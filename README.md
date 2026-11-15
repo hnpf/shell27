@@ -1,20 +1,51 @@
-<h1 align="center">MacShell</h1>
-
 <p align="center">
-  A macOS Tahoe–style <b>menu bar + Dock</b> for Hyprland, built on <a href="https://quickshell.org">Quickshell</a>,<br>
-  with a real-time <b>Liquid Glass</b> refraction shader, and a lock screen, <b>MacLock</b>.
+  <img src="shell27/shell27-banner.png" alt="shell27" width="100%" />
 </p>
 
 <p align="center">
-  <img width="128" height="128" alt="macshell-logo" src="https://github.com/user-attachments/assets/bc67b3fa-33a6-4326-9752-f0d271d0ed22" />
+  A MacOS 27 styled <b>quickshell configuration</b> for Hyprland</a>,<br>
+  with real-time <b>Liquid Glass</b> refraction shading, and a lock screen, <b>shell27-lock</b>.
 </p>
+
+---
+
+### One-line Quick Install
+
+Run the following command on Arch Linux (inside an active Hyprland session) to open the shell27 installer:
+
+```bash
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/hnpf/shell27/main/install.sh)"
+```
+
+> If you decline the optional SDDM theme, a first install only adds Quickshell and the core Qt runtime needed to open the GUI. The installer appears over a black background on its **Dependencies** page; install the full dependency set there before installing shell27.
+
+> On Arch, the installer also offers the optional [MacTahoe SDDM theme](https://github.com/hnpf/MacTahoe-SDDM-Theme). Accepting installs its prerequisites and runs the theme's installer, which configures SDDM and may offer to enable its service.
+
+> The installer also offers the [MacTahoe icon theme](https://github.com/vinceliuice/MacTahoe-icon-theme) and [MacTahoe GTK theme](https://github.com/vinceliuice/MacTahoe-gtk-theme). These are installed for the current user; changing the active GTK or icon settings remains a separate desktop setting.
+
+> Apple Color Emoji is downloaded during installation from the pinned [macOS 26 Linux font release](https://github.com/samuelngs/apple-emoji-ttf/releases/tag/macos-26-20260722-484daf4e) and checksum-verified; the 110 MB font is not stored in this Git repository. The upstream project states its MIT license does not cover Apple emoji assets and notes that use may have licensing implications. You are responsible for ensuring your use is permitted. To use another authorized copy, set `SHELL27_APPLE_EMOJI_PATH` or override `SHELL27_APPLE_EMOJI_URL` and `SHELL27_APPLE_EMOJI_SHA256`.
+
+---
+
+### Repository Layout
+
+- `hyprland/`: personal Hyprland Lua config and its Genie helper.
+- `settings/`: sanitized starter settings; API keys and machine-specific wallpaper/image paths are blank.
+- `hypr-shell27/`: Hyprland helper scripts and session files.
+- `shell27/`: desktop shell Quickshell config.
+- `shell27-lock/`: independent lock-screen Quickshell config.
+- `shell27-installer/`: graphical installer UI.
+- `install.sh`: dependency-aware installer and updater.
+- `LICENSE`: unchanged upstream MIT license.
+
+---
 
 <h1 align="center">Showcase</h1>
 
 <p align="center">
-  <img width="854" alt="MacShell quick showcase" src="https://github.com/user-attachments/assets/b75da31c-73a3-4830-af70-2e0b74f85bf0" />
+  <img width="854" alt="shell27 quick showcase" src="https://github.com/user-attachments/assets/b75da31c-73a3-4830-af70-2e0b74f85bf0" />
   <br>
-  <sub>Quick showcase (OLD)</sub>
+  <sub>Quick showcase</sub>
 </p>
 
 <p align="center">
@@ -23,33 +54,109 @@
   <a href="#install">Install</a> ·
   <a href="#updating">Updating</a> ·
   <a href="#hyprland-configuration-lua">Hyprland config</a> ·
-  <a href="#maclock">MacLock</a> ·
+  <a href="#shell27-lock">shell27-lock</a> ·
   <a href="#troubleshooting">Troubleshooting</a>
 </p>
 
 ---
 
-A macOS Tahoe–style **menu bar + Dock** for Hyprland, built on [Quickshell](https://quickshell.org), with a real-time
-"Liquid Glass" refraction shader, window previews, Spotlight, clipboard/emoji picker, notifications, Control Center,
-screenshots, screen recording, desktop widgets (weather, calendar, clock, music player), a wallpaper picker, an
-Alt+Tab switcher and a full lock screen, all in one Quickshell process.
+A MacOS 27 styled **quickshell configuration** for Hyprland, with real-time
+"Liquid Glass" refraction shading, window previews, Spotlight, clipboard/emoji picker, notifications, Control Center,
+screenshots, screen recording, an extended suite of desktop widgets (weather, calendar, clock, music player with synchronized lyrics, animated GIF/WebP, system monitor, stocks/crypto, battery, reminders), a wallpaper picker, an
+Alt+Tab switcher, and a full lock screen, all in one Quickshell process.
 
-The repository also ships **MacLock**, a matching Liquid Glass lock screen. It is a separate Quickshell config on
-purpose: it runs as its own process, so a shell crash can never take the lock with it.
+The repository also ships **shell27-lock**, a matching Liquid Glass lock screen with **Apple Music Motion Artwork** and **Spotify Canvas** video playback, synchronized karaoke lyrics, and PAM security.
 
 Best icon pack for the shell: https://github.com/Scrimas/MacOS-Like
 
 > **Heads up:** this targets **Hyprland 0.55+ with a Lua config** (`hyprland.lua`) and a recent **Quickshell (0.3.x)**.
 > See [Requirements](#requirements) and [Known issues](#known-issues).
 
+## Fork Features & Enhancements
+
+This fork extends upstream shell27 with multimedia features, desktop widgets, and GPU optimizations:
+
+### Animated Album Canvas on shell27-lock (Apple Music Motion & Spotify Canvas)
+- **Official Apple Music Motion Artwork**: Integrates Apple Music's modern AMP API (`amp-api.music.apple.com`) to retrieve official animated album motion videos (`motionDetailSquare` / `motionDetailTall`).
+- **Official Spotify Canvas**: Automatically queries and fetches Spotify Canvas videos for currently playing tracks.
+- **Zero-CPU Video Remuxing**: Uses pure stream-copy remuxing (`ffmpeg -c copy`) to convert HLS streams to `.mp4` in milliseconds with **0% CPU transcoding overhead**.
+- **Smart 20 MB Cache Protection**: Automatic LRU cache pruner prevents disk bloat by enforcing a strict 20 MB / 4-video limit.
+- **Smooth Fallback**: Gracefully fades into high-resolution blurred album artwork when no animated video exists.
+
+### Synchronized Apple Music-Style Lyrics
+- **Word-by-Word Karaoke Illumination**: Lyrics illuminate and scale smoothly as each word is sung.
+- **Instrumental Break Indicator**: Displays 3 pulsing / breathing rhythm indicator dots during musical interludes.
+- **Depth-of-Field Blur**: Off-focus lines blur and scale down gently; active lines smoothly bounce into focus (`Easing.OutBack`).
+- **Available Everywhere**: Seamlessly integrated into both **shell27-lock** and the **Shell27 Player desktop widget**.
+- **Multi-Source Fetcher (`lyrics_fetcher.py`)**: Asynchronously queries LRCLIB with fallback to `syncedlyrics` (Musixmatch, NetEase, Megalobiz).
+
+### Extended Desktop Widgets Suite
+- **Animated GIF / WebP Widget (`GifWidget.qml`)**: Display looping animations directly on the desktop with macOS squircle aesthetics and an interactive file picker.
+- **System Monitor Widget (`SystemMonitorWidget.qml` & `sysmon_reader.py`)**: macOS Activity Monitor-style circular gauges for CPU, GPU, RAM, Disk, Thermals, and Network.
+- **Stocks & Cryptocurrency Widget (`StocksWidget.qml` & `stocks_fetcher.py`)**: Live market tracking (BTC, ETH, SOL, AAPL, NVDA, etc.) with interactive sparkline curves and gradient fills.
+- **Battery Widget (`BatteryWidget.qml` & `battery_reader.py`)**: Displays battery percentage, health, and power profile.
+- **Reminders Widget (`RemindersWidget.qml` & `Reminders.qml`)**: Interactive task checklist that syncs with `reminders.md` and plays Apple sound effects.
+
+### Heavy GPU & CPU Optimizations (macOS App Nap)
+- **Desktop Occlusion Awareness**: Animated widgets (GIF, Canvas, Lyrics) detect when they are covered by application windows. Playback and decoders pause automatically, dropping idle resource usage to **0%**.
+- **Streamlined Liquid Glass Shader**: Downsampled blur pre-passes (`gl.ds = 0.5`) and settle timers eliminate continuous redraw loops.
+
+### Apple Intelligence, Visual Intelligence, and Siri Voice Assistant
+- **Apple Intelligence Edge Glow Waves**: Fullscreen multi-tier chromatic liquid light bloom (`siriedgeglow.frag`) along all 4 display borders with pure translucent neon emission, subtle micro-ripples, and zero black edge halos.
+- **Dynamic Fluid Siri Orb (`SiriOrb.qml`)**: Fluid plasma sphere icon with noise-driven organic turbulence, breathing with your voice.
+- **Smart On-Demand Voice Interaction**: Instant voice awake via `SUPER + Space` with automatic mic shutdown right after processing.
+- **Studio-Quality Neural Text-to-Speech**: Built-in Microsoft Edge Neural TTS (`edge-tts`) delivers lifelike, crystal-clear vocal responses without robotic buzz. Features single-speaker mutex to prevent overlapping audio.
+- **Gemini AI 2.5 Flash / Pro Integration**: Natural conversational intelligence, live weather syntheses (`wttr.in`), and intelligent multi-step application launcher (Flatpak, Desktop files, Hyprland exec).
+- **Type to Siri Floating Capsule (`TypeToSiri.qml`)**: macOS Sequoia-style floating search capsule with auto-dismissal, history, and keyboard navigation.
+
+---
+
+## Setting Up Apple Intelligence & Siri
+
+shell27 comes with on-device Apple Intelligence powered by Google's Gemini generative AI engine.
+
+### 1. Get a Free Gemini API Key
+1. Go to [Google AI Studio](https://aistudio.google.com).
+2. Sign in with your Google account and click **Get API key** -> **Create API key**.
+3. Copy your generated key.
+
+### 2. Configure the API Key in shell27
+You can configure your API key in either of two ways:
+- **Via Graphical Settings (Recommended)**:
+  1. Open **System Settings** from the Apple Menu or Dock.
+  2. Select the **Apple Intelligence & Siri** panel.
+  3. Paste your key into the **Gemini API Key** field and click **Test Key**.
+- **Via Configuration File**:
+  Edit `~/.config/quickshell/shell27/gemini_config.json`:
+  ```json
+  {
+    "api_key": "YOUR_GEMINI_API_KEY_HERE",
+    "model": "gemini-2.5-flash"
+  }
+  ```
+
+### 3. Siri Voice Assistant Usage & Keybindings
+| Action | Keybinding / Trigger | Description |
+|---|---|---|
+| **Voice Siri** | `SUPER + Space` | Activates on-demand voice listening. Siri records, responds, speaks aloud, and auto-dismisses. |
+| **Type to Siri** | Click Menu Bar / Dock icon, or press `Space` during voice mode | Opens the floating Type to Siri capsule. |
+| **Dismiss / Silence** | `Esc` | Instantly dismisses Siri and cuts off any currently playing speech. |
+
+### 4. Language & Voices
+- **Languages Supported**: English (`en-US`, default) and Vietnamese (`vi-VN`).
+- **Neural Voice Options**:
+  - English: *Jenny* (Female), *Guy* (Male), *Sonia* (British).
+  - Vietnamese: *Hoài My* (Female), *Nam Minh* (Male).
+- **Speech Rate**: Fully adjustable from 130 WPM to 220 WPM in Settings with an instant **Test Voice** preview button.
+
 ## Screenshots
 
-### MacShell
+### shell27
 
 **The whole desktop:** widgets, the menu bar on top and the Dock at the bottom.
 
 <p align="center">
-  <img width="100%" alt="MacShell desktop: widgets, the menu bar on top and the Dock at the bottom" src="https://github.com/user-attachments/assets/600f75bc-b4d1-442d-bec5-41ee7dfa5023" />
+  <img width="100%" alt="shell27 desktop: widgets, the menu bar on top and the Dock at the bottom" src="https://github.com/user-attachments/assets/600f75bc-b4d1-442d-bec5-41ee7dfa5023" />
 </p>
 
 <p align="center">
@@ -60,7 +167,7 @@ Best icon pack for the shell: https://github.com/Scrimas/MacOS-Like
 **The Dock,** with Liquid Glass.
 
 <p align="center">
-  <img width="100%" alt="The MacShell Dock with Liquid Glass" src="https://github.com/user-attachments/assets/edf45f8f-b71a-4bc5-9880-46dafbebf47c" />
+  <img width="100%" alt="The shell27 Dock with Liquid Glass" src="https://github.com/user-attachments/assets/edf45f8f-b71a-4bc5-9880-46dafbebf47c" />
 </p>
 
 **Control Center (New)**
@@ -69,17 +176,17 @@ Best icon pack for the shell: https://github.com/Scrimas/MacOS-Like
   <img width="313" height="510" alt="image" src="https://github.com/user-attachments/assets/cb6c5708-5786-4328-89bd-24737d39e482" />
 </p>
 
-### MacLock
+### shell27-lock
 
 <table align="center">
   <tr>
     <td align="center" width="50%">
-      <img width="100%" alt="MacLock lock screen" src="https://github.com/user-attachments/assets/6ef28e50-612f-4e7b-9822-c0aa0168a6ae" />
+      <img width="100%" alt="shell27-lock lock screen" src="https://github.com/user-attachments/assets/6ef28e50-612f-4e7b-9822-c0aa0168a6ae" />
       <br>
       <sub>Lock screen</sub>
     </td>
     <td align="center" width="50%">
-      <img width="100%" alt="MacLock lock screen with the media player" src="https://github.com/user-attachments/assets/0d15dc6f-8def-47dc-8e42-fa2959e7e5eb" />
+      <img width="100%" alt="shell27-lock lock screen with the media player" src="https://github.com/user-attachments/assets/0d15dc6f-8def-47dc-8e42-fa2959e7e5eb" />
       <br>
       <sub>Lock screen media player</sub>
           <td align="center" width="50%">
@@ -89,17 +196,20 @@ Best icon pack for the shell: https://github.com/Scrimas/MacOS-Like
 
 ## Files
 
-```
-MacShell/               (this repository)
-├── install.sh          installer / updater
-├── README.md
-├── MacShell/           the shell      ->  ~/.config/quickshell/MacShell
-└── MacLock/            the lock screen ->  ~/.config/quickshell/MacLock
+hyprland/       personal Hyprland config and Genie helper
+settings/       sanitized starter shell settings
+hypr-shell27/   Hyprland helper scripts and session files
+          This fork extends the upstream `hnpf/shell27` with powerful new capabilities, multimedia features, and GPU optimizations:
+shell27-lock/   lock Quickshell config -> ~/.config/quickshell/shell27-lock
+shell27-installer/ graphical installer UI
+install.sh      installer and updater
+README.md       project documentation
+LICENSE         upstream MIT license, unchanged
 ```
 
-The two are installed as **separate** Quickshell configs (neither lives inside the other).
+The two Quickshell configs are installed separately. The starter settings in `settings/` contain no API credentials or personal image paths; copy only the settings you want into their documented user config locations.
 
-**MacShell**
+**shell27**
 
 | File | Purpose |
 |---|---|
@@ -109,23 +219,25 @@ The two are installed as **separate** Quickshell configs (neither lives inside t
 | `ClockApp.qml` | The Clock app window (opened from the menu bar clock). |
 | `MacWidgets.qml` | Desktop widgets layer (data, placement, editing). |
 | `WidgetVisual.qml` | Draws one widget; shared by the desktop layer and the Liquid Glass backdrop, so menus refract the widgets too. |
-| `WeatherWidget.qml`, `WeatherIcon.qml`, `WeatherHourCol.qml`, `CalendarWidget.qml`, `ClockWidget.qml`, `PlayerWidget.qml`, `PlayerArt.qml`, `PlayerBtn.qml`, `PlayerGlyph.qml`, `ImageWidget.qml`, `MarqueeText.qml` | The widgets and their helpers (`ImageWidget.qml` shows a picture of your choice). |
+| `WeatherWidget.qml`, `CalendarWidget.qml`, `ClockWidget.qml`, `PlayerWidget.qml`, `ImageWidget.qml` | Core desktop widgets (`PlayerWidget.qml` includes synchronized karaoke lyrics and pulsing rhythm dots). |
+| `GifWidget.qml` | Animated GIF / WebP loop widget with App Nap occlusion pausing. |
+| `SystemMonitorWidget.qml`, `sysmon_reader.py` | Activity Monitor-style circular gauges for CPU, GPU, RAM, Disk, Thermals, and Network. |
+| `StocksWidget.qml`, `stocks_fetcher.py` | Apple Stocks widget for tracking equities and crypto with interactive sparklines. |
+| `BatteryWidget.qml`, `battery_reader.py` | Battery percentage, health status, and power profile widget. |
+| `RemindersWidget.qml`, `Reminders.qml` | Interactive task checklist that syncs with `reminders.md` and plays Apple sound effects. |
+| `lyrics_fetcher.py` | Asynchronous multi-source lyrics daemon with caching (LRCLIB + syncedlyrics). |
+| `AirDrop.qml`, `scripts/shell27-airdrop.py` | Native local sharing with animated radar UI. |
 | `SPopUp.qml`, `Dissolve.qml`, `MorphText.qml`, `MorphGlyph.qml`, `WGlyph.qml`, `ClockGlyph.qml`, `Wheel.qml` | Shared UI pieces and effects. |
 | `liquidglass.frag` (+ `contourglow`, `tintcard`, `dust`, `burn`, `fade`) | Shaders. Prebuilt `.frag.qsb` files ship next to them; `liquidglass.frag` is recompiled with `qsb` on first run. |
 | `EmojiData.js` | Emoji fallback data for Spotlight (from [gemoji](https://github.com/github/gemoji), MIT). |
-| `macshell-update` | Update tool (installed to `~/.local/bin`, see [Updating](#updating)). The installer also writes `macshell-start`, the script the Hyprland autostart runs. |
+| `shell27-update` | Update tool (installed to `~/.local/bin`, see [Updating](#updating)). The installer also writes `shell27-start`, the script the Hyprland autostart runs. |
 | `apple-logo-black.svg`, `apple-logo-white.svg` | Menu bar logo. |
 | `assets/` | Icons and the credits pictures. |
 
-**MacLock**
+**shell27-lock**
 
 | File | Purpose |
-|---|---|
-| `shell.qml` | Entry point: session lock, IPC (`lockscreen`), preview mode. |
-| `LockScreen.qml` | The lock screen UI and PAM password check. |
-| `lock-via-ipc.sh` | Helper for your keybind: starts MacLock if needed, then locks. |
-| `Glass.qml`, `Glyph.qml`, `MorphGlyph.qml`, `MorphText.qml`, `ClockGlyph.qml`, `ContourGlow.qml` and the `*.frag` / `*.qsb` shaders | Visuals. |
-| `hyprland.lua` | Snippet with the keybind (copy it into your config). |
+           Run `shell27-install` and choose **Install shell**, or rerun `bash install.sh` from your clone. Both update the shell and lock config while keeping your settings.
 
 and more files...
 
@@ -145,13 +257,13 @@ and more files...
 | `curl`, `tar` | Used by the installer and the updater, and by the Weather widget. |
 | Font **Inter** (default) | Falls back to the system font; "Noto Sans" / "System" can be chosen in Settings. |
 
-### MacLock (only if you use the lock screen)
+### shell27-lock (only if you use the lock screen)
 
 | What | Why |
 |---|---|
-| A PAM stack at `/etc/pam.d/hyprlock` (installed by the `hyprlock` package) | MacLock checks passwords with it. The installer warns if the file is missing. |
+| A PAM stack at `/etc/pam.d/hyprlock` (installed by the `hyprlock` package) | shell27-lock checks passwords with it. The installer warns if the file is missing. |
 | Quickshell with the **Pam** and **session-lock** modules | Distro packages normally include them. |
-| Hyprland `misc:allow_session_lock_restore` (recommended) | Lets a restarted MacLock take over a lock if it ever dies. |
+| Hyprland `misc:allow_session_lock_restore` (recommended) | Lets a restarted shell27-lock take over a lock if it ever dies. |
 
 ### Optional (missing tools just disable that feature)
 
@@ -215,30 +327,34 @@ This shell **replaces** your bar, dock and notification daemon. Stop anything th
    `bash install.sh --deps-only` does just this step.
    Hyprland 0.55+ with a Lua config may need a newer package than your distro ships, so check `hyprctl version`.
    Debian/Ubuntu have no `quickshell` / `hyprland` packages: build those from source.
-2. Run the installer a clone:
+2. Run the installer, either from a clone of this repository:
    ```sh
-   git clone https://github.com/0-ss/MacShell
-   cd MacShell
+  git clone https://github.com/hnpf/shell27
+  cd shell27
    bash install.sh
    ```
-   then choose 6 (For GUI installer, recommended)
+   or in one line:
+   ```sh
+  curl -fsSL https://raw.githubusercontent.com/hnpf/shell27/main/install.sh | bash
+   ```
+  In an active Hyprland session, a first install opens `shell27-installer` directly after bootstrapping its small Quickshell/Qt runtime. It opens on **Dependencies**; install the required packages there, then move to **Install**. Outside Hyprland, or with `--no-gui`, the terminal flow is used.
+    During installation, you can choose to replace `~/.config/hypr/hyprland.lua` with the bundled personal config. The existing file is backed up first. Declining keeps your config and uses the normal shell27 module-loader append behavior. `--yes` does not opt into replacing it.
    
-   The installer will create a new .lua file in your /.config/hypr/ that have keybinds and auto start, so you don't need to to manually bind MacShell.
-   
-   It installs **MacShell** to `~/.config/quickshell/MacShell` and **MacLock** to `~/.config/quickshell/MacLock`,
-   and adds the autostart and keybinds to your Hyprland config: a .lua file called `macshell.lua` which is located here `/.config/hypr/` (Hyprland 0.55+),
-   when there is no Lua config. The block runs `~/.local/bin/macshell-start`, which waits for
-   the compositor, never starts a second copy and restarts the shell if it crashes. Remove the block between the
-   `MacShell (added by install.sh)` markers to undo it. Your settings are never touched, and the previous
-   install is backed up first (last 3 kept in `~/.local/share/macshell/backups/`).
+  It installs **shell27** to `~/.config/quickshell/shell27` and **shell27-lock** to `~/.config/quickshell/shell27-lock`.
+  It writes the shell module to `~/.config/hypr/shell27.lua`, loaded from `hyprland.lua` on Hyprland 0.55+.
+  If you use `hyprland.conf` instead, it adds an `exec-once` line. The module starts shell27 through `~/.local/bin/shell27-start`, which waits for
+  the compositor, avoids duplicate processes, and restarts the shell after a crash. Remove the block between the
+   `shell27 (added by install.sh)` markers to undo it. Your settings are never touched, and the previous
+   install is backed up first (last 3 kept in `~/.local/share/shell27/backups/`).
 
-   When run from a clone, the installer first checks GitHub: if the repository has a newer version (and your clone has
-   no uncommitted changes) it downloads and installs that one automatically.
+  On a normal interactive install, the installer asks whether to install the bundled Hyprland config. It backs up existing `hyprland.lua` and `genie.lua` files before replacing them. Declining preserves your config and uses the standard module-loader append flow. `--yes` never opts into replacing the config.
+
+  The bundled Hyprland config loads `shell27.lua` and `genie.lua`; both are installed under `~/.config/hypr/` when you accept.
 
    Don't reach the install folders through a symlink; Quickshell ≥ 0.3 derives its state folders from the link path.
 4. Try it:
    ```sh
-   qs -c MacShell
+   qs -c shell27
    ```
    On first run with the Liquid Glass style, `liquidglass.frag` is compiled with `qsb` and cached in
    `~/.config/macdock/liquidglass.frag.qsb`. Watch for `[macbar-glass] state: ready` in the log.
@@ -257,29 +373,22 @@ This shell **replaces** your bar, dock and notification daemon. Stop anything th
 | `--no-autostart` | Don't touch the Hyprland config. |
 | `--no-rules` | Don't add the Liquid Glass layer rules to the Hyprland config. |
 | `--channel release\|main` | `release` (default): latest release, or the newest commit if there are none. `main`: always the newest commit. |
-| `--no-lock` | Install MacShell only, without MacLock. |
+| `--no-lock` | Install shell27 only, without shell27-lock. |
 | `--check` | Only check for a newer version (exit 0 = up to date, 10 = update available). |
 | `--local` | Install the local clone as it is, don't look for a newer version on GitHub. |
 | `--auto-update` / `--no-auto-update` | Set up / remove a daily systemd user timer that installs updates by itself. |
 | `--ref REF` | Install a specific tag or commit. |
 | `--from-dir DIR` | Install from a local folder instead of downloading. |
-| `--uninstall` | Remove MacShell and MacLock (settings are kept). |
+| `--uninstall` | Remove shell27 and shell27-lock (settings are kept). |
 
-Environment: `MACSHELL_REPO`, `MACSHELL_BRANCH`, `MACSHELL_CHANNEL`, `MACSHELL_DEST`, `MACLOCK_DEST`, `GITHUB_TOKEN`.
+Environment: `SHELL27_REPO`, `SHELL27_BRANCH`, `SHELL27_CHANNEL`, `SHELL27_DEST`, `SHELL27_LOCK_DEST`, `GITHUB_TOKEN`.
 
 ## Updating
 
-The Best way to make sure you have the latest update Is to delete the MacShell folder in /home/ (needed) and run this again :
-
-   ```sh
-   git clone https://github.com/0-ss/MacShell
-   cd MacShell
-   bash install.sh
-   ```
-Then Choose install
+Run `shell27-install` and choose **Install shell**, or rerun `bash install.sh` from your clone. Both update the shell and lock config while keeping your settings.
 
 ```
-MacShell (installed: x.x.x)
+shell27 (installed: x.x.x)
 
   1) Install shell (Best for install and updating)
   2) Check for updates (Only checks for updates)
@@ -290,9 +399,9 @@ MacShell (installed: x.x.x)
   q) Quit
 ```
 
-- **Install shell** installs MacShell and MacLock (or reinstalls them).
+- **Install shell** installs shell27 and shell27-lock (or reinstalls them).
 - **Check for updates** compares your version with GitHub and, if there is a newer one, asks whether to install it (y/n).
-- **Uninstall shell** removes MacShell and MacLock (your settings are kept).
+- **Uninstall shell** removes shell27 and shell27-lock (your settings are kept).
 - **Bind help** opens the Hyprland keybind section of this README in your browser.
 - **Check this setup** checks your current setup, looks for issues and solves it.
 - **Graphical Installer** runs the Graphical Installer "GUI" absolutely recommended
@@ -303,9 +412,9 @@ The other tools are still available as options: `--doctor`, `--low-power`, `--de
 
 ```lua
 -- autostart (remove other bars / docks / notification daemons first).
--- install.sh adds this for you; macshell-start waits for the compositor and restarts the shell if it crashes.
+-- install.sh adds this for you; shell27-start waits for the compositor and restarts the shell if it crashes.
 hl.on("hyprland.start", function()
-    hl.exec_cmd("sh ~/.local/bin/macshell-start")
+    hl.exec_cmd("sh ~/.local/bin/shell27-start")
 end)
 
 -- layer rules: blur for the glass surfaces
@@ -317,7 +426,7 @@ hl.layer_rule({ name = "macshot",  match = { namespace = "macshot"  }, no_anim =
 -- The Settings window floats and centres itself when it opens, so it needs no window rule.
 
 -- keybinds (the name after -c is the config folder name, case-sensitive)
-local qs = "qs -c MacShell ipc call "
+local qs = "qs -c shell27 ipc call "
 
 hl.bind("SUPER + V",          hl.dsp.exec_cmd(qs .. "spotlight clipboard"))
 hl.bind("SUPER + period",     hl.dsp.exec_cmd(qs .. "spotlight emoji"))
@@ -326,18 +435,18 @@ hl.bind("ALT + TAB",          hl.dsp.exec_cmd(qs .. "switcher next"))
 hl.bind("CTRL + ALT + W",     hl.dsp.exec_cmd(qs .. "wallpapers toggle"))
 hl.bind("PRINT",              hl.dsp.exec_cmd(qs .. "screenshot region"))
 
--- MacLock (lock screen)
-hl.bind("SUPER + L",          hl.dsp.exec_cmd("sh ~/.config/quickshell/MacLock/lock-via-ipc.sh"))
+-- shell27-lock (lock screen)
+hl.bind("SUPER + L",          hl.dsp.exec_cmd("sh ~/.config/quickshell/shell27-lock/lock-via-ipc.sh"))
 ```
 
 Change `SUPER + L` if that key is already used. On a classic `hyprland.conf` the same bind is
-`bind = SUPER, L, exec, sh ~/.config/quickshell/MacLock/lock-via-ipc.sh`.
+`bind = SUPER, L, exec, sh ~/.config/quickshell/shell27-lock/lock-via-ipc.sh`.
 
 Also make sure **blur is enabled** in your Hyprland `decoration` settings, or the "Normal Blur" style won't blur.
 
 ### IPC reference
 
-`qs -c MacShell ipc call <target> <function>`
+`qs -c shell27 ipc call <target> <function>`
 
 | Target | Functions |
 |---|---|
@@ -349,21 +458,29 @@ Also make sure **blur is enabled** in your Hyprland `decoration` settings, or th
 | `widgets` | `refresh` (re-fetch the weather), `edit true\|false` (move / remove desktop widgets) |
 | `glass` | `captures true\|false` (window previews on/off, same as Settings → Dock Behavior → *Live window capture*) |
 
-## MacLock
+## shell27-lock
 
-A macOS-style lock screen using the same Liquid Glass look (see the [screenshots](#maclock-1) above). Each lock runs in
+A macOS-style lock screen using the same Liquid Glass look (see the [screenshots](#shell27-lock-1) above). Each lock runs in
 its own process (a Wayland session lock is used once), and `lock-via-ipc.sh` starts a fresh one for every lock, so the
 keybind above is all you need.
 
 ```sh
-sh ~/.config/quickshell/MacLock/lock-via-ipc.sh        # lock now (what the keybind runs)
-qs -c MacLock ipc call lockscreen lock                 # same, if an IPC-ready MacLock is already running
-qs -c MacLock                                          # lock immediately, one-shot (e.g. from hypridle)
-MACLOCK_PREVIEW=1 qs -c MacLock                        # preview the design as a window, no real lock
+sh ~/.config/quickshell/shell27-lock/lock-via-ipc.sh        # lock now (what the keybind runs)
+qs -c shell27-lock ipc call lockscreen lock                 # same, if an IPC-ready shell27-lock is already running
+qs -c shell27-lock                                          # lock immediately, one-shot (e.g. from hypridle)
+SHELL27_LOCK_PREVIEW=1 qs -c shell27-lock                        # preview the design as a window, no real lock
 ```
 
+### 🎬 Animated Album Canvas & Lyrics (Apple Music & Spotify)
+shell27-lock elevates the lock screen with dynamic multimedia playback:
+- **Apple Music Motion Artwork**: Integrates with Apple Music's AMP API (`amp-api.music.apple.com`) to play official animated motion album covers.
+- **Spotify Canvas**: Asynchronously loads and loops official Spotify Canvas videos.
+- **Zero CPU Overhead**: Employs stream-copy remuxing (`ffmpeg -c copy`) to process video streams within milliseconds without CPU transcoding spikes.
+- **Storage Protection**: Built-in LRU cache manager enforces a strict **20 MB** disk space limit.
+- **Apple Music-Style Synchronized Lyrics**: Real-time karaoke lyrics with word-by-word illumination and breathing instrumental indicators.
+
 Passwords are checked with PAM (`/etc/pam.d/hyprlock`). To lock on idle or before sleep with `hypridle`, set
-`lock_cmd = sh ~/.config/quickshell/MacLock/lock-via-ipc.sh`.
+`lock_cmd = sh ~/.config/quickshell/shell27-lock/lock-via-ipc.sh`.
 
 ## Dock icon tint
 
@@ -374,13 +491,21 @@ original colours. It needs no shader build and no extra packages.
 
 ## Desktop widgets
 
-Settings → General → Desktop Widgets. Weather, Calendar, Clock, Player and **Image** widgets, each in Small, Medium
-and Large. **Widget size** scales every widget and the grid together (60 % to 150 %); widgets snap back onto the
-grid when you let go of the slider.
+Settings → General → Desktop Widgets. A full suite of macOS Sequoia / Tahoe-style widgets, each available in Small, Medium, and Large:
 
-An Image widget shows a picture you choose: press **+ S / M / L** on the Image row and pick a file (needs `zenity`,
-`kdialog` or `yad`). The picture is copied to `~/.config/macwidgets/images`, so it keeps working if the original
-moves. To change it later use **Edit on Desktop** and press **Choose Image…** on the widget.
+- **Weather, Calendar & Clock**: Live weather forecasts (Open-Meteo), calendar events, and customizable clock dials.
+- **Player Widget with Synchronized Lyrics**:
+  - Displays currently playing tracks, album art, and seek controls.
+  - Interactive lyrics button opens real-time scrolling lyrics with Apple Music-style word-by-word karaoke illumination, depth-of-field blur, and 3-dot breathing animations during instrumental sections.
+  - Automatically queries LRCLIB and `syncedlyrics`.
+- **Animated GIF / WebP Widget**: Place looping GIF or WebP animations on the desktop. In Edit mode, click **Choose GIF…** to pick an animation. Automatically pauses when covered to eliminate GPU usage.
+- **System Monitor Widget**: Activity Monitor-style circular gauges and readouts for CPU load, GPU usage, RAM consumption, disk space, temperatures, and network activity.
+- **Stocks & Cryptocurrency Widget**: Track equities and cryptocurrencies (BTC, ETH, SOL, AAPL, NVDA, etc.) with real-time price trends, percentage badges, and interactive sparkline charts.
+- **Battery Widget**: Clean battery indicator displaying charge level, charging state, and power profile.
+- **Reminders Widget**: Interactive checklist synchronized with `~/.config/macwidgets/reminders.md` with completion sound effects.
+- **Image Widget**: Displays any custom image from disk (supports **+ S / M / L** and **Choose Image…**).
+
+**Widget size** scales every widget and the grid together (60 % to 150 %); widgets snap back onto the grid when you let go of the slider.
 
 ## Wallpaper
 
@@ -406,8 +531,9 @@ by default (`wallpaperDir`).
 | `~/.config/macdock/settings.json`, `pinned.json` | Dock settings and pinned apps |
 | `~/.config/macdock/liquidglass.frag.qsb` | Compiled shader cache |
 | `~/.config/macwidgets/settings.json` | Desktop widgets, their placement and the widget size |
+| `settings/` in this repository | Sanitized starter copies for the menu bar, Dock, widgets, pinned apps, and Siri settings |
 | `~/.config/macwidgets/images/` | Pictures used by Image widgets |
-| `~/.local/share/macshell/` | Installer state, `macshell-update`, backups |
+| `~/.local/share/shell27/` | Installer state, `shell27-update`, backups |
 | `~/.cache/macbar/` | Clipboard history helper files (images, timestamps) |
 | `~/Pictures/Screenshots` | Default screenshot folder |
 
@@ -418,19 +544,19 @@ in `~/.config/macbar/settings.json` if you don't want that.
 
 1. `sudo pacman -Syu`, then reboot if the kernel was updated.
 2. Install Hyprland **0.55 or newer** and make sure you have a `hyprland.lua` (`hyprctl version` shows the version).
-3. `git clone https://github.com/0-ss/MacShell && cd MacShell && bash install.sh` and answer yes. It installs every
+3. `git clone https://github.com/hnpf/shell27 && cd shell27 && bash install.sh` and answer yes. It installs every
    dependency (on Arch it can build `yay` for `awww` / `mpvpaper`), starts the Bluetooth, Wi-Fi, power-profile and
-   audio services, adds the autostart to `hyprland.lua`, and creates `~/.config/macshell/env`.
-4. Log out and back in (or run `sh ~/.local/bin/macshell-start`), then run `bash install.sh --doctor` if anything
+   audio services, adds the autostart to `hyprland.lua`, and creates `~/.config/shell27/env`.
+4. Log out and back in (or run `sh ~/.local/bin/shell27-start`), then run `bash install.sh --doctor` if anything
    looks wrong. On older hardware add `--low-power`.
 
-**Environment variables** (`QS_ICON_THEME`, `QT_QPA_PLATFORM`, `XDG_CURRENT_DESKTOP`, ...): `macshell-start` sets
+**Environment variables** (`QS_ICON_THEME`, `QT_QPA_PLATFORM`, `XDG_CURRENT_DESKTOP`, ...): `shell27-start` sets
 sensible ones before it starts the shell, so it works whether it was started by Hyprland, a terminal or a keybind.
-Your own go in `~/.config/macshell/env` (the installer creates it with commented examples, including
+Your own go in `~/.config/shell27/env` (the installer creates it with commented examples, including
 `QSG_RHI_BACKEND=opengl`, `QSG_RENDER_LOOP=basic` and `QT_QUICK_BACKEND=software` for old graphics).
 
-**Wallpaper after a reboot:** `awww` forgets its image at every shutdown. MacShell remembers the wallpaper you picked
-in the picker and puts it back at login (and `macshell-start` runs `awww restore` first). Pick a wallpaper once after
+**Wallpaper after a reboot:** `awww` forgets its image at every shutdown. shell27 remembers the wallpaper you picked
+in the picker and puts it back at login (and `shell27-start` runs `awww restore` first). Pick a wallpaper once after
 updating and it stays.
 
 ## Troubleshooting
@@ -440,14 +566,14 @@ updating and it stays.
 | Glass looks flat / "Normal Blur" | `qsb` missing (install `qt6-shadertools`) — the log shows `[macbar-glass] state: failed`. Or ship a prebuilt `liquidglass.frag.qsb` next to `liquidglass.frag`; it is used as a fallback. |
 | Glass shows no wallpaper | Wallpaper not detected: see [Wallpaper](#wallpaper). |
 | Changing the wallpaper only changes the widgets and menus | `awww` is not installed or its daemon can't start. Install it, or set `wallpaperCmd` (see [Wallpaper](#wallpaper)); the log shows `[wallpaper] error:`. |
-| Blank app icons | No Qt icon theme: `macshell-start` picks your GTK theme or Papirus / WhiteSur / Tela / Adwaita if installed. Otherwise install one (`sudo pacman -S papirus-icon-theme`) or set `QS_ICON_THEME` in `~/.config/macshell/env`. |
+| Blank app icons | No Qt icon theme: `shell27-start` picks your GTK theme or Papirus / WhiteSur / Tela / Adwaita if installed. Otherwise install one (`sudo pacman -S papirus-icon-theme`) or set `QS_ICON_THEME` in `~/.config/shell27/env`. |
 | Wallpaper is gone after a reboot | See [Fresh Arch install](#fresh-arch-install-recommended-route). Check `awww` is installed (`bash install.sh --doctor`) and pick the wallpaper once in the picker. |
-| Slow or choppy on an old laptop | `bash install.sh --low-power`, and try `QSG_RHI_BACKEND=opengl` in `~/.config/macshell/env`. |
+| Slow or choppy on an old laptop | `bash install.sh --low-power`, and try `QSG_RHI_BACKEND=opengl` in `~/.config/shell27/env`. |
 | No notifications | Another daemon owns the D-Bus name. Disable it and restart the shell. |
 | Window menu actions, Alt+Tab focus, paste-after-pick, Log Out or the floating Settings window do nothing | Not on a Lua-config Hyprland 0.55+: run `hyprctl dispatch 'hl.dsp.no_op()'`. |
 | No window previews / glass behind windows | Quickshell built without Hyprland Toplevel Export, or Settings → Dock Behavior → *Live window capture* is off. |
 | Bluetooth shows nothing / won't power on | `systemctl status bluetooth` must be active (`sudo systemctl enable --now bluetooth`), `bluetoothctl show` must list a controller, and `rfkill list bluetooth` must not say *Soft blocked: yes* (the switch in Control Center un-blocks it). Pairing a new device: put it in pairing mode, open Control Center → Bluetooth (it scans for 10 s) and click it. |
-| MacShell does not start with Hyprland | Hyprland 0.55+ with `hyprland.lua` ignores `hyprland.conf`: the autostart must be in the Lua file (`bash install.sh` puts it there). Test it by hand with `sh ~/.local/bin/macshell-start`. |
+| shell27 does not start with Hyprland | Hyprland 0.55+ with `hyprland.lua` ignores `hyprland.conf`: the autostart must be in the Lua file (`bash install.sh` puts it there). Test it by hand with `sh ~/.local/bin/shell27-start`. |
 | Log | `qs log` (see `qs --help` for selecting the config). |
 
 ## Known issues
@@ -459,7 +585,7 @@ does not answer that frame, the shell then destroys it, and the compositor drops
 - Settings → Menu Bar → turn **Real-time glass** off (far fewer captures; the biggest win).
 - Settings → Dock Behavior → turn **Live window capture** off.
 - The shell already pauses glass captures while windows open/close.
-- Auto-restart: the autostart the installer adds (`macshell-start`) already restarts the shell after a crash.
+- Auto-restart: the autostart the installer adds (`shell27-start`) already restarts the shell after a crash.
 
 **Glitchy window capture** (previews or glass showing a wrong or stale frame): turn off Settings → Dock Behavior →
 **Live window capture**.

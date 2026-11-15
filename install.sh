@@ -1,41 +1,42 @@
 #!/usr/bin/env bash
-# MacShell installer / updater
+# shell27 installer / updater
 #
-#   git clone https://github.com/0-ss/MacShell && cd MacShell
+#   git clone https://github.com/hnpf/shell27 && cd shell27
 #   ./install.sh            (installs exactly what is in the clone)
 #   ./install.sh --gui      (same, in the graphical installer)
 #
 # What it does
-#   1. checks every tool, library, QML module, font and service MacShell / MacLock need and installs the missing ones
+#   1. checks every tool, library, QML module, font and service shell27 / shell27-lock need and installs the missing ones
 #      (pacman, dnf or apt; packages the main repositories lack come from the AUR / the Fedora COPR, and on Arch it can
 #      even set up an AUR helper for you). It also enables the bluetooth service, which Bluetooth needs.
-#      In a Hyprland session on Arch it offers to open the graphical installer (MacInstaller) instead of installing in the terminal.
+#      In a Hyprland session on Arch it offers to open the graphical installer (shell27-installer) instead of installing in the terminal.
 #   2. downloads the latest release (or the latest commit of the main branch)
-#   3. installs the shell to   ~/.config/quickshell/MacShell        (start it with:  qs -c MacShell)
-#      the lock screen to      ~/.config/quickshell/MacLock         (lock with:  sh ~/.config/quickshell/MacLock/lock-via-ipc.sh)
-#      (MacShell and MacLock are two separate Quickshell configs; neither is placed inside the other)
-#      the helper tree to      ~/.config/hypr-macshell              (scripts/ = Game Mode, video wallpapers, AirDrop, lock helper;
+#   3. installs the shell to   ~/.config/quickshell/shell27        (start it with:  qs -c shell27)
+#      the lock screen to      ~/.config/quickshell/shell27-lock         (lock with:  sh ~/.config/quickshell/shell27-lock/lock-via-ipc.sh)
+#      (shell27 and shell27-lock are two separate Quickshell configs; neither is placed inside the other)
+#      the helper tree to      ~/.config/hypr-shell27              (scripts/ = Game Mode, video wallpapers, AirDrop, lock helper;
 #                                                                   plus the standalone Hyprland session config, hypridle / hyprlock files;
 #                                                                   your own custom/ folder is never overwritten)
-#      app launchers to        ~/.local/share/applications          (Finder, Photos, Clock ... entries for macshell-*.desktop)
+#      app launchers to        ~/.local/share/applications          (Finder, Photos, Clock ... entries for shell27-*.desktop)
 #      icons to                ~/.local/share/icons/hicolor/scalable/apps
 #      the Apple emoji font rule to ~/.config/fontconfig/conf.d
-#      sounds to               ~/.local/share/sounds/macshell       (shipped ones, plus the rest synthesized by macshell-make-sounds.py)
-#      the update tool to      ~/.local/share/macshell/bin/macshell-update  (+ ~/.local/bin/macshell-update)
-#      the start script to     ~/.local/share/macshell/bin/macshell-start   (+ ~/.local/bin/macshell-start)
-#   4. installs ~/.config/hypr/macshell.lua with the autostart and keybinds, then loads it from hyprland.lua
-#      (Hyprland 0.55+), or adds an exec-once line to hyprland.conf. It never writes to a config Hyprland is not using.
+#      sounds to               ~/.local/share/sounds/shell27       (shipped ones, plus the rest synthesized by shell27-make-sounds.py)
+#      the update tool to      ~/.local/share/shell27/bin/shell27-update  (+ ~/.local/bin/shell27-update)
+#      the start script to     ~/.local/share/shell27/bin/shell27-start   (+ ~/.local/bin/shell27-start)
+#   4. installs ~/.config/hypr/shell27.lua with the autostart and keybinds; optionally replaces hyprland.lua with the
+#      bundled personal config after backing up the existing file. Otherwise it adds only the module loader. On classic
+#      hyprland.conf sessions, it adds an exec-once line instead. --yes never opts into replacing hyprland.lua.
 #   5. optionally sets up automatic updates (a daily systemd user timer)
 #
 # Updates
 #   Run ./install.sh and pick from the menu: 1) install shell, 2) check for updates (asks whether to install one),
 #   3) uninstall shell, 4) bind help (opens the Hyprland keybind section of the README).
-#   An update installs the dependencies the new version needs, updates MacShell and MacLock together and keeps your
+#   An update installs the dependencies the new version needs, updates shell27 and shell27-lock together and keeps your
 #   settings. Use --local to install exactly what is in a clone, or --check to only look.
-#   (macshell-update still exists for the daily timer and for scripts; "macshell-update rollback" restores both.)
+#   (shell27-update still exists for the daily timer and for scripts; "shell27-update rollback" restores both.)
 #
-# Your settings (~/.config/macbar, macdock, macshell, macwidgets, ...) are never touched.
-# Before replacing an existing install, the old one is saved to ~/.local/share/macshell/backups/ (last 3 kept).
+# Your settings (~/.config/macbar, macdock, shell27, macwidgets, ...) are never touched.
+# Before replacing an existing install, the old one is saved to ~/.local/share/shell27/backups/ (last 3 kept).
 #
 # Options
 #   -y, --yes             do not ask questions (answer yes)
@@ -46,63 +47,64 @@
 #                         start log) and explain problems
 #       --deps            same as --deps-only
 #       --deps-plan       print what the dependency step would install, as one line of JSON (used by the shell's Installer)
-#       --no-start        do not offer to start MacShell at the end
-#       --no-verify       start MacShell without waiting to see whether it stays up
+#       --no-start        do not offer to start shell27 at the end
+#       --no-verify       start shell27 without waiting to see whether it stays up
 #       --low-power       settings for older computers (no live window capture, no magnification, plain blur)
 #       --no-autostart    do not touch the Hyprland config
 #       --no-rules        do not add the Liquid Glass layer rules to the Hyprland config
 #       --channel CH      release (default: latest release, else the main branch) or main (always the newest commit)
 #       --ref REF         install a specific tag / commit instead of the latest
 #       --from-dir DIR    install from a local folder instead of downloading
-#       --update          quiet update mode (used by macshell-update)
-#       --uninstall       remove MacShell (settings are kept)
-#       --no-lock         do not install MacLock
-#       --gui             use the graphical installer (MacInstaller): installs what it needs to run, then opens it
+#       --update          quiet update mode (used by shell27-update)
+#       --uninstall       remove shell27 (settings are kept)
+#       --no-lock         do not install shell27-lock
+#       --gui             use the graphical installer (shell27-installer): installs what it needs to run, then opens it
 #       --no-gui          never offer the graphical installer
 #       --check           only check whether a newer version exists (exit 0 = up to date, 10 = update available)
 #       --local           install the local copy as it is, do not look for a newer version on GitHub
-#       --auto-update     install a daily systemd user timer that updates MacShell + MacLock by itself
+#       --auto-update     install a daily systemd user timer that updates shell27 + shell27-lock by itself
 #       --no-auto-update  remove that timer
 #   -h, --help
 #
 # Environment variables for the shell itself (icon theme, Qt platform, software rendering, ...) go in
-#   ~/.config/macshell/env   (the installer creates it with comments; macshell-start reads it)
+#   ~/.config/shell27/env   (the installer creates it with comments; shell27-start reads it)
 #
-# Environment: MACSHELL_FROM_DIR (install from this folder instead of downloading: the graphical installer sets it),
-#              MACSHELL_REPO (default 0-ss/MacShell), MACSHELL_BRANCH (default main), MACSHELL_CHANNEL, MACSHELL_DEST,
-#              MACLOCK_DEST, GITHUB_TOKEN
+# Environment: SHELL27_FROM_DIR (install from this folder instead of downloading: the graphical installer sets it),
+#              SHELL27_REPO (new default hnpf/shell27), SHELL27_BRANCH (default main), shell27_CHANNEL, shell27_DEST,
+#              SHELL27_LOCK_DEST, SHELL27_APPLE_EMOJI_PATH (local font file), SHELL27_APPLE_EMOJI_URL (font URL),
+#              SHELL27_APPLE_EMOJI_SHA256 (override URL checksum), GITHUB_TOKEN
 
 set -euo pipefail
 
-REPO="${MACSHELL_REPO:-0-ss/MacShell}"
-BRANCH="${MACSHELL_BRANCH:-main}"
-NAME="MacShell"
+REPO="${SHELL27_REPO:-hnpf/shell27}"
+BRANCH="${SHELL27_BRANCH:-main}"
+NAME="shell27"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-DEST="${MACSHELL_DEST:-$CONFIG_HOME/quickshell/$NAME}"
-LOCK_NAME="MacLock"
-LOCK_DEST="${MACLOCK_DEST:-$CONFIG_HOME/quickshell/$LOCK_NAME}"
-STATE_DIR="$DATA_HOME/macshell"
-GUI_NAME="MacInstaller"
+DEST="${SHELL27_DEST:-$CONFIG_HOME/quickshell/$NAME}"
+LOCK_NAME="shell27-lock"
+LOCK_DEST="${SHELL27_LOCK_DEST:-$CONFIG_HOME/quickshell/$LOCK_NAME}"
+STATE_DIR="$DATA_HOME/shell27"
+GUI_NAME="shell27-installer"
 GUI_DEST="$STATE_DIR/$GUI_NAME"
 BIN_DIR="$STATE_DIR/bin"
 BACKUP_DIR="$STATE_DIR/backups"
-HYPR_MAC_DIR="$CONFIG_HOME/hypr-macshell"
+HYPR_MAC_DIR="$CONFIG_HOME/hypr-shell27"
 SCRIPTS_DIR="$HYPR_MAC_DIR/scripts"
 APPS_DIR="$DATA_HOME/applications"
 ICONS_DIR="$DATA_HOME/icons/hicolor/scalable/apps"
 FONTCONF_DIR="$CONFIG_HOME/fontconfig/conf.d"
-SOUNDS_DIR="$DATA_HOME/sounds/macshell"
+SOUNDS_DIR="$DATA_HOME/sounds/shell27"
 LINK_DIR="$HOME/.local/bin"
 HYPR_DIR="$CONFIG_HOME/hypr"
-MARK_BEGIN="-- >>> MacShell (added by install.sh) >>>"
-MARK_END="-- <<< MacShell <<<"
-MACLUA_BEGIN="-- >>> MacShell module (added by install.sh) >>>"
-MACLUA_END="-- <<< MacShell module <<<"
-CONF_BEGIN="# >>> MacShell (added by install.sh) >>>"
-CONF_END="# <<< MacShell <<<"
+MARK_BEGIN="-- >>> shell27 (added by install.sh) >>>"
+MARK_END="-- <<< shell27 <<<"
+MACLUA_BEGIN="-- >>> shell27 module (added by install.sh) >>>"
+MACLUA_END="-- <<< shell27 module <<<"
+CONF_BEGIN="# >>> shell27 (added by install.sh) >>>"
+CONF_END="# <<< shell27 <<<"
 
-ENV_DIR="$CONFIG_HOME/macshell"
+ENV_DIR="$CONFIG_HOME/shell27"
 DOCTOR=0
 GUI=""            # yes | no | "" (ask)
 GUI_ASKED=0
@@ -127,7 +129,7 @@ UPDATE_MODE=0
 UNINSTALL=0
 REF=""
 FROM_DIR=""
-CHANNEL="${MACSHELL_CHANNEL:-}"
+CHANNEL="${SHELL27_CHANNEL:-}"
 RESOLVED_ID=""
 RESOLVED_TYPE=""
 RESOLVED_VER=""     # the version number of RESOLVED_ID (e.g. 0.3.8), when known
@@ -203,37 +205,37 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-# set by the macshell-installer launcher: install from the clone it was started from (if that folder still exists)
-if [ -z "$FROM_DIR" ] && [ -n "${MACSHELL_FROM_DIR:-}" ] && [ -d "$MACSHELL_FROM_DIR" ]; then FROM_DIR="$MACSHELL_FROM_DIR"; fi
+# set by the shell27-installer launcher: install from the clone it was started from (if that folder still exists)
+if [ -z "$FROM_DIR" ] && [ -n "${SHELL27_FROM_DIR:-}" ] && [ -d "$SHELL27_FROM_DIR" ]; then FROM_DIR="$SHELL27_FROM_DIR"; fi
 
 state_get() { [ -f "$STATE_DIR/state.env" ] && sed -n "s/^$1=//p" "$STATE_DIR/state.env" | head -n1 || true; }
 [ -n "$CHANNEL" ] || CHANNEL="$(state_get channel_pref)"
 [ -n "$CHANNEL" ] || CHANNEL="release"
 case "$CHANNEL" in release|main) ;; *) die "--channel must be 'release' or 'main'" ;; esac
 
-[ "$(id -u)" -eq 0 ] && warn "running as root: MacShell is installed per user, run this as your normal user instead."
+[ "$(id -u)" -eq 0 ] && warn "running as root: shell27 is installed per user, run this as your normal user instead."
 
 # ───────────────────────── automatic updates (systemd user timer) ─────────────────────────
 UNIT_DIR="$CONFIG_HOME/systemd/user"
 
 remove_auto_update() {
-    have systemctl && systemctl --user disable --now macshell-update.timer >/dev/null 2>&1 || true
-    rm -f "$UNIT_DIR/macshell-update.timer" "$UNIT_DIR/macshell-update.service"
+    have systemctl && systemctl --user disable --now shell27-update.timer >/dev/null 2>&1 || true
+    rm -f "$UNIT_DIR/shell27-update.timer" "$UNIT_DIR/shell27-update.service"
     have systemctl && systemctl --user daemon-reload >/dev/null 2>&1 || true
     [ "${1:-}" = quiet ] || ok "automatic updates removed"
 }
 
 setup_auto_update() {
     if ! have systemctl || ! systemctl --user show-environment >/dev/null 2>&1; then
-        warn "systemd user session not available: automatic updates were not set up (run 'macshell-update update' by hand)"
+        warn "systemd user session not available: automatic updates were not set up (run 'shell27-update update' by hand)"
         return 0
     fi
     mkdir -p "$UNIT_DIR"
-    local upd="$BIN_DIR/macshell-update update --yes --notify"
-    [ -x "$BIN_DIR/macshell-update" ] || upd="$BIN_DIR/macshell-install --update"
-    cat > "$UNIT_DIR/macshell-update.service" <<UNIT
+    local upd="$BIN_DIR/shell27-update update --yes --notify"
+    [ -x "$BIN_DIR/shell27-update" ] || upd="$BIN_DIR/shell27-install --update"
+    cat > "$UNIT_DIR/shell27-update.service" <<UNIT
 [Unit]
-Description=Update MacShell and MacLock from GitHub
+Description=Update shell27 and shell27-lock from GitHub
 After=network-online.target
 Wants=network-online.target
 
@@ -241,9 +243,9 @@ Wants=network-online.target
 Type=oneshot
 ExecStart=$upd
 UNIT
-    cat > "$UNIT_DIR/macshell-update.timer" <<UNIT
+    cat > "$UNIT_DIR/shell27-update.timer" <<UNIT
 [Unit]
-Description=Check for MacShell updates daily
+Description=Check for shell27 updates daily
 
 [Timer]
 OnCalendar=daily
@@ -254,10 +256,10 @@ Persistent=true
 WantedBy=timers.target
 UNIT
     systemctl --user daemon-reload
-    if systemctl --user enable --now macshell-update.timer >/dev/null 2>&1; then
-        ok "automatic updates on (daily): systemctl --user list-timers macshell-update.timer"
+    if systemctl --user enable --now shell27-update.timer >/dev/null 2>&1; then
+        ok "automatic updates on (daily): systemctl --user list-timers shell27-update.timer"
     else
-        warn "could not enable macshell-update.timer"
+        warn "could not enable shell27-update.timer"
     fi
 }
 
@@ -265,20 +267,20 @@ UNIT
 remove_hypr_blocks() {
     local f
     for f in "$HYPR_DIR/hyprland.lua"; do
-        [ -f "$f" ] && grep -qF -- "$MARK_BEGIN" "$f" && { sedi "\|$MARK_BEGIN|,\|$MARK_END|d" "$f"; ok "removed the MacShell block from $f"; }
+        [ -f "$f" ] && grep -qF -- "$MARK_BEGIN" "$f" && { sedi "\|$MARK_BEGIN|,\|$MARK_END|d" "$f"; ok "removed the shell27 block from $f"; }
     done
-    f="$HYPR_DIR/macshell.lua"
+    f="$HYPR_DIR/shell27.lua"
     if [ -f "$f" ] && grep -qF -- "$MACLUA_BEGIN" "$f"; then
-        if [ -f "$f.macshell-backup" ]; then mv -f "$f.macshell-backup" "$f"; else rm -f "$f"; fi
-        ok "removed the generated MacShell module from $f"
+        if [ -f "$f.shell27-backup" ]; then mv -f "$f.shell27-backup" "$f"; else rm -f "$f"; fi
+        ok "removed the generated shell27 module from $f"
     fi
     f="$HYPR_DIR/hyprland.conf"
-    [ -f "$f" ] && grep -qF -- "$CONF_BEGIN" "$f" && { sedi "\|$CONF_BEGIN|,\|$CONF_END|d" "$f"; ok "removed the MacShell block from $f"; }
+    [ -f "$f" ] && grep -qF -- "$CONF_BEGIN" "$f" && { sedi "\|$CONF_BEGIN|,\|$CONF_END|d" "$f"; ok "removed the shell27 block from $f"; }
     return 0
 }
 
 do_uninstall() {
-    step "Uninstalling MacShell"
+    step "Uninstalling shell27"
     if [ -d "$DEST" ]; then
         ts=$(date +%Y%m%d-%H%M%S); mkdir -p "$BACKUP_DIR/$ts"
         mv "$DEST" "$BACKUP_DIR/$ts/$NAME"; ok "moved $DEST to $BACKUP_DIR/$ts/"
@@ -291,11 +293,11 @@ do_uninstall() {
     fi
     remove_auto_update quiet
     remove_hypr_blocks
-    rm -rf "$GUI_DEST"; rm -f "$LINK_DIR/macshell-installer" "$BIN_DIR/macshell-installer" "$APPS_DIR/macshell-installer.desktop"
-    rm -f "$LINK_DIR/macshell-update" "$LINK_DIR/macshell-start" "$BIN_DIR/macshell-update" "$BIN_DIR/macshell-start" "$STATE_DIR/state.env"
+    rm -rf "$GUI_DEST"; rm -f "$LINK_DIR/shell27-installer" "$BIN_DIR/shell27-installer" "$APPS_DIR/shell27-installer.desktop"
+    rm -f "$LINK_DIR/shell27-update" "$LINK_DIR/shell27-start" "$BIN_DIR/shell27-update" "$BIN_DIR/shell27-start" "$STATE_DIR/state.env"
     ok "removed the update and start tools"
-    say "Your settings were kept (~/.config/macbar, macdock, macshell, macwidgets). The helper tree stays in $HYPR_MAC_DIR (remove it by hand if you like)."
-    say "If you added them yourself, remove the MacShell autostart and the MacLock lock keybind from your Hyprland config."
+    say "Your settings were kept (~/.config/macbar, macdock, shell27, macwidgets). The helper tree stays in $HYPR_MAC_DIR (remove it by hand if you like)."
+    say "If you added them yourself, remove the shell27 autostart and the shell27-lock lock keybind from your Hyprland config."
     exit 0
 }
 [ "$UNINSTALL" = 1 ] && do_uninstall
@@ -348,7 +350,7 @@ LIBS=(
     "qt6-wayland:Qt Wayland support"
     "qt6-svg:SVG app icons"
     "qt6-shadertools:shader tools"
-    "qt6-multimedia-ffmpeg|qt6-multimedia:QtMultimedia (video wallpapers; MacShell and MacLock fail to load without it)"
+    "qt6-multimedia-ffmpeg|qt6-multimedia:QtMultimedia (video wallpapers; shell27 and shell27-lock fail to load without it)"
     "upower:battery and power status (Quickshell UPower)"
     "inter-font|ttf-inter:the Inter font"
     "noto-fonts:fallback fonts"
@@ -359,7 +361,7 @@ LIBS=(
     "polkit:privilege prompts"
 )
 LIBS_LOCK=(
-    "hyprlock:the PAM stack MacLock checks passwords with (/etc/pam.d/hyprlock)"
+    "hyprlock:the PAM stack shell27-lock checks passwords with (/etc/pam.d/hyprlock)"
 )
 
 PM=""            # pacman | dnf | apt
@@ -547,7 +549,7 @@ has_inter_font() {
 }
 
 # QML modules the shell imports. A missing one makes Quickshell refuse to load the whole config, which shows up as
-# "MacShell is crashing on launch". module-folder:arch-package(s)
+# "shell27 is crashing on launch". module-folder:arch-package(s)
 QML_MODULES=(
     "QtMultimedia:qt6-multimedia-ffmpeg|qt6-multimedia"
     "QtQuick/Effects:qt6-declarative"
@@ -676,7 +678,7 @@ check_deps() {
         say ""
         say "  Missing packages (${PM}): ${repo[*]:-none}${extra:+  | other sources: ${extra[*]}}"
         if [ "$CAN_INSTALL" != 1 ]; then
-            warn "a newer MacShell may need: ${repo[*]:-} ${extra[*]:-}. Run the installer in a terminal to install them: bash install.sh --deps-only"
+            warn "a newer shell27 may need: ${repo[*]:-} ${extra[*]:-}. Run the installer in a terminal to install them: bash install.sh --deps-only"
         elif confirm "Install them now?" y; then
             if [ "${#repo[@]}" -gt 0 ]; then
                 offer_full_upgrade "${repo[@]}"
@@ -710,7 +712,7 @@ check_deps() {
             [ -n "$m" ] || continue
             warn "QML module not found: $(describe_missing_qml "$m")"; shown=1
         done <<<"$miss"
-        [ "$shown" = 1 ] && say "  ${D}(MacShell cannot load without these. If it starts fine anyway, your Qt keeps its modules somewhere unusual: ignore this.)${N}"
+        [ "$shown" = 1 ] && say "  ${D}(shell27 cannot load without these. If it starts fine anyway, your Qt keeps its modules somewhere unusual: ignore this.)${N}"
     else
         ok "QML modules (QtMultimedia, Quickshell services, ...) found"
     fi
@@ -727,7 +729,7 @@ check_deps() {
     return 0
 }
 
-# MacShell needs Hyprland 0.55+ (Lua config). Only a warning: the version can be unreadable outside a session.
+# shell27 needs Hyprland 0.55+ (Lua config). Only a warning: the version can be unreadable outside a session.
 check_hyprland_version() {
     local v="" maj min
     if have hyprctl; then v=$(hyprctl version 2>/dev/null | grep -oE 'v?[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1 || true); fi
@@ -735,7 +737,7 @@ check_hyprland_version() {
     [ -n "$v" ] || return 0
     v="${v#v}"; maj="${v%%.*}"; min="${v#*.}"; min="${min%%.*}"
     if [ "$maj" -eq 0 ] 2>/dev/null && [ "$min" -lt 55 ] 2>/dev/null; then
-        warn "Hyprland $v found: MacShell needs 0.55 or newer (Lua config). Window actions, Alt+Tab focus and the Settings window need it."
+        warn "Hyprland $v found: shell27 needs 0.55 or newer (Lua config). Window actions, Alt+Tab focus and the Settings window need it."
     else
         ok "Hyprland $v"
     fi
@@ -792,7 +794,7 @@ write_env_template() {
     mkdir -p "$ENV_DIR"
     [ -f "$ENV_DIR/env" ] && return 0
     cat > "$ENV_DIR/env" <<'ENVF'
-# MacShell environment. macshell-start reads this file before it starts the shell.
+# shell27 environment. shell27-start reads this file before it starts the shell.
 # One "export NAME=value" per line; remove the # to use a line.
 
 # Icon theme for the Dock and Spotlight. Left empty, the start script picks your GTK icon theme, else Papirus,
@@ -859,7 +861,7 @@ apply_low_power() {
     json_merge "$CONFIG_HOME/macbar/settings.json" '{"barStyle": "blur", "glassRealtime": false}' && ok2=1
     if [ "$ok1" = 1 ] && [ "$ok2" = 1 ]; then
         ok "live window capture, magnification and Liquid Glass are off"
-        say "  Restart MacShell (log out and in) so it reads them. Turn things back on in Settings."
+        say "  Restart shell27 (log out and in) so it reads them. Turn things back on in Settings."
     else
         warn "could not edit the settings files (python3 missing?). In Settings turn off: Dock Behavior > Live window capture, Magnification, and set the Menu Bar style to Normal Blur."
     fi
@@ -867,7 +869,7 @@ apply_low_power() {
 
 # ───────────────────────── is it running? what did it log? ─────────────────────────
 shell_running() { pgrep -u "$(id -u)" -f "(^|/)(qs|quickshell)( .*)? (-c|--config) $NAME( |\$)" >/dev/null 2>&1; }
-start_log() { printf '%s' "${XDG_STATE_HOME:-$HOME/.local/state}/macshell/$NAME.log"; }
+start_log() { printf '%s' "${XDG_STATE_HOME:-$HOME/.local/state}/shell27/$NAME.log"; }
 
 multimedia_hint() {
     [ -n "$PM" ] || detect_pm
@@ -892,7 +894,7 @@ diagnose_log() { # diagnose_log <log text>
     done < <(sed -n 's/.*module "\([^"]*\)" is not installed.*/\1/p' <<<"$t" | sort -u)
     if text_has "$t" 'failed to create (the )?(rhi|opengl|egl|vulkan)|could not (initialize|create) (the )?(opengl|egl|rhi|graphics)|rhi.*(fail|error)|eglcreate|libegl|libgl\.so|no (opengl|gpu)|glx'; then
         found=1
-        say "    -> a graphics problem. Try these one at a time in ~/.config/macshell/env (remove the #):"
+        say "    -> a graphics problem. Try these one at a time in ~/.config/shell27/env (remove the #):"
         say "         export QSG_RHI_BACKEND=opengl   then   export QSG_RENDER_LOOP=basic   then   export QT_QUICK_BACKEND=software"
         say "       and check that mesa and your GPU's driver are installed."
     fi
@@ -900,7 +902,7 @@ diagnose_log() { # diagnose_log <log text>
         found=1; say "    -> another notification daemon (dunst / mako / swaync) is running: stop it (bash install.sh offers to)"
     fi
     if text_has "$t" 'could not connect to display|failed to create wl_display|no wayland|wayland.*(no|not).*(compositor|display|socket)'; then
-        found=1; say "    -> MacShell needs a running Hyprland (Wayland) session: start it from inside Hyprland"
+        found=1; say "    -> shell27 needs a running Hyprland (Wayland) session: start it from inside Hyprland"
     fi
     if text_has "$t" 'undefined symbol|cannot open shared object|error while loading shared libraries|version .* not found'; then
         found=1; say "    -> a library mismatch, usually after a partial system upgrade: run  sudo pacman -Syu  (and rebuild quickshell if it comes from the AUR)"
@@ -909,37 +911,37 @@ diagnose_log() { # diagnose_log <log text>
         found=1; say "    -> Quickshell crashed. A crash report may be in ~/.cache/quickshell/crashes: include it and the log when you report this"
     fi
     if text_has "$t" 'syntaxerror|referenceerror|[a-z0-9_]+ is not a type|type [a-z0-9_]+ unavailable|unexpected token|parse error'; then
-        found=1; say "    -> a QML file did not load: run  bash install.sh  again (it replaces the shell files), or  macshell-update rollback"
+        found=1; say "    -> a QML file did not load: run  bash install.sh  again (it replaces the shell files), or  shell27-update rollback"
     fi
     [ "$found" = 1 ] || say "    -> no known cause in the log: run  qs -c $NAME  in a terminal to watch it start, and report what it prints"
     return 0
 }
 
-# Start MacShell and watch it for a few seconds. Quickshell refusing to load the config (a missing module, a bad graphics
+# Start shell27 and watch it for a few seconds. Quickshell refusing to load the config (a missing module, a bad graphics
 # driver) used to be invisible here: the installer printed "started" and the shell was already dead.
 start_and_verify() {
     have qs || return 1
     local log before=0 i up=0 gone=0 t
     log=$(start_log); mkdir -p "$(dirname "$log")" 2>/dev/null || true
     if [ -f "$log" ]; then before=$(wc -c <"$log" | tr -d ' '); fi
-    if have setsid; then setsid nohup sh "$LINK_DIR/macshell-start" >/dev/null 2>&1 &
-    else nohup sh "$LINK_DIR/macshell-start" >/dev/null 2>&1 &
+    if have setsid; then setsid nohup sh "$LINK_DIR/shell27-start" >/dev/null 2>&1 &
+    else nohup sh "$LINK_DIR/shell27-start" >/dev/null 2>&1 &
     fi
     if [ "$NO_VERIFY" = 1 ]; then ok "started"; return 0; fi
-    say "  starting MacShell (waiting a few seconds to see that it stays up) ..."
+    say "  starting shell27 (waiting a few seconds to see that it stays up) ..."
     for i in $(seq 1 50); do
         sleep 0.5
         if shell_running; then up=$((up + 1)); gone=0; else up=0; gone=$((gone + 1)); fi
         [ "$up" -ge 12 ] && break                      # alive for 6 seconds in a row
         # the start script gave up (it stops after repeated quick crashes) and nothing is running
-        if [ "$gone" -ge 6 ] && ! pgrep -u "$(id -u)" -f 'sh .*macshell-start' >/dev/null 2>&1; then break; fi
+        if [ "$gone" -ge 6 ] && ! pgrep -u "$(id -u)" -f 'sh .*shell27-start' >/dev/null 2>&1; then break; fi
     done
-    if [ "$up" -ge 12 ]; then ok "MacShell is running"; return 0; fi
-    warn "MacShell did not stay up. What it logged ($log):"
+    if [ "$up" -ge 12 ]; then ok "shell27 is running"; return 0; fi
+    warn "shell27 did not stay up. What it logged ($log):"
     t=$(tail -c +$((before + 1)) "$log" 2>/dev/null | tail -n 40 || true)
     if [ -n "$t" ]; then printf '%s\n' "$t" | tail -n 15 | sed 's/^/      /'; fi
     diagnose_log "$t"
-    say "  After fixing it:  sh $LINK_DIR/macshell-start      (or:  bash install.sh --doctor)"
+    say "  After fixing it:  sh $LINK_DIR/shell27-start      (or:  bash install.sh --doctor)"
     return 1
 }
 
@@ -948,7 +950,7 @@ stop_conflicts() {
     local d unit_on
     for d in dunst mako swaync; do
         pgrep -x "$d" >/dev/null 2>&1 || continue
-        if confirm "$d is running and owns the notification service (MacShell shows notifications itself). Stop and disable it?" y; then
+        if confirm "$d is running and owns the notification service (shell27 shows notifications itself). Stop and disable it?" y; then
             unit_on=0
             if have systemctl && { systemctl --user is-enabled --quiet "$d.service" 2>/dev/null || systemctl --user is-active --quiet "$d.service" 2>/dev/null; }; then unit_on=1; fi
             if [ "$unit_on" = 1 ]; then systemctl --user disable --now "$d.service" >/dev/null 2>&1 || true; fi
@@ -958,22 +960,22 @@ stop_conflicts() {
             else ok "$d stopped"; fi
             [ "$unit_on" = 1 ] || say "  $d was not started by systemd: remove it from your Hyprland autostart as well"
         else
-            warn "$d keeps the notification service: MacShell cannot show notifications until it is stopped (systemctl --user disable --now $d)"
+            warn "$d keeps the notification service: shell27 cannot show notifications until it is stopped (systemctl --user disable --now $d)"
         fi
     done
     for d in waybar hyprpanel; do
         pgrep -x "$d" >/dev/null 2>&1 || continue
-        warn "$d is running: MacShell has its own menu bar, they overlap. Remove $d from your Hyprland autostart."
+        warn "$d is running: shell27 has its own menu bar, they overlap. Remove $d from your Hyprland autostart."
         if confirm "Quit $d for this session now?" n; then pkill -x "$d" >/dev/null 2>&1 || true; fi
     done
     return 0
 }
 
-# does this Hyprland config start MacShell? (directly, or through the generated macshell.lua module)
+# does this Hyprland config start shell27? (directly, or through the generated shell27.lua module)
 autostart_present() { # autostart_present <config file>
-    local f="$1" m="$HYPR_DIR/macshell.lua" pat="macshell-start|(qs|quickshell)[[:space:]]+(-c|--config)[[:space:]]+$NAME"
+    local f="$1" m="$HYPR_DIR/shell27.lua" pat="shell27-start|(qs|quickshell)[[:space:]]+(-c|--config)[[:space:]]+$NAME"
     grep -Eq "$pat" "$f" 2>/dev/null && return 0
-    if grep -Eq "require[[:space:]]*\\(?[[:space:]]*[\"']macshell[\"']" "$f" 2>/dev/null && [ -f "$m" ] && grep -Eq "$pat" "$m" 2>/dev/null; then
+    if grep -Eq "require[[:space:]]*\\(?[[:space:]]*[\"']shell27[\"']" "$f" 2>/dev/null && [ -f "$m" ] && grep -Eq "$pat" "$m" 2>/dev/null; then
         return 0
     fi
     return 1
@@ -995,16 +997,16 @@ detect_icon_theme() {
 }
 
 run_doctor() {
-    step "MacShell doctor"
+    step "shell27 doctor"
     local bad=0 t u miss m log tail_txt
     detect_pm
     d_ok()  { ok "$*"; }
     d_bad() { warn "$*"; bad=$((bad+1)); }
 
     # install
-    if [ -f "$DEST/shell.qml" ]; then d_ok "MacShell is installed ($DEST, $(state_get installed | cut -c1-12))"; else d_bad "MacShell is not installed in $DEST: run  bash install.sh"; fi
-    [ -f "$LOCK_DEST/shell.qml" ] && d_ok "MacLock is installed" || say "  ${D}- MacLock is not installed${N}"
-    [ -x "$LINK_DIR/macshell-start" ] && d_ok "start script: $LINK_DIR/macshell-start" || d_bad "macshell-start is missing: run  bash install.sh  again"
+    if [ -f "$DEST/shell.qml" ]; then d_ok "shell27 is installed ($DEST, $(state_get installed | cut -c1-12))"; else d_bad "shell27 is not installed in $DEST: run  bash install.sh"; fi
+    [ -f "$LOCK_DEST/shell.qml" ] && d_ok "shell27-lock is installed" || say "  ${D}- shell27-lock is not installed${N}"
+    [ -x "$LINK_DIR/shell27-start" ] && d_ok "start script: $LINK_DIR/shell27-start" || d_bad "shell27-start is missing: run  bash install.sh  again"
     case ":$PATH:" in *":$LINK_DIR:"*) d_ok "$LINK_DIR is in PATH" ;; *) d_bad "$LINK_DIR is not in your PATH (add it to ~/.profile or your shell config, or run the tools with their full path)" ;; esac
 
     # session
@@ -1012,37 +1014,37 @@ run_doctor() {
     check_hyprland_version
     if [ -f "$HYPR_DIR/hyprland.lua" ]; then
         if autostart_present "$HYPR_DIR/hyprland.lua"; then d_ok "autostart is in hyprland.lua"
-        else d_bad "hyprland.lua does not start MacShell: run  bash install.sh  to add the autostart"; fi
-        if [ -f "$HYPR_DIR/hyprland.conf" ] && grep -q 'exec-once.*\(macshell\|MacShell\)' "$HYPR_DIR/hyprland.conf"; then
-            warn "hyprland.conf also has a MacShell line, but Hyprland reads hyprland.lua and ignores it"; fi
+        else d_bad "hyprland.lua does not start shell27: run  bash install.sh  to add the autostart"; fi
+        if [ -f "$HYPR_DIR/hyprland.conf" ] && grep -q 'exec-once.*\(shell27\|shell27\)' "$HYPR_DIR/hyprland.conf"; then
+            warn "hyprland.conf also has a shell27 line, but Hyprland reads hyprland.lua and ignores it"; fi
     elif [ -f "$HYPR_DIR/hyprland.conf" ]; then
         if autostart_present "$HYPR_DIR/hyprland.conf"; then d_ok "autostart is in hyprland.conf"
-        else d_bad "hyprland.conf does not start MacShell: run  bash install.sh  to add the autostart"; fi
+        else d_bad "hyprland.conf does not start shell27: run  bash install.sh  to add the autostart"; fi
     else
         d_bad "no Hyprland config found in $HYPR_DIR"
     fi
     if shell_running; then
-        d_ok "MacShell is running"
+        d_ok "shell27 is running"
     else
-        say "  ${D}- MacShell is not running right now${N}"
+        say "  ${D}- shell27 is not running right now${N}"
         log=$(start_log)
         if [ -s "$log" ]; then
             tail_txt=$(tail -n 80 "$log" 2>/dev/null || true)
             if text_has "$tail_txt" 'error|failed|crash|not installed|segmentation|abort|cannot open'; then
-                d_bad "the last start of MacShell logged errors ($log):"
+                d_bad "the last start of shell27 logged errors ($log):"
                 printf '%s\n' "$tail_txt" | tail -n 12 | sed 's/^/      /'
                 diagnose_log "$tail_txt"
             fi
         fi
     fi
-    if [ -s "${XDG_STATE_HOME:-$HOME/.local/state}/macshell/auto-env" ]; then
-        say "  ${D}- MacShell runs with fallback graphics settings it chose after crashing ($(tr '\n' ' ' < "${XDG_STATE_HOME:-$HOME/.local/state}/macshell/auto-env")): delete ${XDG_STATE_HOME:-~/.local/state}/macshell/auto-env to go back to the defaults${N}"
+    if [ -s "${XDG_STATE_HOME:-$HOME/.local/state}/shell27/auto-env" ]; then
+        say "  ${D}- shell27 runs with fallback graphics settings it chose after crashing ($(tr '\n' ' ' < "${XDG_STATE_HOME:-$HOME/.local/state}/shell27/auto-env")): delete ${XDG_STATE_HOME:-~/.local/state}/shell27/auto-env to go back to the defaults${N}"
     fi
 
     # environment
     if [ -n "${QS_ICON_THEME:-}" ]; then d_ok "icon theme (QS_ICON_THEME): $QS_ICON_THEME"
     elif [ -n "${QT_QPA_PLATFORMTHEME:-}" ]; then d_ok "icon theme comes from the Qt platform theme ($QT_QPA_PLATFORMTHEME)"
-    elif t=$(detect_icon_theme); then d_ok "icon theme: $t (macshell-start sets QS_ICON_THEME for the shell)"
+    elif t=$(detect_icon_theme); then d_ok "icon theme: $t (shell27-start sets QS_ICON_THEME for the shell)"
     else d_bad "no icon theme found: Dock icons will be blank. Install one (sudo pacman -S papirus-icon-theme)"; fi
     [ -f "$ENV_DIR/env" ] && d_ok "your environment file: $ENV_DIR/env" || say "  ${D}- no $ENV_DIR/env yet (the installer creates it)${N}"
     if has_inter_font; then d_ok "Inter font"; else d_bad "Inter font missing (sudo pacman -S inter-font)"; fi
@@ -1052,7 +1054,7 @@ run_doctor() {
     if have lspci; then lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -n2 | sed 's/^/    GPU: /' || true; fi
     if [ -f "$DEST/liquidglass.frag.qsb" ]; then d_ok "Liquid Glass shader is built"; else d_bad "liquidglass.frag.qsb is missing: install qt6-shadertools and run bash install.sh"; fi
     if [ -f "$LOCK_DEST/shell.qml" ]; then
-        if [ -f "$LOCK_DEST/liquidglass.frag.qsb" ]; then d_ok "MacLock shaders are built"; else d_bad "MacLock's liquidglass.frag.qsb is missing: install qt6-shadertools and run bash install.sh"; fi
+        if [ -f "$LOCK_DEST/liquidglass.frag.qsb" ]; then d_ok "shell27-lock shaders are built"; else d_bad "shell27-lock's liquidglass.frag.qsb is missing: install qt6-shadertools and run bash install.sh"; fi
     fi
     miss=$(missing_qml_modules)
     if [ -z "$miss" ]; then
@@ -1074,15 +1076,15 @@ run_doctor() {
             done
         fi
     fi
-    [ -e /etc/pam.d/hyprlock ] && d_ok "/etc/pam.d/hyprlock (MacLock passwords)" || d_bad "/etc/pam.d/hyprlock is missing: install hyprlock"
+    [ -e /etc/pam.d/hyprlock ] && d_ok "/etc/pam.d/hyprlock (shell27-lock passwords)" || d_bad "/etc/pam.d/hyprlock is missing: install hyprlock"
 
     # helper scripts
-    for u in macshell-setwall.sh macshell-gaming.sh macshell-wallpause.sh macshell-wallpaper.sh; do
+    for u in shell27-setwall.sh shell27-gaming.sh shell27-wallpause.sh shell27-wallpaper.sh; do
         if [ -x "$SCRIPTS_DIR/$u" ]; then d_ok "helper: $u"; else d_bad "helper script missing: $SCRIPTS_DIR/$u (video wallpapers / Game Mode need it): run  bash install.sh"; fi
     done
     if [ -f "$LOCK_DEST/shell.qml" ]; then
         if [ -x "$LOCK_DEST/lock-via-ipc.sh" ]; then d_ok "lock helper: lock-via-ipc.sh"; else d_bad "$LOCK_DEST/lock-via-ipc.sh is missing or not executable: run  bash install.sh"; fi
-        if [ -x "$SCRIPTS_DIR/maclock.sh" ]; then d_ok "helper: maclock.sh"; else d_bad "helper script missing: $SCRIPTS_DIR/maclock.sh (older hypridle / keybind setups call it): run  bash install.sh"; fi
+        if [ -x "$SCRIPTS_DIR/shell27-lock.sh" ]; then d_ok "helper: shell27-lock.sh"; else d_bad "helper script missing: $SCRIPTS_DIR/shell27-lock.sh (older hypridle / keybind setups call it): run  bash install.sh"; fi
     fi
     have mpvpaper && d_ok "mpvpaper is installed" || say "  ${D}- mpvpaper is not installed (animated wallpapers)${N}"
     have jq || d_bad "jq is missing (the wallpaper helpers read settings with it)"
@@ -1090,7 +1092,7 @@ run_doctor() {
     # wallpaper
     if have awww; then
         d_ok "awww is installed"
-        if awww query >/dev/null 2>&1; then d_ok "awww daemon is running"; else say "  ${D}- awww daemon is not running (macshell-start / the shell start it)${N}"; fi
+        if awww query >/dev/null 2>&1; then d_ok "awww daemon is running"; else say "  ${D}- awww daemon is not running (shell27-start / the shell start it)${N}"; fi
         if grep -q '"wpRestorePath"' "$CONFIG_HOME/macbar/settings.json" 2>/dev/null; then d_ok "the shell remembers your wallpaper and puts it back at login"
         else say "  ${D}- pick a wallpaper once in the wallpaper picker: the shell then restores it after every reboot${N}"; fi
     else
@@ -1099,7 +1101,7 @@ run_doctor() {
 
     # conflicts
     for u in waybar hyprpanel ags dunst mako swaync nwg-dock-hyprland; do
-        if pgrep -x "$u" >/dev/null 2>&1; then d_bad "$u is running and overlaps with MacShell (stop it: bash install.sh offers to, or  systemctl --user disable --now $u;  dunst / mako / swaync also own the notification service)"; fi
+        if pgrep -x "$u" >/dev/null 2>&1; then d_bad "$u is running and overlaps with shell27 (stop it: bash install.sh offers to, or  systemctl --user disable --now $u;  dunst / mako / swaync also own the notification service)"; fi
     done
 
     # version
@@ -1118,14 +1120,14 @@ run_doctor() {
 }
 
 # ───────────────────────── menu (every interactive run) ─────────────────────────
-BIND_HELP_URL="https://github.com/0-ss/MacShell#hyprland-configuration-lua"
+BIND_HELP_URL="https://github.com/hnpf/shell27#hyprland-configuration-lua"
 maybe_menu() {
     [ "$MODE_FLAG" = 1 ] || [ "$ASSUME_YES" = 1 ] && return 0
     [ -r /dev/tty ] && [ -w /dev/tty ] || return 0
     local inst ans latest
     inst=$(installed_version); inst="${inst:-$(state_get installed)}"
     say ""
-    if [ -f "$STATE_DIR/state.env" ] && [ -d "$DEST" ]; then say "${B}MacShell${N} (installed: ${inst:-unknown})"; else say "${B}MacShell${N} (not installed yet)"; fi
+    if [ -f "$STATE_DIR/state.env" ] && [ -d "$DEST" ]; then say "${B}shell27${N} (installed: ${inst:-unknown})"; else say "${B}shell27${N} (not installed yet)"; fi
     {
         printf '\n  1) Install shell\n'
         printf '  2) Check for updates\n'
@@ -1145,7 +1147,7 @@ maybe_menu() {
             if ! try_resolve; then warn "could not reach GitHub (repo $REPO), check your connection"; exit 1; fi
             latest="${RESOLVED_VER:-$RESOLVED_ID}"
             if [ ! -f "$STATE_DIR/state.env" ] || [ ! -d "$DEST" ]; then
-                say "  MacShell is not installed (latest: ${latest:0:12})"
+                say "  shell27 is not installed (latest: ${latest:0:12})"
                 confirm "Install it now?" y && return 0
                 exit 0
             fi
@@ -1157,7 +1159,7 @@ maybe_menu() {
             exit 0
             ;;
         3)
-            confirm "Remove MacShell and MacLock (your settings are kept)?" n && do_uninstall
+            confirm "Remove shell27 and shell27-lock (your settings are kept)?" n && do_uninstall
             exit 0
             ;;
         4)
@@ -1176,10 +1178,10 @@ CURL=(curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused)
 gh_api() { # gh_api <accept> <url>
     "${CURL[@]}" --max-time 20 ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} -H "Accept: $1" "$2"
 }
-# The version number also lives in AboutApp.qml ("MacShell 0.3.8") and the VERSION file is easy to forget: take the highest.
+# The version number also lives in AboutApp.qml ("shell27 0.x.x") and the VERSION file is easy to forget: take the highest.
 qml_ver() { # qml_ver <AboutApp.qml>
     [ -f "$1" ] || return 0
-    grep -oE 'MacShell [0-9]+(\.[0-9]+)+' "$1" 2>/dev/null | head -n1 | cut -d' ' -f2 || true
+    grep -oE 'shell27 [0-9]+(\.[0-9]+)+' "$1" 2>/dev/null | head -n1 | cut -d' ' -f2 || true
 }
 max_ver() { # max_ver <version>...: the highest valid one
     local best="" v
@@ -1213,13 +1215,13 @@ latest_release() {
 # the VERSION file on the main branch of the repository
 remote_version() {
     local p v="" found=()
-    for p in MacShell/VERSION VERSION; do
+    for p in shell27/VERSION VERSION; do
         v=$("${CURL[@]}" --max-time 20 "https://raw.githubusercontent.com/$REPO/$BRANCH/$p" 2>/dev/null | head -n1 | tr -d ' \t\r\n' || true)
         found+=("$v")
     done
-    for p in MacShell/AboutApp.qml AboutApp.qml; do
+    for p in shell27/AboutApp.qml AboutApp.qml; do
         v=$("${CURL[@]}" --max-time 20 "https://raw.githubusercontent.com/$REPO/$BRANCH/$p" 2>/dev/null \
-            | grep -oE 'MacShell [0-9]+(\.[0-9]+)+' | head -n1 | cut -d' ' -f2 || true)
+            | grep -oE 'shell27 [0-9]+(\.[0-9]+)+' | head -n1 | cut -d' ' -f2 || true)
         found+=("$v")
     done
     max_ver "${found[@]}"
@@ -1289,13 +1291,13 @@ run_check() {
     fi
     say "  installed: ${inst:0:12}"
     say "  latest:    ${latest:0:12} ($RESOLVED_TYPE)"
-    say "  Update available. Run ./install.sh, or: macshell-install --update"
+    say "  Update available. Run ./install.sh, or: shell27-install --update"
     exit 10
 }
 
-# the folder of one component. A component is a folder called <name> that holds shell.qml (e.g. MacShell/, MacLock/),
-# found anywhere near the top of the source. For MacShell only, a shell.qml that sits in the repository root
-# (and is not inside the MacLock folder) is accepted too.
+# the folder of one component. A component is a folder called <name> that holds shell.qml (e.g. shell27/, shell27-lock/),
+# found anywhere near the top of the source. For shell27 only, a shell.qml that sits in the repository root
+# (and is not inside the shell27-lock folder) is accepted too.
 find_component_root() { # find_component_root <source-root> <name> [allow-root-fallback]
     local src="$1" name="$2" f
     f=$(find "$src" -maxdepth 3 -type f -name shell.qml -path "*/$name/shell.qml" -not -path '*/.git/*' 2>/dev/null \
@@ -1322,7 +1324,7 @@ fetch_source() {
     local here="${BASH_SOURCE[0]:-}"
     if [ -z "$REF" ] && [ -n "$here" ] && [ -f "$here" ]; then
         local d; d=$(cd "$(dirname "$here")" && pwd)
-        if [ -f "$d/shell.qml" ] || [ -f "$d/MacShell/shell.qml" ] || [ -f "$d/MacLock/shell.qml" ]; then
+        if [ -f "$d/shell.qml" ] || [ -f "$d/shell27/shell.qml" ] || [ -f "$d/shell27-lock/shell.qml" ]; then
             SRC_ROOT="$d"
             if git -C "$d" rev-parse --short HEAD >/dev/null 2>&1; then
                 RESOLVED_ID=$(git -C "$d" rev-parse HEAD); RESOLVED_TYPE="commit"
@@ -1366,12 +1368,12 @@ backup_current() { # backup_current <dest> <name>
     ls -1dt "$BACKUP_DIR"/*/ 2>/dev/null | tail -n +4 | while read -r old; do rm -rf "$old"; done
 }
 
-# repository files that are not part of a Quickshell config (MacLock is excluded so it never ends up inside MacShell)
-EXCLUDES=(.git .github install.sh macshell-update macshell-start hypr-macshell README.md README LICENSE LICENSE.md docs screenshots scripts sounds "$LOCK_NAME" "$GUI_NAME")
+# repository files that are not part of a Quickshell config (shell27-lock is excluded so it never ends up inside shell27)
+EXCLUDES=(.git .github install.sh shell27-update shell27-start hypr-shell27 README.md README LICENSE LICENSE.md docs screenshots scripts sounds "$LOCK_NAME" "$GUI_NAME" assets/fonts/AppleColorEmoji-Linux.ttf)
 LOCK_EXCLUDES=(.git .github)
 
 # the destination is emptied of files the source does not have (rsync --delete): refuse folders that are obviously not a
-# shell's own config folder (a mistyped MACSHELL_DEST=$HOME would otherwise be wiped)
+# shell's own config folder (a mistyped SHELL27_DEST=$HOME would otherwise be wiped)
 safe_dest() { # safe_dest <path> <variable name>
     local p="${1%/}"
     case "$p" in
@@ -1407,15 +1409,15 @@ sync_files() { # sync_files <source-folder> <dest> <exclude>...
 # restarts the shell when it crashes (and gives up when it dies right away over and over)
 write_start_script() {
     mkdir -p "$BIN_DIR" "$LINK_DIR"
-    cat > "$BIN_DIR/.macshell-start.new" <<'START'
+    cat > "$BIN_DIR/.shell27-start.new" <<'START'
 #!/bin/sh
-# macshell-start: starts MacShell for the Hyprland session (the autostart line runs this).
-#   macshell-start [ConfigName]      default: MacShell
-# Your own environment variables go in ~/.config/macshell/env   (for example: export QS_ICON_THEME=Papirus)
-# Everything the shell prints is kept in ~/.local/state/macshell/<ConfigName>.log
-NAME="${1:-MacShell}"
+# shell27-start: starts shell27 for the Hyprland session (the autostart line runs this).
+#   shell27-start [ConfigName]      default: shell27
+# Your own environment variables go in ~/.config/shell27/env   (for example: export QS_ICON_THEME=Papirus)
+# Everything the shell prints is kept in ~/.local/state/shell27/<ConfigName>.log
+NAME="${1:-shell27}"
 CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
-STATE="${XDG_STATE_HOME:-$HOME/.local/state}/macshell"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/shell27"
 LOG="$STATE/$NAME.log"
 AUTO="$STATE/auto-env"
 PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"; export PATH
@@ -1423,9 +1425,9 @@ PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"; export PATH
 mkdir -p "$STATE" 2>/dev/null
 # keep the log small
 if [ -f "$LOG" ] && [ "$(wc -c < "$LOG" 2>/dev/null | tr -d ' ')" -gt 1048576 ] 2>/dev/null; then mv -f "$LOG" "$LOG.old" 2>/dev/null; fi
-log() { printf '%s macshell-start: %s\n' "$(date '+%F %T')" "$*" >> "$LOG" 2>/dev/null; }
+log() { printf '%s shell27-start: %s\n' "$(date '+%F %T')" "$*" >> "$LOG" 2>/dev/null; }
 
-command -v qs >/dev/null 2>&1 || { echo "macshell-start: qs (quickshell) not found in PATH" >&2; log "qs (quickshell) not found in PATH"; exit 1; }
+command -v qs >/dev/null 2>&1 || { echo "shell27-start: qs (quickshell) not found in PATH" >&2; log "qs (quickshell) not found in PATH"; exit 1; }
 
 # wait (up to 20 s) until the Wayland socket exists
 i=0
@@ -1444,7 +1446,7 @@ export XDG_SESSION_DESKTOP="${XDG_SESSION_DESKTOP:-Hyprland}"
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
 # graphics settings this script picked by itself after crashes (lowest priority), then your own settings, which win
 if [ -f "$AUTO" ]; then set -a; . "$AUTO"; set +a; fi
-if [ -f "$CONF/macshell/env" ]; then set -a; . "$CONF/macshell/env"; set +a; fi
+if [ -f "$CONF/shell27/env" ]; then set -a; . "$CONF/shell27/env"; set +a; fi
 # icon theme: yours (QS_ICON_THEME or qt6ct), else the GTK one, else the first well-known theme that is installed
 if [ -z "${QS_ICON_THEME:-}" ] && [ -z "${QT_QPA_PLATFORMTHEME:-}" ]; then
     has_theme() { [ -f "/usr/share/icons/$1/index.theme" ] || [ -f "$HOME/.local/share/icons/$1/index.theme" ] || [ -f "$HOME/.icons/$1/index.theme" ]; }
@@ -1507,33 +1509,75 @@ while :; do
     log "qs exited with code $rc after $((now - start)) s"
     if [ $((now - start)) -lt 5 ]; then fast=$((fast + 1)); else fast=0; fi
     if [ "$fast" -ge 6 ]; then
-        msg="MacShell keeps crashing right after it starts. See $LOG   (or run:  qs -c $NAME   and  bash install.sh --doctor)"
-        echo "macshell-start: $msg" >&2
+        msg="shell27 keeps crashing right after it starts. See $LOG   (or run:  qs -c $NAME   and  bash install.sh --doctor)"
+        echo "shell27-start: $msg" >&2
         log "giving up: $msg"
-        command -v notify-send >/dev/null 2>&1 && notify-send -u critical "MacShell" "$msg"
+        command -v notify-send >/dev/null 2>&1 && notify-send -u critical "shell27" "$msg"
         exit 1
     fi
     sleep 1
 done
 START
-    chmod +x "$BIN_DIR/.macshell-start.new" && mv -f "$BIN_DIR/.macshell-start.new" "$BIN_DIR/macshell-start"
-    ln -sf "$BIN_DIR/macshell-start" "$LINK_DIR/macshell-start"
+    chmod +x "$BIN_DIR/.shell27-start.new" && mv -f "$BIN_DIR/.shell27-start.new" "$BIN_DIR/shell27-start"
+    ln -sf "$BIN_DIR/shell27-start" "$LINK_DIR/shell27-start"
 }
 
-# Find the helper tree (a folder called hypr-macshell near the top of the source).
+# Find the helper tree (a folder called hypr-shell27 near the top of the source).
 find_hypr_root() { # find_hypr_root <source-root>
     local d
-    d=$(find "$1" -maxdepth 3 -type d -name hypr-macshell -not -path '*/.git/*' 2>/dev/null \
+    d=$(find "$1" -maxdepth 3 -type d -name hypr-shell27 -not -path '*/.git/*' 2>/dev/null \
         | awk '{ print length($0) " " $0 }' | sort -n | head -n1 | cut -d' ' -f2-)
     [ -n "$d" ] && printf '%s' "$d"
 }
 
-# Copy the helper tree into ~/.config/hypr-macshell. Files that ship with MacShell are updated; the user's own
+install_apple_emoji_font() {
+    local root="$1" source="${SHELL27_APPLE_EMOJI_PATH:-}" target="$DATA_HOME/fonts/apple-emoji/AppleColorEmoji-Linux.ttf" download=""
+    local font_url="${SHELL27_APPLE_EMOJI_URL:-https://github.com/samuelngs/apple-emoji-ttf/releases/download/macos-26-20260722-484daf4e/AppleColorEmoji-Linux.ttf}"
+    local expected_sha="${SHELL27_APPLE_EMOJI_SHA256:-e37c7af6265ac4a0af6d57bc65e86109a776d9966e8343334557f63da482516f}" actual_sha
+    if [ -n "$source" ] && [ ! -s "$source" ]; then
+        warn "SHELL27_APPLE_EMOJI_PATH is not a readable font file; looking for a local copy"
+        source=""
+    fi
+    if [ -z "$source" ]; then
+        for candidate in "$root/shell27/assets/fonts/AppleColorEmoji-Linux.ttf" "$root/assets/fonts/AppleColorEmoji-Linux.ttf"; do
+            if [ -s "$candidate" ]; then source="$candidate"; break; fi
+        done
+    fi
+    if [ -z "$source" ] && [ ! -s "$target" ]; then
+        download=$(mktemp) || { warn "could not create a temporary file for the Apple emoji font"; return 1; }
+        if ! curl -fL --retry 3 --retry-delay 2 "$font_url" -o "$download" || [ ! -s "$download" ]; then
+            warn "could not download the Apple emoji font"
+            rm -f "$download"
+            return 1
+        fi
+        actual_sha=$(sha256sum "$download" | cut -d' ' -f1)
+        if [ "$actual_sha" != "$expected_sha" ]; then
+            warn "Apple emoji font checksum mismatch; refusing to install it"
+            rm -f "$download"
+            return 1
+        fi
+        source="$download"
+    fi
+    if [ -n "$source" ]; then
+        mkdir -p "$(dirname "$target")"
+        if [ "$source" != "$target" ] && ! cmp -s "$source" "$target"; then cp -f "$source" "$target" || { [ -z "$download" ] || rm -f "$download"; warn "could not install the Apple emoji font"; return 1; }; fi
+        [ -z "$download" ] || rm -f "$download"
+    fi
+    if [ -s "$target" ]; then
+        have fc-cache && fc-cache -f "$DATA_HOME/fonts/apple-emoji" >/dev/null 2>&1 || true
+        ok "Apple Color Emoji font -> $target"
+        return 0
+    fi
+    warn "Apple Color Emoji font is unavailable; provide SHELL27_APPLE_EMOJI_PATH or SHELL27_APPLE_EMOJI_URL to install it"
+    return 1
+}
+
+# Copy the helper tree into ~/.config/hypr-shell27. Files that ship with shell27 are updated; the user's own
 # custom/ folder is only filled in where files are missing, and extra files the user added are never deleted.
-install_hypr_tree() { # install_hypr_tree <hypr-macshell source folder>
+install_hypr_tree() { # install_hypr_tree <hypr-shell27 source folder>
     local src="$1" f n
     [ -d "$src/scripts" ] || return 1
-    backup_current "$HYPR_MAC_DIR" hypr-macshell
+    backup_current "$HYPR_MAC_DIR" hypr-shell27
     mkdir -p "$HYPR_MAC_DIR"
     if have rsync; then
         rsync -a --exclude=/custom/ "$src"/ "$HYPR_MAC_DIR"/
@@ -1554,7 +1598,7 @@ install_hypr_tree() { # install_hypr_tree <hypr-macshell source folder>
     # enable-sleep-lock.sh) changed is never overwritten
     if [ -f "$HYPR_MAC_DIR/hypridle.conf" ]; then install_managed "$HYPR_MAC_DIR/hypridle.conf" "$HYPR_DIR/hypridle.conf"; fi
     find "$HYPR_MAC_DIR" -type f \( -name '*.sh' -o -name '*.py' \) -exec chmod +x {} + 2>/dev/null || true
-    n=$(find "$HYPR_MAC_DIR/scripts" -maxdepth 1 -type f \( -name 'macshell-*.sh' -o -name 'macshell-*.py' \) | wc -l)
+    n=$(find "$HYPR_MAC_DIR/scripts" -maxdepth 1 -type f \( -name 'shell27-*.sh' -o -name 'shell27-*.py' \) | wc -l)
     ok "$n helper script(s) -> $SCRIPTS_DIR"
     ok "session config, hypridle / hyprlock files -> $HYPR_MAC_DIR"
     # app launchers (Finder, Photos, Clock, ...)
@@ -1571,11 +1615,16 @@ install_hypr_tree() { # install_hypr_tree <hypr-macshell source folder>
         for f in "$src"/icons/*.svg; do [ -f "$f" ] && { cp -f "$f" "$ICONS_DIR/"; n=$((n+1)); }; done
         [ "$n" -gt 0 ] && { ok "$n icon(s) -> $ICONS_DIR"; have gtk-update-icon-cache && gtk-update-icon-cache -q -t "$DATA_HOME/icons/hicolor" >/dev/null 2>&1 || true; }
     fi
-    # Apple emoji font preference
+    # Apple emoji font preference is enabled only when the font itself is installed.
     if [ -f "$src/75-apple-emoji.conf" ]; then
-        mkdir -p "$FONTCONF_DIR"; cp -f "$src/75-apple-emoji.conf" "$FONTCONF_DIR/"
-        have fc-cache && fc-cache -f >/dev/null 2>&1 || true
-        ok "emoji font rule -> $FONTCONF_DIR"
+        if [ -s "$DATA_HOME/fonts/apple-emoji/AppleColorEmoji-Linux.ttf" ]; then
+            mkdir -p "$FONTCONF_DIR"; cp -f "$src/75-apple-emoji.conf" "$FONTCONF_DIR/"
+            have fc-cache && fc-cache -f >/dev/null 2>&1 || true
+            ok "emoji font rule -> $FONTCONF_DIR"
+        elif [ -f "$FONTCONF_DIR/75-apple-emoji.conf" ] && cmp -s "$src/75-apple-emoji.conf" "$FONTCONF_DIR/75-apple-emoji.conf"; then
+            rm -f "$FONTCONF_DIR/75-apple-emoji.conf"
+            have fc-cache && fc-cache -f >/dev/null 2>&1 || true
+        fi
     fi
     return 0
 }
@@ -1595,19 +1644,19 @@ install_managed() {
     if [ -n "$rec" ] && [ "$cur" = "$rec" ]; then
         cp -f "$src" "$dst"; printf '%s\n' "$sum" > "$STATE_DIR/managed/$key"; return 0
     fi
-    say "  ${D}- $dst has your own changes: left as it is (MacShell's version: $src)${N}"
+    say "  ${D}- $dst has your own changes: left as it is (shell27's version: $src)${N}"
     return 0
 }
 
-# MacLock is locked through lock-via-ipc.sh; maclock.sh is the older name that hypridle setups and keybinds still call
-ensure_maclock_shim() {
+# shell27-lock is locked through lock-via-ipc.sh; shell27-lock.sh is the older name that hypridle setups and keybinds still call
+ensure_shell27_lock_shim() {
     [ -n "${LOCK_ROOT:-}" ] || return 0
-    local f="$SCRIPTS_DIR/maclock.sh"
+    local f="$SCRIPTS_DIR/shell27-lock.sh"
     [ -e "$f" ] && return 0
     mkdir -p "$SCRIPTS_DIR"
     cat > "$f" <<SHIM
 #!/bin/sh
-# maclock.sh: lock the screen now (kept so older hypridle / keybind setups keep working).
+# shell27-lock.sh: lock the screen now (kept so older hypridle / keybind setups keep working).
 exec sh "$LOCK_DEST/lock-via-ipc.sh" "\$@"
 SHIM
     chmod +x "$f"
@@ -1617,26 +1666,33 @@ SHIM
 # a zip download (instead of a git clone / release tarball) loses the executable bit
 fix_modes() { # fix_modes <installed folder>
     [ -d "$1" ] || return 0
-    find "$1" -type f \( -name '*.sh' -o -name '*.py' -o -name macshell-update \) -exec chmod +x {} + 2>/dev/null || true
+    find "$1" -type f \( -name '*.sh' -o -name '*.py' -o -name shell27-update \) -exec chmod +x {} + 2>/dev/null || true
     return 0
 }
 
 install_extras() {
     local root="$1" f n hroot
+    install_apple_emoji_font "$root" || true
     # helper tree: scripts (Game Mode, video wallpapers, AirDrop, lock), session config, launchers, icons
     hroot=$(find_hypr_root "$root" || true)
     if [ -n "$hroot" ] && install_hypr_tree "$hroot"; then
         :
     else
-        # older layout: loose macshell-*.sh / macshell-*.py files somewhere in the source
+        # older layout: loose shell27-*.sh / shell27-*.py files somewhere in the source
         n=0
         while IFS= read -r f; do
             mkdir -p "$SCRIPTS_DIR"
             cp -f "$f" "$SCRIPTS_DIR/$(basename "$f")"; chmod +x "$SCRIPTS_DIR/$(basename "$f")"; n=$((n+1))
-        done < <(find "$root" -type f \( -name 'macshell-*.sh' -o -name 'macshell-*.py' \) -not -path '*/.git/*' 2>/dev/null)
-        if [ "$n" -gt 0 ]; then ok "$n helper script(s) -> $SCRIPTS_DIR"; else warn "no helper scripts (macshell-*.sh) and no hypr-macshell/ folder in the source: Game Mode and video wallpapers will not work (the repository is missing hypr-macshell/)"; fi
+        done < <(find "$root" -type f \( -name 'shell27-*.sh' -o -name 'shell27-*.py' \) -not -path '*/.git/*' 2>/dev/null)
+        if [ "$n" -gt 0 ]; then ok "$n helper script(s) -> $SCRIPTS_DIR"; else warn "no helper scripts (shell27-*.sh) and no hypr-shell27/ folder in the source: Game Mode and video wallpapers will not work (the repository is missing hypr-shell27/)"; fi
     fi
-    ensure_maclock_shim
+    if [ -f "$SCRIPTS_DIR/shell27-genie.py" ]; then
+        mkdir -p "$LINK_DIR"
+        chmod +x "$SCRIPTS_DIR/shell27-genie.py"
+        ln -sf "$SCRIPTS_DIR/shell27-genie.py" "$LINK_DIR/shell27-genie"
+        ok "Genie helper -> $LINK_DIR/shell27-genie"
+    fi
+    ensure_shell27_lock_shim
     # sounds
     n=0
     while IFS= read -r f; do
@@ -1644,31 +1700,31 @@ install_extras() {
     done < <(find "$root" -type f -name '*.wav' -path '*sounds*' -not -path '*/.git/*' 2>/dev/null)
     [ "$n" -gt 0 ] && ok "$n sound(s) -> $SOUNDS_DIR"
     # synthesize the UI sounds that are still missing (existing files are never replaced)
-    if [ -f "$SCRIPTS_DIR/macshell-make-sounds.py" ] && have python3; then
-        python3 "$SCRIPTS_DIR/macshell-make-sounds.py" "$SOUNDS_DIR" >/dev/null 2>&1 && ok "UI sounds ready in $SOUNDS_DIR" || warn "could not generate the UI sounds"
+    if [ -f "$SCRIPTS_DIR/shell27-make-sounds.py" ] && have python3; then
+        python3 "$SCRIPTS_DIR/shell27-make-sounds.py" "$SOUNDS_DIR" >/dev/null 2>&1 && ok "UI sounds ready in $SOUNDS_DIR" || warn "could not generate the UI sounds"
     elif [ "$n" -eq 0 ]; then
-        warn "no UI sounds installed (the repo ships none and python3 / macshell-make-sounds.py is missing)"
+        warn "no UI sounds installed (the repo ships none and python3 / shell27-make-sounds.py is missing)"
     fi
     # the update tool
-    f=$(find "$root" -maxdepth 3 -type f -name macshell-update -not -path '*/.git/*' 2>/dev/null | head -n1 || true)
+    f=$(find "$root" -maxdepth 3 -type f -name shell27-update -not -path '*/.git/*' 2>/dev/null | head -n1 || true)
     if [ -n "$f" ]; then
         mkdir -p "$BIN_DIR" "$LINK_DIR"
-        cp -f "$f" "$BIN_DIR/.macshell-update.new" && chmod +x "$BIN_DIR/.macshell-update.new" && mv -f "$BIN_DIR/.macshell-update.new" "$BIN_DIR/macshell-update"
-        ln -sf "$BIN_DIR/macshell-update" "$LINK_DIR/macshell-update"
-        ok "update tool -> $BIN_DIR/macshell-update"
+        cp -f "$f" "$BIN_DIR/.shell27-update.new" && chmod +x "$BIN_DIR/.shell27-update.new" && mv -f "$BIN_DIR/.shell27-update.new" "$BIN_DIR/shell27-update"
+        ln -sf "$BIN_DIR/shell27-update" "$LINK_DIR/shell27-update"
+        ok "update tool -> $BIN_DIR/shell27-update"
     else
-        say "  ${D}- no macshell-update tool in the source: use  macshell-install  (it checks GitHub and updates)${N}"
+        say "  ${D}- no shell27-update tool in the source: use  shell27-install  (it checks GitHub and updates)${N}"
     fi
     write_start_script
-    ok "start script -> $BIN_DIR/macshell-start"
-    if [ "$SKIP_AUTOSTART" != 1 ] || [ "$UPDATE_MODE" = 1 ]; then write_macshell_lua; fi
-    # a copy of this installer: run  macshell-install  any time to update, check dependencies or run the doctor
+    ok "start script -> $BIN_DIR/shell27-start"
+    if [ "$SKIP_AUTOSTART" != 1 ] || [ "$UPDATE_MODE" = 1 ]; then write_shell27_lua; fi
+    # a copy of this installer: run  shell27-install  any time to update, check dependencies or run the doctor
     local self="$root/install.sh"
     [ -f "$self" ] || self="${BASH_SOURCE[0]:-}"
     if [ -n "$self" ] && [ -f "$self" ]; then
-        cp -f "$self" "$BIN_DIR/.macshell-install.new" && chmod +x "$BIN_DIR/.macshell-install.new" \
-            && mv -f "$BIN_DIR/.macshell-install.new" "$BIN_DIR/macshell-install" && ln -sf "$BIN_DIR/macshell-install" "$LINK_DIR/macshell-install"
-        ok "installer -> $LINK_DIR/macshell-install"
+        cp -f "$self" "$BIN_DIR/.shell27-install.new" && chmod +x "$BIN_DIR/.shell27-install.new" \
+            && mv -f "$BIN_DIR/.shell27-install.new" "$BIN_DIR/shell27-install" && ln -sf "$BIN_DIR/shell27-install" "$LINK_DIR/shell27-install"
+        ok "installer -> $LINK_DIR/shell27-install"
     fi
 }
 
@@ -1694,38 +1750,38 @@ write_state() {
 # ───────────────────────── Hyprland autostart ─────────────────────────
 # Hyprland 0.55+ reads hyprland.lua and ignores hyprland.conf when both exist, so the autostart goes where Hyprland
 # actually looks. (The old installer always wrote "exec-once" into hyprland.conf, which a Lua session never reads.)
-START_CMD() { printf 'sh %s' "$LINK_DIR/macshell-start"; }
+START_CMD() { printf 'sh %s' "$LINK_DIR/shell27-start"; }
 
-write_macshell_lua() {
+write_shell27_lua() {
     mkdir -p "$HYPR_DIR"
-    local f="$HYPR_DIR/macshell.lua"
-    if [ -f "$f" ] && ! grep -qF -- "$MACLUA_BEGIN" "$f" && [ ! -e "$f.macshell-backup" ]; then
-        cp -p "$f" "$f.macshell-backup"
-        ok "saved the existing $f to $f.macshell-backup"
+    local f="$HYPR_DIR/shell27.lua"
+    if [ -f "$f" ] && ! grep -qF -- "$MACLUA_BEGIN" "$f" && [ ! -e "$f.shell27-backup" ]; then
+        cp -p "$f" "$f.shell27-backup"
+        ok "saved the existing $f to $f.shell27-backup"
     fi
-    # the module that ships with the shell (MacShell/macshell.lua) is the one that matches this version of the shell: use it.
+    # the module that ships with the shell (shell27/shell27.lua) is the one that matches this version of the shell: use it.
     # The copy below is only the fallback for a source tree that does not contain it.
-    local shipped="${QML_ROOT:-}/macshell.lua"
+    local shipped="${QML_ROOT:-}/shell27.lua"
     if [ -n "${QML_ROOT:-}" ] && [ -f "$shipped" ] && grep -qF -- "$MACLUA_BEGIN" "$shipped" && grep -qF -- "$MACLUA_END" "$shipped"; then
         cp -f "$shipped" "$f"
-        ok "MacShell autostart and keybinds -> $f"
+        ok "shell27 autostart and keybinds -> $f"
         return 0
     fi
     {
         printf '%s\n' "$MACLUA_BEGIN"
-        cat <<'MACSHELL_LUA'
+        cat <<'SHELL27_LUA'
 -- autostart (remove other bars / docks / notification daemons first).
--- install.sh adds this for you; macshell-start waits for the compositor and restarts the shell if it crashes.
+-- install.sh adds this for you; shell27-start waits for the compositor and restarts the shell if it crashes.
 hl.on("hyprland.start", function()
     hl.exec_cmd("awww-daemon")
     -- Install/update Hypridle's before_sleep_cmd hook (lid close is covered when it suspends).
-    hl.exec_cmd("sh ~/.config/quickshell/MacLock/enable-sleep-lock.sh")
-    hl.exec_cmd("sh ~/.local/bin/macshell-start")
+    hl.exec_cmd("sh ~/.config/quickshell/shell27-lock/enable-sleep-lock.sh")
+    hl.exec_cmd("sh ~/.local/bin/shell27-start")
 end)
 -- The Settings window floats and centres itself when it opens, so it needs no window rule.
 
 -- keybinds (the name after -c is the config folder name, case-sensitive)
-local qs = "qs -c MacShell ipc call "
+local qs = "qs -c shell27 ipc call "
 
 hl.bind("SUPER + Z",          hl.dsp.exec_cmd(qs .. "settings toggle"))
 hl.bind("SUPER + V",          hl.dsp.exec_cmd(qs .. "spotlight clipboard"))
@@ -1735,7 +1791,7 @@ hl.bind("ALT + TAB",          hl.dsp.exec_cmd(qs .. "switcher next"))
 hl.bind("CTRL + ALT + W",     hl.dsp.exec_cmd(qs .. "wallpapers toggle"))
 hl.bind("PRINT",              hl.dsp.exec_cmd(qs .. "screenshot region"))
 
--- Hardware keys (laptop buttons too): volume, mute, brightness, media. MacShell handles them itself and shows its
+-- Hardware keys (laptop buttons too): volume, mute, brightness, media. shell27 handles them itself and shows its
 -- on-screen display. If the shell is not running, wpctl / brightnessctl do the work instead.
 -- "locked" keeps the keys working on the lock screen. Any earlier bind on the same key is dropped first, so a key never fires twice.
 local function hw(action, fallback)
@@ -1760,12 +1816,12 @@ for _, k in ipairs(hwkeys) do
     hl.bind(k[1], hl.dsp.exec_cmd(k[2]), { locked = true, repeating = k[3] })
 end
 
--- MacLock (lock screen)
-hl.bind("SUPER + L",          hl.dsp.exec_cmd("sh ~/.config/quickshell/MacLock/lock-via-ipc.sh"))
-MACSHELL_LUA
+-- shell27-lock (lock screen)
+hl.bind("SUPER + L",          hl.dsp.exec_cmd("sh ~/.config/quickshell/shell27-lock/lock-via-ipc.sh"))
+SHELL27_LUA
         printf '%s\n' "$MACLUA_END"
     } > "$f"
-    ok "MacShell autostart and keybinds -> $f"
+    ok "shell27 autostart and keybinds -> $f"
 }
 
 # a refreshed block is appended after an empty line: drop the empty lines left at the end first, or every run adds one
@@ -1777,8 +1833,8 @@ trim_blank_tail() {
 
 lua_block() { # lua_block <with-rules 0|1>
     printf '%s\n' "$MARK_BEGIN"
-    printf '%s\n' '-- Load the generated MacShell autostart and keybind module.'
-    printf '%s\n' 'require("macshell")'
+    printf '%s\n' '-- Load the generated shell27 autostart and keybind module.'
+    printf '%s\n' 'require("shell27")'
     if [ "${1:-0}" = 1 ]; then
         printf '%s\n' '-- Liquid Glass: blur behind the shell surfaces'
         printf '%s\n' 'hl.layer_rule({ name = "macdock",  match = { namespace = "macdock"  }, blur = true, ignore_alpha = 0.2,  no_anim = true })'
@@ -1787,6 +1843,37 @@ lua_block() { # lua_block <with-rules 0|1>
         printf '%s\n' 'hl.layer_rule({ name = "macshot",  match = { namespace = "macshot"  }, no_anim = true })'
     fi
     printf '%s\n' "$MARK_END"
+}
+
+install_bundled_hyprland_config() {
+    [ "$SKIP_AUTOSTART" = 1 ] && return 0
+    [ "$UPDATE_MODE" = 1 ] && return 0
+    local src="$SRC_ROOT/hyprland/hyprland.lua" dst="$HYPR_DIR/hyprland.lua" backup genie_src="$SRC_ROOT/hyprland/genie.lua" genie_dst="$HYPR_DIR/genie.lua"
+    [ -f "$src" ] || return 0
+    [ "$ASSUME_YES" = 1 ] && return 0
+    confirm "Use the bundled personal Hyprland config? It replaces $dst (with a backup)." n || return 0
+
+    mkdir -p "$HYPR_DIR"
+    if [ -e "$dst" ]; then
+        backup="$dst.shell27-backup"
+        [ -e "$backup" ] && backup="$dst.shell27-backup.$(date +%Y%m%d-%H%M%S)"
+        [ -e "$backup" ] && backup="$backup.$$"
+        cp -p "$dst" "$backup"
+        ok "saved the existing Hyprland config to $backup"
+    fi
+    cp -p "$src" "$dst"
+    ok "bundled Hyprland config -> $dst"
+    if [ -f "$genie_src" ]; then
+        if [ -e "$genie_dst" ]; then
+            backup="$genie_dst.shell27-backup"
+            [ -e "$backup" ] && backup="$genie_dst.shell27-backup.$(date +%Y%m%d-%H%M%S)"
+            [ -e "$backup" ] && backup="$backup.$$"
+            cp -p "$genie_dst" "$backup"
+            ok "saved the existing Hyprland helper to $backup"
+        fi
+        cp -p "$genie_src" "$genie_dst"
+        ok "bundled Hyprland helper -> $genie_dst"
+    fi
 }
 
 add_autostart() {
@@ -1801,21 +1888,21 @@ add_autostart() {
             trim_blank_tail "$lua"
             { echo; lua_block "$had_rules"; } >> "$lua"
             ok "autostart block in $lua refreshed"
-        elif grep -Eq "macshell-start|(qs|quickshell)[[:space:]]+(-c|--config)[[:space:]]+$NAME" "$lua"; then
-            if ! grep -qF 'require("macshell")' "$lua" && ! grep -qF 'macshell.lua' "$lua"; then
-                cp -f "$lua" "$lua.macshell-backup"
+        elif grep -Eq "shell27-start|(qs|quickshell)[[:space:]]+(-c|--config)[[:space:]]+$NAME" "$lua"; then
+            if ! grep -qF 'require("shell27")' "$lua" && ! grep -qF 'shell27.lua' "$lua"; then
+                cp -f "$lua" "$lua.shell27-backup"
                 { echo; lua_block 0; } >> "$lua"
-                ok "added the MacShell module loader to $lua (backup: $lua.macshell-backup)"
+                ok "added the shell27 module loader to $lua (backup: $lua.shell27-backup)"
                 have hyprctl && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && hyprctl reload >/dev/null 2>&1 && ok "Hyprland config reloaded"
             else
-                ok "$lua already loads the MacShell module"
+                ok "$lua already loads the shell27 module"
             fi
         else
             if [ "$SKIP_RULES" != 1 ] && ! grep -q 'namespace *= *"macdock"' "$lua" \
                && confirm "Also add the Liquid Glass layer rules (blur behind the Dock and menus)?" y; then rules=1; fi
-            cp -f "$lua" "$lua.macshell-backup"
+            cp -f "$lua" "$lua.shell27-backup"
             { echo; lua_block "$rules"; } >> "$lua"
-            ok "added the autostart to $lua (backup: $lua.macshell-backup)"
+            ok "added the autostart to $lua (backup: $lua.shell27-backup)"
             have hyprctl && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && hyprctl reload >/dev/null 2>&1 && ok "Hyprland config reloaded"
         fi
     elif [ -f "$conf" ]; then
@@ -1824,17 +1911,17 @@ add_autostart() {
             trim_blank_tail "$conf"
             { echo; printf '%s\nexec-once = %s\n%s\n' "$CONF_BEGIN" "$(START_CMD)" "$CONF_END"; } >> "$conf"
             ok "autostart line in $conf refreshed"
-        elif grep -Eq "macshell-start|(qs|quickshell)[[:space:]]+(-c|--config)[[:space:]]+$NAME" "$conf"; then
-            ok "$conf already starts MacShell"
+        elif grep -Eq "shell27-start|(qs|quickshell)[[:space:]]+(-c|--config)[[:space:]]+$NAME" "$conf"; then
+            ok "$conf already starts shell27"
         else
-            cp -f "$conf" "$conf.macshell-backup"
+            cp -f "$conf" "$conf.shell27-backup"
             { echo; printf '%s\nexec-once = %s\n%s\n' "$CONF_BEGIN" "$(START_CMD)" "$CONF_END"; } >> "$conf"
-            ok "added the autostart to $conf (backup: $conf.macshell-backup)"
+            ok "added the autostart to $conf (backup: $conf.shell27-backup)"
             say "  Glass blur needs layer rules, see the README (Hyprland configuration)."
         fi
     else
-        say "  No Hyprland config found in $HYPR_DIR. Start MacShell from your autostart with:"
-        say '      Lua:   require("macshell")'
+        say "  No Hyprland config found in $HYPR_DIR. Start shell27 from your autostart with:"
+        say '      Lua:   require("shell27")'
         say "      conf:  exec-once = $(START_CMD)"
     fi
     stop_conflicts
@@ -1849,15 +1936,29 @@ show_lock_hint() {
     else
         say "      bind = SUPER, L, exec, sh ~/.config/quickshell/$LOCK_NAME/lock-via-ipc.sh"
     fi
-    [ -e /etc/pam.d/hyprlock ] || warn "/etc/pam.d/hyprlock not found: MacLock checks passwords with that PAM stack (install hyprlock, or add the file)"
+    [ -e /etc/pam.d/hyprlock ] || warn "/etc/pam.d/hyprlock not found: shell27-lock checks passwords with that PAM stack (install hyprlock, or add the file)"
 }
 
 
-# ───────────────────────── graphical installer (MacInstaller) ─────────────────────────
-# MacInstaller is a Quickshell window that drives this script. It needs quickshell and a running Hyprland session.
+# ───────────────────────── graphical installer (shell27-installer) ─────────────────────────
+# shell27-installer is a Quickshell window that drives this script. It needs quickshell and a running Hyprland session.
+GUI_PROBLEM=""
+gui_session_ready() {
+    GUI_PROBLEM=""
+    if ! have hyprctl; then GUI_PROBLEM="Hyprland control utility (hyprctl) is not installed"; return 1; fi
+    if [ -z "${WAYLAND_DISPLAY:-}" ] || [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        GUI_PROBLEM="a running Hyprland Wayland session is required"; return 1
+    fi
+    if ! hyprctl -j monitors >/dev/null 2>&1; then
+        GUI_PROBLEM="cannot connect to the running Hyprland session"; return 1
+    fi
+    return 0
+}
+
 gui_possible() {
-    have qs || return 1
-    [ -n "${WAYLAND_DISPLAY:-}" ] && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || return 1
+    GUI_PROBLEM=""
+    if ! have qs; then GUI_PROBLEM="Quickshell (qs) is not installed"; return 1; fi
+    gui_session_ready || return 1
     [ "$UPDATE_MODE" != 1 ] && [ "$CHECK_ONLY" != 1 ] || return 1
     return 0
 }
@@ -1870,11 +1971,11 @@ maybe_offer_gui() {
     gui_possible || return 0
     detect_pm; [ "$PM" = pacman ] || return 0
     GUI_ASKED=1
-    if confirm "Use the graphical installer (MacInstaller) instead of the terminal?" y; then GUI=yes; else GUI=no; fi
+    if confirm "Use the graphical installer (shell27-installer) instead of the terminal?" y; then GUI=yes; else GUI=no; fi
     return 0
 }
 
-# copy MacInstaller out of the (temporary) source into a permanent place, plus the launcher and a desktop entry
+# copy shell27-installer out of the (temporary) source into a permanent place, plus the launcher and a desktop entry
 install_gui_files() {
     [ -n "${GUI_ROOT:-}" ] || return 1
     safe_dest "$GUI_DEST" GUI_DEST
@@ -1884,45 +1985,56 @@ install_gui_files() {
     local self="$SRC_ROOT/install.sh"
     [ -f "$self" ] || self="${BASH_SOURCE[0]:-}"
     if [ -n "$self" ] && [ -f "$self" ]; then
-        cp -f "$self" "$BIN_DIR/.macshell-install.new" && chmod +x "$BIN_DIR/.macshell-install.new" \
-            && mv -f "$BIN_DIR/.macshell-install.new" "$BIN_DIR/macshell-install" && ln -sf "$BIN_DIR/macshell-install" "$LINK_DIR/macshell-install"
+        cp -f "$self" "$BIN_DIR/.shell27-install.new" && chmod +x "$BIN_DIR/.shell27-install.new" \
+            && mv -f "$BIN_DIR/.shell27-install.new" "$BIN_DIR/shell27-install" && ln -sf "$BIN_DIR/shell27-install" "$LINK_DIR/shell27-install"
     else
         warn "could not find install.sh to copy: the graphical installer cannot call it"; return 1
     fi
     # install from the clone the user ran this from (a temporary download folder is gone after the run: skip it then)
     local GUI_FROM_LINE=""
     if [ -z "${TMP:-}" ] || [ "${SRC_ROOT#"$TMP"/}" = "$SRC_ROOT" ]; then
-        GUI_FROM_LINE="export MACSHELL_FROM_DIR=\"$SRC_ROOT\"
+        GUI_FROM_LINE="export SHELL27_FROM_DIR=\"$SRC_ROOT\"
 "
     fi
-    cat > "$BIN_DIR/macshell-installer" <<LAUNCH
+    cat > "$BIN_DIR/shell27-installer" <<LAUNCH
 #!/bin/sh
-# macshell-installer: opens the MacShell graphical installer (it runs $BIN_DIR/macshell-install)
-export MACSHELL_INSTALL_SH="$BIN_DIR/macshell-install"
-${GUI_FROM_LINE}exec qs -p "$GUI_DEST" "\$@"
+# shell27-installer: opens the shell27 graphical installer (it runs $BIN_DIR/shell27-install)
+export SHELL27_INSTALL_SH="$BIN_DIR/shell27-install"
+${GUI_FROM_LINE}fail() {
+    message="\$1"
+    printf 'shell27-installer: %s\n' "\$message" >&2
+    command -v notify-send >/dev/null 2>&1 && notify-send -u critical "shell27 Installer" "\$message"
+    exit 1
+}
+command -v qs >/dev/null 2>&1 || fail "Quickshell (qs) is not installed. Run the terminal installer first."
+command -v hyprctl >/dev/null 2>&1 || fail "Hyprland control utility (hyprctl) is not installed."
+[ -n "\${WAYLAND_DISPLAY:-}" ] && [ -n "\${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || fail "Start this installer inside a Hyprland Wayland session."
+hyprctl -j monitors >/dev/null 2>&1 || fail "Cannot connect to the running Hyprland session."
+exec qs -p "$GUI_DEST" "\$@"
 LAUNCH
-    chmod +x "$BIN_DIR/macshell-installer"; ln -sf "$BIN_DIR/macshell-installer" "$LINK_DIR/macshell-installer"
-    cat > "$APPS_DIR/macshell-installer.desktop" <<DESK
+    chmod +x "$BIN_DIR/shell27-installer"; ln -sf "$BIN_DIR/shell27-installer" "$LINK_DIR/shell27-installer"
+    cat > "$APPS_DIR/shell27-installer.desktop" <<DESK
 [Desktop Entry]
 Type=Application
-Name=MacShell Installer
-Comment=Install, update or repair MacShell
-Exec=sh $LINK_DIR/macshell-installer
+Name=Shell27 Installer
+Comment=Install, update or repair shell27
+Exec=sh $LINK_DIR/shell27-installer
 Terminal=false
 Categories=System;Settings;
 DESK
     have update-desktop-database && update-desktop-database "$APPS_DIR" >/dev/null 2>&1 || true
-    ok "graphical installer -> $GUI_DEST  (open it any time with: macshell-installer)"
+    ok "graphical installer -> $GUI_DEST  (open it any time with: shell27-installer)"
     return 0
 }
 
 launch_gui() {
+    gui_possible || { warn "cannot open the graphical installer: ${GUI_PROBLEM:-unsupported session}"; return 1; }
     install_gui_files || return 1
-    local log pid; log="${XDG_STATE_HOME:-$HOME/.local/state}/macshell/$GUI_NAME.log"
+    local log pid; log="${XDG_STATE_HOME:-$HOME/.local/state}/shell27/$GUI_NAME.log"
     mkdir -p "$(dirname "$log")" 2>/dev/null || true
     step "Opening the graphical installer"
-    if have setsid; then setsid nohup sh "$BIN_DIR/macshell-installer" >"$log" 2>&1 &
-    else nohup sh "$BIN_DIR/macshell-installer" >"$log" 2>&1 &
+    if have setsid; then setsid nohup sh "$BIN_DIR/shell27-installer" >"$log" 2>&1 &
+    else nohup sh "$BIN_DIR/shell27-installer" >"$log" 2>&1 &
     fi
     pid=$!
     sleep 3
@@ -1930,15 +2042,172 @@ launch_gui() {
         warn "the graphical installer closed right away (log: $log)"; tail -n 5 "$log" 2>/dev/null | sed 's/^/      /'
         return 1
     fi
-    ok "MacInstaller is open: finish the installation in its window"
-    say "  Reopen it later with:  macshell-installer     (log: $log)"
+    ok "shell27-installer is open: finish the installation in its window"
+    say "  Reopen it later with:  shell27-installer     (log: $log)"
     return 0
+}
+
+bootstrap_gui_dependencies() {
+    detect_pm
+    [ -n "$PM" ] || { warn "no supported package manager found; cannot bootstrap the graphical installer"; return 1; }
+    local packages=(quickshell qt6-declarative qt6-wayland qt6-svg)
+    local repo=() extra=() p dp pick
+    for p in "${packages[@]}"; do
+        dp=$(pkg_for "$p")
+        [ -n "$dp" ] || continue
+        first_installed "$dp" >/dev/null && continue
+        if pick=$(first_available "$dp"); then repo+=("$pick"); else extra+=("${dp%%|*}"); fi
+    done
+    [ "${#repo[@]}" -gt 0 ] || [ "${#extra[@]}" -gt 0 ] || { have qs; return; }
+    say "The shell is not installed yet. A small Quickshell/Qt runtime is needed to open its graphical installer."
+    confirm "Install the graphical installer prerequisites now?" y || return 1
+    if [ "${#repo[@]}" -gt 0 ]; then
+        offer_full_upgrade "${repo[@]}"
+        install_packages "${repo[@]}" || return 1
+    fi
+    [ "${#extra[@]}" -eq 0 ] || install_extra_sources "${extra[@]}"
+    have qs || { warn "Quickshell is still unavailable; use --no-gui for the terminal installer"; return 1; }
+    return 0
+}
+
+bootstrap_first_install_gui() {
+    [ ! -f "$DEST/shell.qml" ] || return 1
+    [ "$GUI" != no ] && [ "$ASSUME_YES" != 1 ] || return 1
+    [ "$CHECK_ONLY" != 1 ] && [ "$DOCTOR" != 1 ] && [ "$DEPS_ONLY" != 1 ] && [ "$UPDATE_MODE" != 1 ] || return 1
+    [ "$MODE_FLAG" = 0 ] || [ "$GUI" = yes ] || return 1
+    [ -r /dev/tty ] && [ -w /dev/tty ] || return 1
+    gui_session_ready || return 1
+
+    SRC_ROOT=""
+    fetch_source
+    QML_ROOT=$(find_component_root "$SRC_ROOT" "$NAME" fallback || true)
+    GUI_ROOT=$(find_component_root "$SRC_ROOT" "$GUI_NAME" || true)
+    [ -n "$QML_ROOT" ] && [ -n "$GUI_ROOT" ] || return 1
+
+    if [ "$SKIP_DEPS" = 1 ]; then
+        have qs || return 1
+    else
+        bootstrap_gui_dependencies || return 2
+    fi
+    gui_possible || return 2
+    SHELL27_INSTALLER_BOOTSTRAP=1 launch_gui || return 2
+    return 0
+}
+
+ensure_theme_git() {
+    detect_pm
+    have git && return 0
+    local package; package=$(pkg_for git)
+    [ -n "$package" ] || { warn "cannot determine the git package for this system"; return 1; }
+    offer_full_upgrade "$package"
+    install_packages "$package" || return 1
+    have git || { warn "git is still unavailable"; return 1; }
+}
+
+ensure_icon_cache_tool() {
+    have gtk-update-icon-cache && return 0
+    local package
+    case "$PM" in
+        pacman|dnf) package=gtk3 ;;
+        apt) package=libgtk-3-bin ;;
+        *) warn "cannot determine the GTK icon-cache package for this system"; return 1 ;;
+    esac
+    offer_full_upgrade "$package"
+    install_packages "$package" || return 1
+    have gtk-update-icon-cache || { warn "gtk-update-icon-cache is still unavailable"; return 1; }
+}
+
+install_theme_repo() {
+    local name="$1" repo="$2" theme_tmp
+    shift 2
+    theme_tmp=$(mktemp -d) || { warn "could not create a temporary folder for $name"; return 0; }
+    step "Downloading $name"
+    if ! git clone --depth 1 "$repo" "$theme_tmp/theme"; then
+        warn "could not download $name; continuing with shell27"
+    elif (cd "$theme_tmp/theme" && ./install.sh "$@"); then
+        ok "$name installed"
+    else
+        warn "$name installer did not complete; continuing with shell27"
+    fi
+    rm -rf "$theme_tmp"
+    return 0
+}
+
+maybe_offer_mactahoe_icons() {
+    [ "$ASSUME_YES" != 1 ] && [ "$UPDATE_MODE" != 1 ] && [ "$DEPS_ONLY" != 1 ] || return 0
+    [ -r /dev/tty ] && [ -w /dev/tty ] || return 0
+    detect_pm
+    [ -n "$PM" ] || return 0
+    confirm "Install the MacTahoe icon theme for this user?" n || return 0
+    ensure_theme_git || return 0
+    ensure_icon_cache_tool || return 0
+    install_theme_repo "MacTahoe icon theme" https://github.com/vinceliuice/MacTahoe-icon-theme.git
+}
+
+maybe_offer_mactahoe_gtk() {
+    [ "$ASSUME_YES" != 1 ] && [ "$UPDATE_MODE" != 1 ] && [ "$DEPS_ONLY" != 1 ] || return 0
+    [ -r /dev/tty ] && [ -w /dev/tty ] || return 0
+    detect_pm
+    [ -n "$PM" ] || return 0
+    confirm "Install the MacTahoe GTK theme for this user?" n || return 0
+    ensure_theme_git || return 0
+    install_theme_repo "MacTahoe GTK theme" https://github.com/vinceliuice/MacTahoe-gtk-theme.git
+}
+
+install_sddm_theme() {
+    detect_pm
+    [ "$PM" = pacman ] || return 0
+    if ! have sudo; then
+        warn "the SDDM theme installer requires sudo; install it and rerun to set up the theme"
+        return 0
+    fi
+
+    local packages=(sddm qt6-declarative qt6-shadertools git)
+    offer_full_upgrade "${packages[@]}"
+    if ! install_packages "${packages[@]}"; then
+        warn "could not install the SDDM theme prerequisites; continuing with shell27"
+        return 0
+    fi
+
+    local theme_tmp
+    theme_tmp=$(mktemp -d) || { warn "could not create a temporary folder for the SDDM theme"; return 0; }
+    step "Downloading the MacTahoe SDDM theme"
+    if ! git clone --depth 1 https://github.com/hnpf/MacTahoe-SDDM-Theme.git "$theme_tmp/MacTahoe-SDDM-Theme"; then
+        warn "could not download the SDDM theme; continuing with shell27"
+        rm -rf "$theme_tmp"
+        return 0
+    fi
+    if (cd "$theme_tmp/MacTahoe-SDDM-Theme" && ./install.sh); then
+        ok "MacTahoe SDDM theme installed"
+    else
+        warn "the SDDM theme installer did not complete; continuing with shell27"
+    fi
+    rm -rf "$theme_tmp"
+    return 0
+}
+
+maybe_offer_sddm_theme() {
+    [ "$ASSUME_YES" != 1 ] && [ "$UPDATE_MODE" != 1 ] && [ "$DEPS_ONLY" != 1 ] || return 0
+    [ -r /dev/tty ] && [ -w /dev/tty ] || return 0
+    detect_pm
+    [ "$PM" = pacman ] || return 0
+    confirm "Also install the MacTahoe SDDM login theme? (this configures the SDDM greeter)" n || return 0
+    install_sddm_theme
 }
 
 # ───────────────────────── main ─────────────────────────
 [ "$DEPS_PLAN" = 1 ] && { run_deps_plan; exit 0; }
 [ "$DOCTOR" = 1 ] && { run_doctor; exit 0; }
 [ "$CHECK_ONLY" = 1 ] && run_check
+maybe_offer_mactahoe_icons
+maybe_offer_mactahoe_gtk
+maybe_offer_sddm_theme
+if bootstrap_first_install_gui; then
+    exit 0
+else
+    bootstrap_status=$?
+    [ "$bootstrap_status" = 1 ] || exit 1
+fi
 maybe_menu
 [ "$GUI" = yes ] || maybe_offer_gui
 # the window has its own dependency page: when it can open now, leave the dependencies to it
@@ -1946,7 +2215,7 @@ if [ "$GUI" = yes ] && [ "$DEPS_ONLY" != 1 ] && [ "$SKIP_DEPS" != 1 ] && gui_pos
 [ "$SKIP_DEPS" = 1 ] || check_deps
 [ "$DEPS_ONLY" = 1 ] || maybe_offer_gui     # quickshell may have just been installed above
 if [ "$GUI" = yes ] && ! gui_possible; then
-    warn "the graphical installer needs quickshell and a running Hyprland session: continuing in the terminal"
+    warn "cannot open the graphical installer: ${GUI_PROBLEM:-unsupported session}; continuing in the terminal"
     GUI=no
 fi
 if [ "$DEPS_ONLY" = 1 ]; then enable_services; write_env_template; ensure_dirs; ok "dependencies done"; exit 0; fi
@@ -1954,7 +2223,7 @@ SRC_ROOT=""
 fetch_source
 
 QML_ROOT=$(find_component_root "$SRC_ROOT" "$NAME" fallback || true)
-[ -n "$QML_ROOT" ] || die "shell.qml not found in the source: is this the MacShell repository?"
+[ -n "$QML_ROOT" ] || die "shell.qml not found in the source: is this the shell27 repository?"
 # a release download is not a git clone: take its version from the VERSION file (so "update available" compares against
 # the real release, not against "local")
 if [ "$RESOLVED_ID" = local ]; then
@@ -1969,25 +2238,25 @@ if [ "$GUI" = yes ]; then
     # the dependency check was left to the window: do it now
     if [ "$GUI_SKIPPED_DEPS" = 1 ]; then SKIP_DEPS=0; check_deps; fi
 fi
-safe_dest "$DEST" MACSHELL_DEST
-safe_dest "$LOCK_DEST" MACLOCK_DEST
-[ "$DEST" != "$LOCK_DEST" ] || die "MACSHELL_DEST and MACLOCK_DEST are the same folder: MacShell and MacLock are two separate configs"
+safe_dest "$DEST" SHELL27_DEST
+safe_dest "$LOCK_DEST" SHELL27_LOCK_DEST
+[ "$DEST" != "$LOCK_DEST" ] || die "SHELL27_DEST and SHELL27_LOCK_DEST are the same folder: shell27 and shell27-lock are two separate configs"
 LOCK_ROOT=""
 if [ "$SKIP_LOCK" != 1 ]; then
     LOCK_ROOT=$(find_component_root "$SRC_ROOT" "$LOCK_NAME" || true)
-    [ -n "$LOCK_ROOT" ] || warn "MacLock was not found in the source: only MacShell will be installed"
+    [ -n "$LOCK_ROOT" ] || warn "shell27-lock was not found in the source: only shell27 will be installed"
 fi
 
-step "Installing MacShell to $DEST"
+step "Installing shell27 to $DEST"
 backup_current "$DEST" "$NAME"
 sync_files "$QML_ROOT" "$DEST" "${EXCLUDES[@]}"
-ok "MacShell files copied"
+ok "all shell27 files have been copied"
 if [ -n "$LOCK_ROOT" ]; then
-    step "Installing MacLock to $LOCK_DEST"
+    step "Installing shell27-lock to $LOCK_DEST"
     backup_current "$LOCK_DEST" "$LOCK_NAME"
     sync_files "$LOCK_ROOT" "$LOCK_DEST" "${LOCK_EXCLUDES[@]}"
     fix_modes "$LOCK_DEST"
-    ok "MacLock files copied"
+    ok "shell27-lock files copied"
 fi
 fix_modes "$DEST"
 install_extras "$SRC_ROOT"
@@ -2008,6 +2277,7 @@ if [ "$UPDATE_MODE" = 1 ]; then
 fi
 
 enable_services
+install_bundled_hyprland_config
 add_autostart
 [ "$LOW_POWER" = 1 ] && apply_low_power
 case "$AUTO_UPDATE" in
@@ -2017,22 +2287,22 @@ case "$AUTO_UPDATE" in
 esac
 
 echo
-printf '%sMacShell %s is installed%s.%s\n' "$G" "${RESOLVED_ID:0:12}" "${LOCK_ROOT:+ (with MacLock)}" "$N"
-say "  Start it:            sh $LINK_DIR/macshell-start      (or: qs -c $NAME)"
+printf '%shell27 %s is installed%s.%s\n' "$G" "${RESOLVED_ID:0:12}" "${LOCK_ROOT:+ (with shell27-lock)}" "$N"
+say "  Start it:            sh $LINK_DIR/shell27-start      (or: qs -c $NAME)"
 [ -n "$LOCK_ROOT" ] && show_lock_hint
-say "  Update / repair:     macshell-install      (or run ./install.sh again: it looks for news on GitHub)"
-say "  Graphical installer: macshell-installer"
-say "  Find problems:       macshell-install --doctor"
-say "  Roll back:           macshell-update rollback"
-case ":$PATH:" in *":$LINK_DIR:"*) ;; *) say "  Note: add $LINK_DIR to your PATH to use 'macshell-update' from a terminal." ;; esac
+say "  Update / repair:     shell27-install      (or run ./install.sh again: it looks for news on GitHub)"
+say "  Graphical installer: shell27-installer"
+say "  Find problems:       shell27-install --doctor"
+say "  Roll back:           shell27-update rollback"
+case ":$PATH:" in *":$LINK_DIR:"*) ;; *) say "  Note: add $LINK_DIR to your PATH to use 'shell27-update' from a terminal." ;; esac
 if ! have qs; then
-    warn "qs (quickshell) is not installed: install it, then start MacShell with:  sh $LINK_DIR/macshell-start"
+    warn "qs (quickshell) is not installed: install it, then start shell27 with:  sh $LINK_DIR/shell27-start"
 elif shell_running; then
-    say "  MacShell is running and reloads by itself."
+    say "  shell27 is running and reloads by itself."
 elif [ "$NO_START" = 1 ]; then
     :
 elif [ -n "${WAYLAND_DISPLAY:-}" ]; then
-    if confirm "Start MacShell now?" y; then start_and_verify || true; fi
+    if confirm "Start shell27 now?" y; then start_and_verify || true; fi
 else
-    say "  Not inside a Wayland session: log in to Hyprland and MacShell starts by itself."
+    say "  Not inside a Wayland session: log in to Hyprland and shell27 starts by itself."
 fi

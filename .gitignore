@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.log
+.DS_Store
+
+# Keep local credentials and machine-specific settings out of commits.
+settings/*-local.json
+settings/*-private.json
+shell27/gemini_config.local.json
+shell27/siri_settings.local.json
+shell27/assets/fonts/AppleColorEmoji-Linux.ttf
+
+# Generated shader/build artifacts are normally shipped prebuilt, but local compiler output is not.
+*.tmp

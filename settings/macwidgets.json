@@ -1,0 +1,59 @@
+{
+  "tempUnit": "C",
+  "locMode": "auto",
+  "cityName": "",
+  "weatherLocation": "",
+  "widgetScale": 1,
+  "widgets": [
+    {
+      "id": "wmwe8lgfdck",
+      "type": "calendar",
+      "style": "liquid",
+      "size": "medium",
+      "mode": "auto",
+      "src": "",
+      "x": 42,
+      "y": 56
+    },
+    {
+      "id": "wmwe8maiw26z",
+      "type": "clock",
+      "style": "liquid",
+      "size": "small",
+      "mode": "auto",
+      "src": "",
+      "x": 249,
+      "y": 258
+    },
+    {
+      "id": "wmwe8mj2d329",
+      "type": "weather",
+      "style": "liquid",
+      "size": "small",
+      "mode": "auto",
+      "src": "",
+      "x": 42,
+      "y": 258
+    },
+    {
+      "id": "wmwe8moxb1vy",
+      "type": "player",
+      "style": "liquid",
+      "size": "medium",
+      "mode": "auto",
+      "src": "",
+      "x": 1491,
+      "y": 56
+    },
+    {
+      "id": "wmwftajef2ui",
+      "type": "image",
+      "style": "normal",
+      "size": "medium",
+      "mode": "auto",
+      "src": "",
+      "x": 1491,
+      "y": 258
+    }
+  ]
+}

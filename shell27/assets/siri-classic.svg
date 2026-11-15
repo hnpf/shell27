@@ -1,0 +1,62 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background subtle dark disk -->
+    <radialGradient id="baseGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2C2C3E" stop-opacity="0.95"/>
+      <stop offset="85%" stop-color="#181822" stop-opacity="0.98"/>
+      <stop offset="100%" stop-color="#101018" stop-opacity="1"/>
+    </radialGradient>
+
+    <!-- Outer Rim Highlight -->
+    <linearGradient id="rimGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#BF5AF2" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#FF2D55" stop-opacity="0.7"/>
+    </linearGradient>
+
+    <!-- Gradient Wave 1: Cyan to Blue -->
+    <linearGradient id="waveCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF"/>
+      <stop offset="100%" stop-color="#0A84FF"/>
+    </linearGradient>
+
+    <!-- Gradient Wave 2: Magenta to Pink -->
+    <linearGradient id="waveMagenta" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF2D55"/>
+      <stop offset="100%" stop-color="#FF375F"/>
+    </linearGradient>
+
+    <!-- Gradient Wave 3: Purple to Violet -->
+    <linearGradient id="wavePurple" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#BF5AF2"/>
+      <stop offset="100%" stop-color="#5856D6"/>
+    </linearGradient>
+
+    <!-- Gradient Wave 4: Amber to Gold -->
+    <linearGradient id="waveAmber" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#FFD60A"/>
+      <stop offset="100%" stop-color="#FF9F0A"/>
+    </linearGradient>
+
+    <!-- Center White Nucleus Glow -->
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Circular Outer Base -->
+  <circle cx="32" cy="32" r="29" fill="url(#baseGlow)"/>
+  <circle cx="32" cy="32" r="29" stroke="url(#rimGlow)" stroke-width="1.2"/>
+
+  <!-- Classic Siri Swirl Waveforms (Smooth Interlocking Fluid Ribbons) -->
+  <path d="M12 32 C12 21, 21 12, 32 12 C39 12, 45 15, 49 20 C42 22, 35 25, 29 31 C22 37, 18 43, 14 38 C12.7 36.2, 12 34.2, 12 32 Z" fill="url(#waveCyan)" opacity="0.92"/>
+  <path d="M52 32 C52 43, 43 52, 32 52 C25 52, 19 49, 15 44 C22 42, 29 39, 35 33 C42 27, 46 21, 50 26 C51.3 27.8, 52 29.8, 52 32 Z" fill="url(#waveMagenta)" opacity="0.92"/>
+  <path d="M32 12 C43 12, 52 21, 52 32 C52 37.5, 49.8 42.5, 46.2 46.2 C43 38, 38 31, 31 25 C25 20, 20 16, 26 13.5 C27.8 12.5, 29.8 12, 32 12 Z" fill="url(#wavePurple)" opacity="0.88"/>
+  <path d="M32 52 C21 52, 12 43, 12 32 C12 26.5, 14.2 21.5, 17.8 17.8 C21 26, 26 33, 33 39 C39 44, 44 48, 38 50.5 C36.2 51.5, 34.2 52, 32 52 Z" fill="url(#waveAmber)" opacity="0.85"/>
+
+  <!-- Center Core Breathing Glow -->
+  <circle cx="32" cy="32" r="16" fill="url(#coreGlow)"/>
+  <circle cx="32" cy="32" r="5" fill="#FFFFFF" opacity="0.9"/>
+</svg>
