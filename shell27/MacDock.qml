@@ -174,6 +174,254 @@ Scope {
 
     // ───────────── CONFIG ───────────── Lachowski
     property string monitor: ""          // "" = every monitor, or e.g. "DP-1"
+    property bool screenTimeEnabled: false
+    property var screenTimeData: ({ date: "", totalSeconds: 0, categories: {}, apps: {} })
+    property string screenTimeCurrentAppKey: ""
+    property string screenTimeCurrentAppName: ""
+    property bool screenTimeReady: false
+    readonly property string screenTimeDataPath: configDir + "/screentime.json"
+    property var screenTimePreferences: ({ categories: [], schedules: [] })
+    readonly property string screenTimePreferencesPath: configDir + "/screentime-settings.json"
+    function screenTimeDefaultPreferences() {
+        return {
+            categories: [
+                { name: "Entertainment", limitMinutes: 90 },
+                { name: "Games", limitMinutes: 45 },
+                { name: "Social Media", limitMinutes: 65 }
+            ],
+            schedules: [
+                { name: "School Hours", start: "08:00", end: "15:00", days: "Mon-Fri", enabled: false },
+                { name: "Bedtime", start: "22:00", end: "07:00", days: "Mon-Fri", enabled: true }
+            ]
+        };
+    }
+    function saveScreenTimePreferences() {
+        screenTimePreferencesStore.setText(JSON.stringify(root.screenTimePreferences, null, 2));
+    }
+    function screenTimeSaveCategory(name, limitMinutes, keywords, index) {
+        var prefs = root.screenTimePreferences;
+        var categories = (prefs.categories || []).slice();
+        var cleanName = String(name || "").trim();
+        var cleanKeywords = String(keywords || "").trim();
+        var limit = Math.max(1, Math.min(1440, Math.round(Number(limitMinutes) || 0)));
+        if (!cleanName) return false;
+        for (var i = 0; i < categories.length; i++)
+            if (i !== index && categories[i].name.toLowerCase() === cleanName.toLowerCase()) return false;
+        var entry = { name: cleanName, limitMinutes: limit, keywords: cleanKeywords };
+        if (index >= 0 && index < categories.length) categories[index] = entry;
+        else categories.push(entry);
+        root.screenTimePreferences = { categories: categories, schedules: (prefs.schedules || []).slice() };
+        root.saveScreenTimePreferences();
+        return true;
+    }
+    function screenTimeRemoveCategory(index) {
+        var prefs = root.screenTimePreferences;
+        var categories = (prefs.categories || []).slice();
+        if (index < 0 || index >= categories.length) return;
+        categories.splice(index, 1);
+        root.screenTimePreferences = { categories: categories, schedules: (prefs.schedules || []).slice() };
+        root.saveScreenTimePreferences();
+    }
+    function screenTimeSaveSchedule(name, start, end, days, enabled, index) {
+        var prefs = root.screenTimePreferences;
+        var schedules = (prefs.schedules || []).slice();
+        var cleanName = String(name || "").trim();
+        if (!cleanName || !/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(start) || !/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(end)) return false;
+        var entry = { name: cleanName, start: start, end: end, days: String(days || "Every day").trim() || "Every day", enabled: !!enabled };
+        if (index >= 0 && index < schedules.length) schedules[index] = entry;
+        else schedules.push(entry);
+        root.screenTimePreferences = { categories: (prefs.categories || []).slice(), schedules: schedules };
+        root.saveScreenTimePreferences();
+        return true;
+    }
+    function screenTimeSetScheduleEnabled(index, enabled) {
+        var prefs = root.screenTimePreferences;
+        var schedules = (prefs.schedules || []).slice();
+        if (index < 0 || index >= schedules.length) return;
+        var item = Object.assign({}, schedules[index]);
+        item.enabled = !!enabled;
+        schedules[index] = item;
+        root.screenTimePreferences = { categories: (prefs.categories || []).slice(), schedules: schedules };
+        root.saveScreenTimePreferences();
+    }
+    function screenTimeRemoveSchedule(index) {
+        var prefs = root.screenTimePreferences;
+        var schedules = (prefs.schedules || []).slice();
+        if (index < 0 || index >= schedules.length) return;
+        schedules.splice(index, 1);
+        root.screenTimePreferences = { categories: (prefs.categories || []).slice(), schedules: schedules };
+        root.saveScreenTimePreferences();
+    }
+    FileView {
+        id: screenTimePreferencesStore
+        path: root.screenTimePreferencesPath
+        printErrors: false
+        onLoaded: {
+            try {
+                var prefs = JSON.parse(text());
+                var defaults = root.screenTimeDefaultPreferences();
+                root.screenTimePreferences = {
+                    categories: Array.isArray(prefs.categories) ? prefs.categories : defaults.categories,
+                    schedules: Array.isArray(prefs.schedules) ? prefs.schedules : defaults.schedules
+                };
+            } catch (err) {
+                root.screenTimePreferences = root.screenTimeDefaultPreferences();
+                root.saveScreenTimePreferences();
+            }
+        }
+        onLoadFailed: {
+            root.screenTimePreferences = root.screenTimeDefaultPreferences();
+            root.saveScreenTimePreferences();
+        }
+    }
+    function screenTimeFormatSeconds(value) {
+        var s = Math.max(0, Number(value) || 0);
+        var h = Math.floor(s / 3600);
+        var m = Math.floor((s % 3600) / 60);
+        if (h > 0) return h + "h " + m + "m";
+        if (m > 0) return m + "m";
+        return s + "s";
+    }
+    function screenTimeDefaultData() {
+        return { date: new Date().toISOString().slice(0, 10), totalSeconds: 0, categories: { "Games": 0, "Entertainment": 0, "Social Media": 0, "Productivity": 0, "Utilities": 0, "Other": 0 }, apps: {} };
+    }
+    function screenTimeCategoryTotal(categoryName) {
+        var d = root.screenTimeData;
+        if (!d || !d.categories) return 0;
+        return Number(d.categories[categoryName]) || 0;
+    }
+    function screenTimeChartSeries() {
+        var arr = [];
+        for (var i = 0; i < 12; i++) arr.push(0);
+        var d = root.screenTimeData;
+        if (!d || !d.apps) return arr;
+        var keys = Object.keys(d.apps);
+        for (var j = 0; j < keys.length; j++) {
+            var app = d.apps[keys[j]];
+            if (!app || !app.seconds) continue;
+            var bucket = Math.min(11, Math.max(0, Math.floor((Number(app.seconds) || 0) / 60) % 12));
+            arr[bucket] += Number(app.seconds) || 0;
+        }
+        return arr;
+    }
+    function screenTimeKeyOf(appId, appName) {
+        var s = String(appId || appName || "unknown").trim().toLowerCase();
+        s = s.replace(/[^a-z0-9]+/g, "-");
+        return (s || "unknown").replace(/^-+|-+$/g, "");
+    }
+    function screenTimeCategoryOf(appId, appName) {
+        var text = (appId || "") + " " + (appName || "");
+        text = text.toLowerCase();
+        var categories = root.screenTimePreferences && root.screenTimePreferences.categories ? root.screenTimePreferences.categories : [];
+        for (var i = 0; i < categories.length; i++) {
+            var terms = String(categories[i].keywords || "").toLowerCase().split(",");
+            for (var j = 0; j < terms.length; j++) {
+                var term = terms[j].trim();
+                if (term && text.indexOf(term) >= 0) return categories[i].name;
+            }
+        }
+        if (/(steam|minecraft|roblox|fortnite|league|csgo|osu|brawl|game|epic|curse|gog)/.test(text)) return "Games";
+        if (/(tiktok|instagram|facebook|reddit|twitter|x\.com|discord|telegram|whatsapp|snapchat|signal)/.test(text)) return "Social Media";
+        if (/(youtube|netflix|spotify|hulu|twitch|prime|plex|disney|vlc|mpv|movie|stream)/.test(text)) return "Entertainment";
+        if (/(code|vscode|editor|slack|obsidian|notion|docs|office|libreoffice|terminal|git|browser|firefox|chromium|chrome)/.test(text)) return "Productivity";
+        if (/(settings|system|file|nautilus|dolphin|thunar|launcher|update|monitor|clock|battery|calculator|terminal|desktop)/.test(text)) return "Utilities";
+        return "Other";
+    }
+    function screenTimeEnsureData() {
+        var d = root.screenTimeData;
+        if (!d || typeof d !== "object") d = root.screenTimeDefaultData();
+        if (!d.date) d.date = new Date().toISOString().slice(0, 10);
+        if (!d.categories || typeof d.categories !== "object") d.categories = root.screenTimeDefaultData().categories;
+        if (!d.apps || typeof d.apps !== "object") d.apps = {};
+        if (d.date !== new Date().toISOString().slice(0, 10)) {
+            d = root.screenTimeDefaultData();
+        }
+        root.screenTimeData = d;
+    }
+    function screenTimeAddUsage(appId, appName, seconds) {
+        if (!root.screenTimeEnabled || !Number.isFinite(seconds) || seconds <= 0) return;
+        root.screenTimeEnsureData();
+        var d = root.screenTimeData;
+        var day = new Date().toISOString().slice(0, 10);
+        if (d.date !== day) {
+            d = root.screenTimeDefaultData();
+            d.date = day;
+        }
+        var key = root.screenTimeKeyOf(appId, appName);
+        var name = appName || appId || "Unknown app";
+        var cat = root.screenTimeCategoryOf(appId, appName);
+        d.totalSeconds = (Number(d.totalSeconds) || 0) + seconds;
+        d.categories[cat] = (Number(d.categories[cat]) || 0) + seconds;
+        if (!d.apps[key]) d.apps[key] = { key: key, name: name, category: cat, seconds: 0 };
+        d.apps[key].name = name;
+        d.apps[key].category = cat;
+        d.apps[key].seconds = (Number(d.apps[key].seconds) || 0) + seconds;
+        root.screenTimeData = d;
+        root.screenTimeStore.setText(JSON.stringify(d, null, 2));
+    }
+    onScreenTimeEnabledChanged: {
+        if (screenTimeEnabled) {
+            screenTimeEnsureData();
+            if (screenTimeReady) screenTimePollTimer.restart();
+            if (screenTimeProbe.running) screenTimeProbe.running = false;
+            screenTimeProbe.running = true;
+        } else {
+            screenTimePollTimer.stop();
+            screenTimeCurrentAppKey = "";
+            screenTimeCurrentAppName = "";
+        }
+    }
+    Timer {
+        id: screenTimePollTimer
+        interval: 10000
+        repeat: true
+        onTriggered: {
+            if (!root.screenTimeEnabled) { stop(); return; }
+            root.screenTimeProbe.running = true;
+        }
+    }
+    Process {
+        id: screenTimeProbe
+        running: false
+        command: ["hyprctl", "-j", "activewindow"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (!root.screenTimeEnabled || !text || text.trim() === "") return;
+                try {
+                    var active = JSON.parse(text);
+                    if (!active || (!active.app_id && !active.title)) return;
+                    var appId = active.app_id || "";
+                    var appName = active.title || appId || "Unknown app";
+                    root.screenTimeCurrentAppKey = root.screenTimeKeyOf(appId, appName);
+                    root.screenTimeCurrentAppName = appName;
+                    root.screenTimeAddUsage(appId, appName, 10);
+                } catch (err) {
+                    // ignore invalid data while the compositor is busy or a window is transient
+                }
+            }
+        }
+    }
+    FileView {
+        id: screenTimeStore
+        path: root.screenTimeDataPath
+        printErrors: false
+        onLoaded: {
+            try {
+                var obj = JSON.parse(text());
+                root.screenTimeData = obj && typeof obj === "object" ? obj : root.screenTimeDefaultData();
+            } catch (err) {
+                root.screenTimeData = root.screenTimeDefaultData();
+            }
+            root.screenTimeEnsureData();
+            root.screenTimeReady = true;
+            if (root.screenTimeEnabled) root.screenTimePollTimer.restart();
+        }
+        onLoadFailed: {
+            root.screenTimeData = root.screenTimeDefaultData();
+            root.screenTimeReady = true;
+            if (root.screenTimeEnabled) root.screenTimePollTimer.restart();
+        }
+    }
     property int iconSize: 52
     property real magnification: 1.7     // peak icon scale
     property int spacing: 6
@@ -907,7 +1155,7 @@ Scope {
             { id: "notifications", sec: 4, name: "Notifications", wg: "bell",      c1: "#FF5E57", c2: "#E8342A", keys: "alerts banners popups do not disturb screenshot" },
             { id: "sound",      sec: 4, name: "Sound",           wg: "speaker",    c1: "#FF5E7E", c2: "#E8344F", keys: "volume output input microphone speakers headphones effects ui sounds" },
             { id: "focus",      sec: 4, name: "Focus",           wg: "moon",       c1: "#7D7AFF", c2: "#5856D6", keys: "do not disturb keep awake sleep" },
-            { id: "screentime", sec: 4, name: "Screen Time",     wg: "moon",       c1: "#8C7BFF", c2: "#5A6CFF", keys: "screen time app usage digital wellbeing focus allowance schedules downtime" },
+            { id: "screentime", sec: 4, name: "Screen Time",     glyph: "screentime", c1: "#8C7BFF", c2: "#5A6CFF", keys: "screen time app usage digital wellbeing focus allowance schedules downtime" },
             // 5 · Security & Accounts
             { id: "lockscreen", sec: 5, name: "Lock Screen",     wg: "lock",       c1: "#3A3A3C", c2: "#1C1C1E", keys: "lock password album lyrics media clock" },
             { id: "users",      sec: 5, name: "Users & Groups",  wg: "smile",      c1: "#3D9BFF", c2: "#0A6CFF", keys: "account user name picture avatar" },
@@ -4494,11 +4742,52 @@ Scope {
             Column {
                 id: screenTimePane
                 spacing: 10
-                property bool trackingEnabled: true
                 property string actionNotice: ""
+                property string editorMode: ""
+                property int editorIndex: -1
+                property string formName: ""
+                property string formKeywords: ""
+                property string formLimit: "60"
+                property string formStart: "20:00"
+                property string formEnd: "07:00"
+                property string formDays: "Every day"
+                property bool formEnabled: true
                 function showActionNotice(msg) {
                     screenTimePane.actionNotice = msg
                     screenTimeNoticeTimer.restart()
+                }
+                function editCategory(index) {
+                    var item = index >= 0 ? root.screenTimePreferences.categories[index] : null
+                    screenTimePane.editorMode = "category"
+                    screenTimePane.editorIndex = index
+                    screenTimePane.formName = item ? item.name : ""
+                    screenTimePane.formKeywords = item ? (item.keywords || "") : ""
+                    screenTimePane.formLimit = item ? String(item.limitMinutes) : "60"
+                    screenTimePane.actionNotice = ""
+                }
+                function editSchedule(index) {
+                    var item = index >= 0 ? root.screenTimePreferences.schedules[index] : null
+                    screenTimePane.editorMode = "schedule"
+                    screenTimePane.editorIndex = index
+                    screenTimePane.formName = item ? item.name : ""
+                    screenTimePane.formStart = item ? item.start : "20:00"
+                    screenTimePane.formEnd = item ? item.end : "07:00"
+                    screenTimePane.formDays = item ? item.days : "Every day"
+                    screenTimePane.formEnabled = item ? !!item.enabled : true
+                    screenTimePane.actionNotice = ""
+                }
+                function saveEditor() {
+                    var ok = false
+                    if (editorMode === "category")
+                        ok = root.screenTimeSaveCategory(formName, formLimit, formKeywords, editorIndex)
+                    else if (editorMode === "schedule")
+                        ok = root.screenTimeSaveSchedule(formName, formStart, formEnd, formDays, formEnabled, editorIndex)
+                    if (ok) {
+                        editorMode = ""
+                        showActionNotice(I18n.tr("Saved"))
+                    } else {
+                        showActionNotice(editorMode === "category" ? I18n.tr("Enter a unique name and a valid daily limit") : I18n.tr("Enter a name and times in HH:MM format"))
+                    }
                 }
                 Timer {
                     id: screenTimeNoticeTimer
@@ -4511,7 +4800,7 @@ Scope {
                     SRow {
                         t: pal; title: I18n.tr("Screen Time tracking")
                         subtitle: I18n.tr("Collect app and category usage when enabled")
-                        SSwitch { t: pal; checked: screenTimePane.trackingEnabled; onToggled: v => screenTimePane.trackingEnabled = v }
+                        SSwitch { t: pal; checked: root.screenTimeEnabled; onToggled: v => { root.screenTimeEnabled = v; screenTimePane.trackingEnabled = v; } }
                     }
                 }
 
@@ -4525,13 +4814,151 @@ Scope {
                     horizontalAlignment: Text.AlignLeft
                 }
 
+                SCard {
+                    visible: screenTimePane.editorMode === "category"
+                    t: pal
+                    Column {
+                        width: parent.width - 28
+                        x: 14
+                        y: 12
+                        spacing: 8
+                        TextField {
+                            width: parent.width
+                            height: 36
+                            text: screenTimePane.formName
+                            placeholderText: I18n.tr("Category name")
+                            color: pal.text
+                            font.family: root.fontForWeight(Font.Normal, pal.fam)
+                            font.pixelSize: 13
+                            selectByMouse: true
+                            onTextChanged: screenTimePane.formName = text
+                            background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
+                        }
+                        TextField {
+                            width: parent.width
+                            height: 36
+                            text: screenTimePane.formLimit
+                            placeholderText: I18n.tr("Daily limit in minutes")
+                            validator: IntValidator { bottom: 1; top: 1440 }
+                            color: pal.text
+                            font.family: root.fontForWeight(Font.Normal, pal.fam)
+                            font.pixelSize: 13
+                            selectByMouse: true
+                            onTextChanged: screenTimePane.formLimit = text
+                            background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
+                        }
+                        TextField {
+                            width: parent.width
+                            height: 36
+                            text: screenTimePane.formKeywords
+                            placeholderText: I18n.tr("App name matches, comma separated")
+                            color: pal.text
+                            font.family: root.fontForWeight(Font.Normal, pal.fam)
+                            font.pixelSize: 13
+                            selectByMouse: true
+                            onTextChanged: screenTimePane.formKeywords = text
+                            background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
+                        }
+                        Row {
+                            spacing: 8
+                            SButton { t: pal; text: I18n.tr("Save"); onClicked: screenTimePane.saveEditor() }
+                            SButton { t: pal; text: I18n.tr("Cancel"); onClicked: screenTimePane.editorMode = "" }
+                            SButton {
+                                visible: screenTimePane.editorIndex >= 0
+                                t: pal; text: I18n.tr("Delete")
+                                onClicked: {
+                                    root.screenTimeRemoveCategory(screenTimePane.editorIndex)
+                                    screenTimePane.editorMode = ""
+                                }
+                            }
+                        }
+                    }
+                }
+
+                SCard {
+                    visible: screenTimePane.editorMode === "schedule"
+                    t: pal
+                    Column {
+                        width: parent.width - 28
+                        x: 14
+                        y: 12
+                        spacing: 8
+                        TextField {
+                            width: parent.width
+                            height: 36
+                            text: screenTimePane.formName
+                            placeholderText: I18n.tr("Schedule name")
+                            color: pal.text
+                            font.family: root.fontForWeight(Font.Normal, pal.fam)
+                            font.pixelSize: 13
+                            selectByMouse: true
+                            onTextChanged: screenTimePane.formName = text
+                            background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
+                        }
+                        Row {
+                            width: parent.width
+                            spacing: 8
+                            TextField {
+                                width: (parent.width - 8) / 2
+                                height: 36
+                                text: screenTimePane.formStart
+                                placeholderText: I18n.tr("Start HH:MM")
+                                color: pal.text
+                                font.family: root.fontForWeight(Font.Normal, pal.fam)
+                                font.pixelSize: 13
+                                selectByMouse: true
+                                onTextChanged: screenTimePane.formStart = text
+                                background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
+                            }
+                            TextField {
+                                width: (parent.width - 8) / 2
+                                height: 36
+                                text: screenTimePane.formEnd
+                                placeholderText: I18n.tr("End HH:MM")
+                                color: pal.text
+                                font.family: root.fontForWeight(Font.Normal, pal.fam)
+                                font.pixelSize: 13
+                                selectByMouse: true
+                                onTextChanged: screenTimePane.formEnd = text
+                                background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
+                            }
+                        }
+                        TextField {
+                            width: parent.width
+                            height: 36
+                            text: screenTimePane.formDays
+                            placeholderText: I18n.tr("Days, for example Mon-Fri")
+                            color: pal.text
+                            font.family: root.fontForWeight(Font.Normal, pal.fam)
+                            font.pixelSize: 13
+                            selectByMouse: true
+                            onTextChanged: screenTimePane.formDays = text
+                            background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
+                        }
+                        Row {
+                            spacing: 8
+                            SButton { t: pal; text: I18n.tr("Save"); onClicked: screenTimePane.saveEditor() }
+                            SButton { t: pal; text: I18n.tr("Cancel"); onClicked: screenTimePane.editorMode = "" }
+                            SButton {
+                                visible: screenTimePane.editorIndex >= 0
+                                t: pal; text: I18n.tr("Delete")
+                                onClicked: {
+                                    root.screenTimeRemoveSchedule(screenTimePane.editorIndex)
+                                    screenTimePane.editorMode = ""
+                                }
+                            }
+                        }
+                    }
+                }
+
                 SLabel { t: pal; header: true; text: I18n.tr("At a glance") }
                 SCard {
                     t: pal
                     ScreenTimeWidget {
                         width: parent.width - 24
                         height: 138
-                        totalText: "2h 14m"
+                        totalText: root.screenTimeSummaryText()
+                        values: root.screenTimeChartSeries()
                     }
                     Row {
                         anchors.left: parent.left
@@ -4544,7 +4971,7 @@ Scope {
                             width: (parent.width - 24) / 4; height: 42
                             Text {
                                 anchors.centerIn: parent
-                                text: I18n.tr("Today") + "\n2h 14m"
+                                text: I18n.tr("Today") + "\n" + root.screenTimeSummaryText()
                                 horizontalAlignment: Text.AlignHCenter
                                 color: pal.text
                                 font.family: root.fontForWeight(Font.Normal, pal.fam)
@@ -4556,7 +4983,7 @@ Scope {
                             width: (parent.width - 24) / 4; height: 42
                             Text {
                                 anchors.centerIn: parent
-                                text: I18n.tr("Entertainment") + "\n44m"
+                                text: I18n.tr("Entertainment") + "\n" + root.screenTimeFormatSeconds(root.screenTimeCategoryTotal("Entertainment"))
                                 horizontalAlignment: Text.AlignHCenter
                                 color: pal.text2
                                 font.family: root.fontForWeight(Font.Normal, pal.fam)
@@ -4568,7 +4995,7 @@ Scope {
                             width: (parent.width - 24) / 4; height: 42
                             Text {
                                 anchors.centerIn: parent
-                                text: I18n.tr("Games") + "\n39m"
+                                text: I18n.tr("Games") + "\n" + root.screenTimeFormatSeconds(root.screenTimeCategoryTotal("Games"))
                                 horizontalAlignment: Text.AlignHCenter
                                 color: pal.text2
                                 font.family: root.fontForWeight(Font.Normal, pal.fam)
@@ -4580,7 +5007,7 @@ Scope {
                             width: (parent.width - 24) / 4; height: 42
                             Text {
                                 anchors.centerIn: parent
-                                text: I18n.tr("Social") + "\n51m"
+                                text: I18n.tr("Social") + "\n" + root.screenTimeFormatSeconds(root.screenTimeCategoryTotal("Social Media"))
                                 horizontalAlignment: Text.AlignHCenter
                                 color: pal.text2
                                 font.family: root.fontForWeight(Font.Normal, pal.fam)
@@ -4594,43 +5021,44 @@ Scope {
                 SLabel { t: pal; header: true; text: I18n.tr("Time Allowances") }
                 SCard {
                     t: pal
-                    SRow {
-                        t: pal; title: I18n.tr("Entertainment")
-                        subtitle: I18n.tr("1h 30m today")
-                        SButton { t: pal; text: I18n.tr("View"); onClicked: screenTimePane.showActionNotice(I18n.tr("Entertainment allowance coming soon")) }
-                    }
-                    SRow {
-                        t: pal; title: I18n.tr("Games")
-                        subtitle: I18n.tr("45m today")
-                        SButton { t: pal; text: I18n.tr("View"); onClicked: screenTimePane.showActionNotice(I18n.tr("Games allowance coming soon")) }
-                    }
-                    SRow {
-                        t: pal; title: I18n.tr("Social Media")
-                        subtitle: I18n.tr("1h 05m today")
-                        SButton { t: pal; text: I18n.tr("View"); onClicked: screenTimePane.showActionNotice(I18n.tr("Social Media allowance coming soon")) }
+                    Repeater {
+                        model: root.screenTimePreferences.categories
+                        delegate: SRow {
+                            required property var modelData
+                            required property int index
+                            t: pal
+                            title: modelData.name
+                            subtitle: root.screenTimeFormatSeconds(root.screenTimeCategoryTotal(modelData.name)) + " / " + root.screenTimeFormatSeconds(Number(modelData.limitMinutes) * 60) + " " + I18n.tr("today")
+                            SButton { t: pal; text: I18n.tr("View"); onClicked: screenTimePane.editCategory(index) }
+                        }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Add category")
-                        SButton { t: pal; text: I18n.tr("New"); onClicked: screenTimePane.showActionNotice(I18n.tr("New category flow coming soon")) }
+                        SButton { t: pal; text: I18n.tr("New"); onClicked: screenTimePane.editCategory(-1) }
                     }
                 }
 
                 SLabel { t: pal; header: true; text: I18n.tr("Schedules") }
                 SCard {
                     t: pal
-                    SRow {
-                        t: pal; title: I18n.tr("School Hours")
-                        subtitle: I18n.tr("Mon–Fri · 8:00 AM to 3:00 PM")
-                        SSwitch { t: pal; checked: false }
-                    }
-                    SRow {
-                        t: pal; title: I18n.tr("Bedtime")
-                        subtitle: I18n.tr("Mon–Fri · 10:00 PM to 7:00 AM")
-                        SSwitch { t: pal; checked: true }
+                    Repeater {
+                        model: root.screenTimePreferences.schedules
+                        delegate: SRow {
+                            required property var modelData
+                            required property int index
+                            t: pal
+                            title: modelData.name
+                            subtitle: modelData.days + " · " + modelData.start + " to " + modelData.end
+                            Row {
+                                spacing: 8
+                                SButton { t: pal; text: I18n.tr("Edit"); onClicked: screenTimePane.editSchedule(index) }
+                                SSwitch { t: pal; checked: !!modelData.enabled; onToggled: v => root.screenTimeSetScheduleEnabled(index, v) }
+                            }
+                        }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Add Schedule")
-                        SButton { t: pal; text: I18n.tr("New"); onClicked: screenTimePane.showActionNotice(I18n.tr("Schedule editor coming soon")) }
+                        SButton { t: pal; text: I18n.tr("New"); onClicked: screenTimePane.editSchedule(-1) }
                     }
                 }
 
@@ -5536,6 +5964,10 @@ Scope {
     }
 
     readonly property real effMag: magnificationEnabled ? magnification : 1
+    function screenTimeSummaryText() {
+        var t = Number(root.screenTimeData && root.screenTimeData.totalSeconds ? root.screenTimeData.totalSeconds : 0);
+        return root.screenTimeFormatSeconds(t);
+    }
     // hover labels and the right-click menu scale with the Dock (52 px icons = the reference size)
     readonly property real labelK: Math.max(0.7, Math.min(2.2, iconSize / 52))
     readonly property int bgHeight: iconSize + topPad + bottomPad
@@ -5624,7 +6056,7 @@ Scope {
     // ── settings persistence (~/.config/macdock/settings.json) ──
     readonly property string settingsSig: [dockEnabled, settingsEnabled, desktopIcons, desktopTrash, desktopIconSize, iconSize, magnification, magnificationEnabled, spacing, margin,
         cornerRadius, darkMode, appearanceMode, screenCornerMode, glassOpacity, glassBlur, glassLiquid, glassControlsSplit, dockStyle, wallpaperPath, String(accent), textHighlightMode, fontFamily, hideMode, hideDelay, monitor,
-        showTrash, showLabels, showIndicators, bounceOnLaunch, showThumbs, windowCapture, glassLive, iconTint, iconTintColor, iconTintStrength].join("|")
+        showTrash, showLabels, showIndicators, bounceOnLaunch, showThumbs, windowCapture, glassLive, iconTint, iconTintColor, iconTintStrength, screenTimeEnabled].join("|")
     property bool settingsReady: false
     onSettingsSigChanged: if (settingsReady) saveTimer.restart()
     onShowTrashChanged: { rebuild(); if (showTrash) trashCheck(); }
@@ -5642,7 +6074,8 @@ Scope {
             hideMode: hideMode, hideDelay: hideDelay, monitor: monitor,
             showTrash: showTrash, showLabels: showLabels, showIndicators: showIndicators,
             bounceOnLaunch: bounceOnLaunch, showThumbs: showThumbs, windowCapture: windowCapture, glassLive: glassLive,
-            iconTint: iconTint, iconTintColor: iconTintColor, iconTintStrength: iconTintStrength
+            iconTint: iconTint, iconTintColor: iconTintColor, iconTintStrength: iconTintStrength,
+            screenTimeEnabled: screenTimeEnabled
         };
         settingsStore.setText(JSON.stringify(o, null, 2));
     }
@@ -5651,7 +6084,7 @@ Scope {
         if (!o || typeof o !== "object") return;
         var keys = ["dockEnabled", "settingsEnabled", "desktopIcons", "desktopTrash", "desktopIconSize", "iconSize", "magnification", "magnificationEnabled", "spacing", "margin", "cornerRadius",
                     "darkMode", "appearanceMode", "screenCornerMode", "glassOpacity", "dockStyle", "wallpaperPath", "glassDebug", "glassRim", "glassGrain", "glassLiquid", "glassBlur", "glassControlsSplit", "accent", "textHighlightMode", "fontFamily", "hideMode", "hideDelay", "monitor",
-                    "showTrash", "showLabels", "showIndicators", "bounceOnLaunch", "showThumbs", "windowCapture", "glassLive", "iconTint", "iconTintColor", "iconTintStrength"];
+                    "showTrash", "showLabels", "showIndicators", "bounceOnLaunch", "showThumbs", "windowCapture", "glassLive", "iconTint", "iconTintColor", "iconTintStrength", "screenTimeEnabled"];
         for (var i = 0; i < keys.length; i++) {
             if (o[keys[i]] === undefined) continue;
             try { root[keys[i]] = o[keys[i]]; } catch (err) { }

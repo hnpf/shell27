@@ -52,7 +52,7 @@ DAEMON_LOCK_FILE = RUNTIME_DIR / f"shell27-siri-{os.getuid()}.lock"
 DEFAULT_CONFIG = {
     "api_key": os.getenv("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY_HERE"),
     "model": "gemini-3.1-flash-lite",
-    "wake_words": ["hey siri", "siri", "ơi siri"],
+    "wake_words": ["hey siri", "siri", "hello siri", "hi siri", "hey google:", "ok google"],
     "live_voice_streaming": True,
     "language": "auto",       # "auto", "vi-VN", "en-US"
     "tts_engine": "edge-tts", # "edge-tts", "piper"
@@ -446,6 +446,9 @@ def handle_local_intent(query: str):
     elif any(k in norm_q for k in ["light mode", "turn on light mode", "enable light mode"]):
         subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "color-scheme", "prefer-light"], stdout=subprocess.DEVNULL)
         return "Switched to Light Mode."
+    elif any(k in norm_q for k in ["Hey", "Hi", "Hello", "Greetings", "Good morning", "Good afternoon", "Good evening"]):
+        subprocess.run(["echo", "hello world"], stdout=subprocess.DEVNULL)
+        return "Hello."
     elif any(k in norm_q for k in ["increase brightness", "brightness up", "turn up brightness", "raise brightness"]):
         subprocess.run(["brightnessctl", "s", "+10%"], stdout=subprocess.DEVNULL)
         return "Increased screen brightness."
