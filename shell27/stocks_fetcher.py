@@ -12,10 +12,12 @@ CACHE_TTL = 90  # 90 seconds cache
 def fetch_crypto():
     results = []
     try:
-        url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana&sparkline=true"
+        coin_order = ["litecoin", "bitcoin", "ethereum", "solana"]
+        url = f"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids={','.join(coin_order)}&sparkline=true"
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode())
+            data.sort(key=lambda coin: coin_order.index(coin.get("id")) if coin.get("id") in coin_order else len(coin_order))
             for c in data:
                 raw_spark = c.get("sparkline_in_7d", {}).get("price", [])
                 # Downsample 168 pts to ~14 pts
