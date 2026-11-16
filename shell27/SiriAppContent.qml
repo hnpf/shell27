@@ -15,6 +15,7 @@ Scope {
     readonly property string fam: dock ? dock.fontFamily : "Open Runde"
     readonly property string home: Quickshell.env("HOME")
     property var chats: []
+    property var pendingIntelligenceMessages: []
     property string activeChat: ""
     property string deletingChatId: ""
     property string newChatId: ""
@@ -144,6 +145,23 @@ Scope {
         if (role === "user" && title === "New Chat") title = (text || "Image").slice(0, 40);
         updateChat(id, { messages: messages, title: title });
     }
+    function appendIntelligenceMessage(role, text) {
+        var cleanText = String(text || "").trim();
+        if (cleanText === "") return;
+        if (!loaded) {
+            pendingIntelligenceMessages = pendingIntelligenceMessages.concat([{ role: role, text: cleanText }]);
+            return;
+        }
+        var chat = chats.filter(function (item) { return item.source === "apple-intelligence"; })[0];
+        if (!chat) {
+            chat = { id: uid(), title: "Apple Intelligence", messages: [], pinned: false, temporary: false, source: "apple-intelligence", updated: Date.now() };
+            chats = [chat].concat(chats);
+        }
+        var messages = chat.messages.slice();
+        messages.push({ role: role, text: cleanText, imagePath: "", showImage: false });
+        updateChat(chat.id, { messages: messages, title: "Apple Intelligence", source: "apple-intelligence" });
+        activeChat = chat.id;
+    }
     function renameChat(id, title) {
         if (!title || title.trim() === "") return;
         updateChat(id, { title: title.trim() });
@@ -272,6 +290,9 @@ Scope {
             }
             root.chats = storedChats;
             root.loaded = true;
+            var pendingMessages = root.pendingIntelligenceMessages;
+            root.pendingIntelligenceMessages = [];
+            for (var i = 0; i < pendingMessages.length; i++) root.appendIntelligenceMessage(pendingMessages[i].role, pendingMessages[i].text);
             if (root.initialChatId !== "" && root.chats.some(function (chat) { return chat.id === root.initialChatId; })) root.activeChat = root.initialChatId;
             else if (root.activeChat === "" && root.chats.length) root.activeChat = root.chats[0].id;
             if (!root.hub || root.openOnStart) root.open();

@@ -222,6 +222,11 @@ Scope {
         messages = messages.concat([{ role: role, text: text }]);
     }
 
+    function syncWithSiriApp(role, text) {
+        if (hub && hub.siriApp && hub.siriApp.appendIntelligenceMessage)
+            hub.siriApp.appendIntelligenceMessage(role, text);
+    }
+
     function cleanupMessageImages(replaceWithNotice) {
         var nextMessages = messages.slice();
         var changed = false;
@@ -244,11 +249,14 @@ Scope {
 
     function receiveResponse(text: string) {
         response = text;
+        if (text === "Processing request...") return;
         if (pendingPrompt === "" && prompt !== "" && !isVoiceStatusPrompt(prompt)) {
             appendMessage("user", prompt);
+            syncWithSiriApp("user", prompt);
         }
         if (text !== "" && text !== "Processing request...") {
             appendMessage("assistant", text);
+            syncWithSiriApp("assistant", text);
         }
         if (hub && hub.aiSettings && hub.aiSettings.deleteVisualImageAfterResponse) cleanupMessageImages(true);
         pendingPrompt = "";
@@ -298,6 +306,7 @@ Scope {
         } else {
             appendMessage("user", cleanPrompt);
         }
+        syncWithSiriApp("user", cleanPrompt);
         editingMessageIndex = -1;
         sources = [];
         chatStarted = true;
@@ -329,6 +338,7 @@ Scope {
         response = "";
         pendingPrompt = cleanPrompt;
         messages = messages.concat([{ role: "user", text: showImage ? "" : cleanPrompt, imagePath: imagePath, showImage: showImage }]);
+        syncWithSiriApp("user", cleanPrompt || "Image shared");
         editingMessageIndex = -1;
         sources = [];
         chatStarted = true;
