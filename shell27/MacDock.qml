@@ -876,7 +876,7 @@ Scope {
             { id: "dock",       sec: 3, name: "Desktop & Dock",  glyph: "dock",     c1: "#2C2C2E", c2: "#1C1C1E", keys: "size icon magnification zoom spacing margin distance corner radius round square edge hide auto labels indicators bounce trash monitor preview app switcher alt tab" },
             { id: "menubar",    sec: 3, name: "Menu Bar",        glyph: "menubar",  c1: "#3D9BFF", c2: "#0A6CFF", keys: "panel bar height clock date seconds 24 hour battery tray search spotlight week monday style liquid bluetooth screenshots appearance light dark auto" },
             { id: "controlcenter", sec: 3, name: "Control Center", wg: "cc",       c1: "#8E8E93", c2: "#636366", keys: "modules tiles controls" },
-            { id: "widgets",    sec: 3, name: "Widgets",         glyph: "widgets",  c1: "#FF9F0A", c2: "#FF7A00", keys: "desktop widgets weather clock calendar player image photo add remove arrange edit size temperature fahrenheit celsius city location" },
+            { id: "widgets",    sec: 3, name: "Widgets",         glyph: "widgets",  c1: "#FF9F0A", c2: "#FF7A00", keys: "desktop widgets weather clock calendar player image photo battery stocks crypto markets reminders tasks todo add remove arrange edit size temperature fahrenheit celsius city location" },
             // 4 · Notifications & Sound
             { id: "notifications", sec: 4, name: "Notifications", wg: "bell",      c1: "#FF5E57", c2: "#E8342A", keys: "alerts banners popups do not disturb screenshot" },
             { id: "sound",      sec: 4, name: "Sound",           wg: "speaker",    c1: "#FF5E7E", c2: "#E8344F", keys: "volume output input microphone speakers headphones effects ui sounds" },
@@ -2274,6 +2274,53 @@ Scope {
                 SLabel {
                     t: pal
                     text: I18n.tr("If you turn both off, reopen this window with:  qs -c shell27 ipc call settings open")
+                }
+
+                Item {
+                    id: updateHero
+                    width: parent.width
+                    height: 98
+                    property real animTime: 0
+                    FrameAnimation {
+                        running: prefsWindow.visible
+                        onTriggered: {
+                            updateHero.animTime += 0.016;
+                            if (updateHero.animTime > 10000) updateHero.animTime = 0;
+                        }
+                    }
+                    ShaderEffect {
+                        anchors.fill: parent
+                        fragmentShader: Qt.resolvedUrl("waterflow.frag.qsb")
+                        property vector2d itemSize: Qt.vector2d(width, height)
+                        property real u_time: updateHero.animTime
+                        property real borderRadius: 20
+                    }
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 20
+                        color: "transparent"
+                        border.width: 1
+                        border.color: Qt.rgba(1, 1, 1, 0.28)
+                    }
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 18
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 16
+                        Image {
+                            width: 58; height: 58
+                            anchors.verticalCenter: parent.verticalCenter
+                            source: Qt.resolvedUrl("assets/shell27-logo.svg")
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                        }
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 4
+                            Text { text: "shell27"; color: "white"; font.family: root.fontForWeight(Font.DemiBold, pal.fam); font.pixelSize: 18; font.weight: Font.DemiBold }
+                            Text { text: "System Software"; color: Qt.rgba(1, 1, 1, 0.76); font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 12 }
+                        }
+                    }
                 }
 
                 SCard {
@@ -3964,6 +4011,9 @@ Scope {
                             { type: "player",   name: I18n.tr("Player"),   hint: I18n.tr("Now Playing with controls and lyrics"), styles: [["liquid", I18n.tr("Liquid Glass")], ["light", I18n.tr("Light")], ["dark", I18n.tr("Dark")]] },
                             { type: "image",    name: I18n.tr("Image"),    hint: I18n.tr("Your own picture (you choose the file)"), styles: [["normal", I18n.tr("Photo")]] },
                             { type: "sysmon",   name: I18n.tr("System Monitor"), hint: I18n.tr("Live CPU, RAM, Disk, Thermal and Network"), styles: [["liquid", I18n.tr("Liquid Glass")], ["normal", I18n.tr("Normal")]] },
+                            { type: "battery",  name: I18n.tr("Battery"), hint: I18n.tr("Laptop and connected device battery levels"), styles: [["liquid", I18n.tr("Liquid Glass")], ["normal", I18n.tr("Normal")]], sizes: ["small", "medium"] },
+                            { type: "stocks",   name: I18n.tr("Stocks & Crypto"), hint: I18n.tr("Live market prices, changes and sparklines"), styles: [["liquid", I18n.tr("Liquid Glass")], ["normal", I18n.tr("Normal")]] },
+                            { type: "reminders", name: I18n.tr("Reminders"), hint: I18n.tr("Shared interactive checklist and completed items"), styles: [["liquid", I18n.tr("Liquid Glass")], ["normal", I18n.tr("Normal")]] },
                             { type: "gif",      name: I18n.tr("GIF"),      hint: I18n.tr("Animated GIF or WebP loop"), styles: [["normal", I18n.tr("Loop")]] }
                         ]
                         delegate: Item {
@@ -3971,8 +4021,8 @@ Scope {
                             required property var modelData
                             required property int index
                             property int styleIdx: 0
-                            property int sizeIdx: 1
-                            readonly property var sizeKeys: ["small", "medium", "large"]
+                            property int sizeIdx: modelData.sizes ? 0 : 1
+                            readonly property var sizeKeys: modelData.sizes || ["small", "medium", "large"]
                             readonly property int onDesktop: (wgPane.wdg && wgPane.wdg.rev >= 0) ? wgPane.wdg.count(modelData.type) : 0
                             width: parent ? parent.width : 0
                             height: 12 + head.height + 10 + ctl.height + 14
@@ -4023,7 +4073,7 @@ Scope {
                                 }
                                 SSegmented {
                                     t: pal
-                                    model: [I18n.tr("Small"), I18n.tr("Medium"), I18n.tr("Large")]
+                                    model: addRow.sizeKeys.map(function (s) { return wgPane.wdg ? wgPane.wdg.sizeNames[s] : s; })
                                     segWidth: 64
                                     current: addRow.sizeIdx
                                     onPicked: i => addRow.sizeIdx = i

@@ -1097,8 +1097,10 @@ Item {
         onTriggered: ls.estPos = ls.posBase + (ls.posPlaying ? (Date.now() - ls.posAt) / 1000 : 0)
     }
 
-    // Spotify Canvas: short looping video artwork for supported tracks
+    // Apple Music Motion first, then the existing Spotify Canvas helper when applicable.
     property string canvasVideo: ""
+    property string canvasRequestKey: ""
+    readonly property string appleMotionScript: decodeURIComponent(Qt.resolvedUrl("apple-motion.py").toString().replace(/^file:\/\//, ""))
     readonly property string spotifyTrackId: {
         if (!media.pl) return "";
         // MPRIS trackId is often a generic D-Bus object path; do not let it mask the Spotify URL.
@@ -1112,15 +1114,32 @@ Item {
         return "";
     }
     onTrackKeyChanged: { lyrFetchDelay.restart(); canvasDelay.restart(); }
+    function fetchSpotifyCanvasFallback() {
+        if (!media.pl || (ls.spotifyTrackId === "" && (media.pl.identity || "").toLowerCase().indexOf("spotify") < 0)) return;
+        var arg = ls.spotifyTrackId !== "" ? ls.spotifyTrackId : ((media.pl.trackArtist || "") + " " + (media.pl.trackTitle || ""));
+        canvasProc.command = ["python3", Quickshell.env("HOME") + "/.config/quickshell/shell27-lock/spotify-canvas.py", arg];
+        canvasProc.running = true;
+    }
     Timer {
         id: canvasDelay; interval: 500
         onTriggered: {
             ls.canvasVideo = "";
-            if (media.pl && (ls.spotifyTrackId !== "" || (media.pl.identity || "").toLowerCase().indexOf("spotify") >= 0)) {
-                canvasProc.running = false;
-                var arg = ls.spotifyTrackId !== "" ? ls.spotifyTrackId : ((media.pl.trackArtist || "") + " " + (media.pl.trackTitle || ""));
-                canvasProc.command = ["python3", Quickshell.env("HOME") + "/.config/quickshell/shell27-lock/spotify-canvas.py", arg];
-                canvasProc.running = true;
+            canvasAppleProc.running = false;
+            canvasProc.running = false;
+            if (!media.pl || !(media.pl.trackTitle || "")) return;
+            ls.canvasRequestKey = ls.trackKey;
+            canvasAppleProc.command = ["python3", ls.appleMotionScript, media.pl.trackArtist || "", media.pl.trackTitle || "", media.pl.trackAlbum || ""];
+            canvasAppleProc.running = true;
+        }
+    }
+    Process {
+        id: canvasAppleProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (ls.canvasRequestKey !== ls.trackKey) return;
+                var p = (text || "").trim();
+                if (p.length > 0) ls.canvasVideo = p;
+                else ls.fetchSpotifyCanvasFallback();
             }
         }
     }

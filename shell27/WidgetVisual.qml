@@ -202,9 +202,99 @@ Item {
                 size: wsize
                 fam: host.fontFamily
                 screenX: v.sx; screenY: v.sy
+                glassReady: host.glassState === "ready"
+                shaderUrl: "file://" + host.glassShaderOut
+                wallUrl: host.fileUrl(host.wallpaperFor(v.sname))
+                screenW: v.sw
+                screenH: v.sh
+                glassOpacity: host.glassOpacity
+                glassBlur: host.glassBlur
+                glassLiquid: host.glassLiquid
+                glassRim: host.glassRim
+                glassGrain: host.glassGrain
+                darkGlass: host.darkGlass
+                editing: host.editing
+                desktopCovered: false
+                appFocused: host.hub ? host.hub.appFocused : false
+                onGlassFailed: host.glassState = "failed"
+            }
+        }
+        Component {
+            id: batteryVisual
+            BatteryWidget {
+                scaleF: host.widgetScale
+                style: wstyle
+                size: wsize
+                fam: host.fontFamily
+                screenX: v.sx; screenY: v.sy
+                glassReady: host.glassState === "ready"
+                shaderUrl: "file://" + host.glassShaderOut
+                wallUrl: host.fileUrl(host.wallpaperFor(v.sname))
+                screenW: v.sw
+                screenH: v.sh
+                glassOpacity: host.glassOpacity
+                glassBlur: host.glassBlur
+                glassLiquid: host.glassLiquid
+                glassRim: host.glassRim
+                glassGrain: host.glassGrain
                 darkGlass: host.darkGlass
                 editing: host.editing
                 onGlassFailed: host.glassState = "failed"
+            }
+        }
+        Component {
+            id: stocksVisual
+            StocksWidget {
+                scaleF: host.widgetScale
+                style: wstyle
+                size: wsize
+                fam: host.fontFamily
+                screenX: v.sx; screenY: v.sy
+                glassReady: host.glassState === "ready"
+                shaderUrl: "file://" + host.glassShaderOut
+                wallUrl: host.fileUrl(host.wallpaperFor(v.sname))
+                screenW: v.sw
+                screenH: v.sh
+                glassOpacity: host.glassOpacity
+                glassBlur: host.glassBlur
+                glassLiquid: host.glassLiquid
+                glassRim: host.glassRim
+                glassGrain: host.glassGrain
+                darkGlass: host.darkGlass
+                editing: host.editing
+                onGlassFailed: host.glassState = "failed"
+            }
+        }
+        Component {
+            id: remindersVisual
+            RemindersWidget {
+                host: v.host
+                size: wsize
+                style: wstyle
+                scaleF: host.widgetScale
+                fam: host.fontFamily
+                screenX: v.sx; screenY: v.sy
+                remindersModel: host.remModel
+                openCount: host.remOpenCount
+                editing: host.editing
+                glassReady: host.glassState === "ready"
+                shaderUrl: "file://" + host.glassShaderOut
+                wallUrl: host.fileUrl(host.wallpaperFor(v.sname))
+                screenW: v.sw
+                screenH: v.sh
+                glassOpacity: host.glassOpacity
+                glassBlur: host.glassBlur
+                glassLiquid: host.glassLiquid
+                glassRim: host.glassRim
+                glassGrain: host.glassGrain
+                darkGlass: host.darkGlass
+                onOpenRemindersApp: {
+                    if (host.hub && host.hub.reminders) host.hub.reminders.open();
+                    else Quickshell.execDetached(["xdg-open", host.configDir + "/reminders.md"]);
+                }
+                onAddReminder: text => host.addReminder(text)
+                onToggleReminder: line => host.toggleReminder(line)
+                onDeleteReminder: line => host.deleteReminder(line)
             }
         }
         Loader {
@@ -216,7 +306,10 @@ Item {
                 player: playerVisual,
                 image: imageVisual,
                 gif: gifVisual,
+                battery: batteryVisual,
                 sysmon: sysmonVisual,
+                stocks: stocksVisual,
+                reminders: remindersVisual,
             }[wtype] ?? weatherVisual)
         }
 }

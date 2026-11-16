@@ -45,6 +45,9 @@ ShellRoot {
         property var widgets: macWidgets
         property var desktop: desktopIcons
         property var clock: clockApp
+        property var airdrop: airDrop
+        property var reminders: remindersApp
+        property var setupAssistant: welcomeAssistant
         property var about: aboutApp
         property var stagemanager: stageManager
         property var siri: null
@@ -380,8 +383,9 @@ ShellRoot {
     MacWidgets { id: macWidgets; hub: sharedHub }
     ClockApp { id: clockApp; hub: sharedHub }
     AboutApp { id: aboutApp; hub: sharedHub }
-    //AirDrop { id: airDrop; hub: sharedHub }
-    //Reminders { id: remindersApp; hub: sharedHub }
+    AirDrop { id: airDrop; hub: sharedHub }
+    Reminders { id: remindersApp; hub: sharedHub }
+    SetupAssistant { id: welcomeAssistant; hub: sharedHub }
     Desktop { id: desktopIcons; hub: sharedHub }
     MinimizeFx { id: minFx; hub: sharedHub; effect: macDock.minimizeEffect !== undefined ? macDock.minimizeEffect : "genie"; speed: macDock.minimizeSecs !== undefined ? macDock.minimizeSecs : 0.42 }
     WindowBar { id: windowBar; hub: sharedHub }

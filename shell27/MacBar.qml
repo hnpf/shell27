@@ -104,6 +104,8 @@ Scope {
     readonly property bool barLayerNeeded: barEnabled || spotlightEnabled || ccEnabled || notificationsEnabled
     property bool darkMode: true             // the resolved look (true = dark); follows appearanceMode
     property string appearanceMode: "dark"   // light | dark | auto (auto = light by day, dark by night)
+    property bool suppressAppearanceWallpaper: false
+    property real appearanceIgnoreExternalUntil: 0
     property string barAppearance: "auto"    // auto | light | dark; controls the menu bar palette independently
     // Panels (top bar menus / popovers, Spotlight, Control Center, notifications) are light or dark by what is BEHIND them
     // (panelTone, measured live, see "Auto contrast" below); the Light / Dark / Auto setting is the fallback while nothing is
@@ -588,13 +590,18 @@ Scope {
 
     // Appearance: light / dark / auto. darkMode is the resolved look; the Dock window is kept in step.
     function autoIsDark() { var h = new Date().getHours(); return h < 7 || h >= 19; }
-    function setAppearance(mode) {
+    function setAppearance(mode, commitExternal) {
         if (["light", "dark", "auto"].indexOf(mode) < 0) return;
+        var commit = commitExternal !== false;
+        var wasSuppressed = suppressAppearanceWallpaper;
+        suppressAppearanceWallpaper = !commit || wasSuppressed;
+        if (!commit) appearanceIgnoreExternalUntil = Date.now() + 5000;
         appearanceMode = mode;
         darkMode = mode === "auto" ? autoIsDark() : mode === "dark";
         try { if (hub && hub.dock) { hub.dock.appearanceMode = mode; hub.dock.darkMode = darkMode; } } catch (e) {}
         try { if (hub && hub.about) { hub.about.darkMode = darkMode; } } catch (e2) {}
-        Quickshell.execDetached(["gsettings", "set", "org.gnome.desktop.interface", "color-scheme", darkMode ? "prefer-dark" : "prefer-light"]);
+        suppressAppearanceWallpaper = wasSuppressed;
+        if (commit) Quickshell.execDetached(["gsettings", "set", "org.gnome.desktop.interface", "color-scheme", darkMode ? "prefer-dark" : "prefer-light"]);
     }
     Timer {
         interval: 60000; repeat: true; triggeredOnStart: true
@@ -606,6 +613,7 @@ Scope {
         command: ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"]
         stdout: StdioCollector {
             onStreamFinished: {
+                if (Date.now() < root.appearanceIgnoreExternalUntil) return;
                 var s = text.trim();
                 if (s.indexOf("prefer-light") >= 0 && root.darkMode && root.appearanceMode !== "dark") {
                     root.darkMode = false;
@@ -5622,7 +5630,7 @@ Scope {
         wpApplyProc.running = true;
     }
     onWallpaperAppearanceChanged: wpApplyAppearance()
-    onDarkModeChanged: if (wallpaperAppearance === "auto") wpApplyAppearance()
+    onDarkModeChanged: if (wallpaperAppearance === "auto" && !suppressAppearanceWallpaper) wpApplyAppearance()
     Timer { interval: 60000; repeat: true; running: root.wpHasPair && root.wallpaperAppearance === "dynamic" && !root.gaming; onTriggered: root.wpApplyAppearance() }
     // at start: scan the folder, then pick up a pair for the wallpaper already in use
     Timer { interval: 1500; running: true; onTriggered: root.wpRefresh() }

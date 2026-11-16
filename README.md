@@ -23,6 +23,8 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/hnpf/shell27/main/install.
 
 > The installer also offers the [MacTahoe icon theme](https://github.com/vinceliuice/MacTahoe-icon-theme) and [MacTahoe GTK theme](https://github.com/vinceliuice/MacTahoe-gtk-theme). These are installed for the current user; changing the active GTK or icon settings remains a separate desktop setting.
 
+> shell27’s first-run welcome lets you choose a starting appearance and accent. Reopen it with `qs -c shell27 ipc call welcome open`; reset it with `qs -c shell27 ipc call welcome reset`. Update tools can show the update welcome with `qs -c shell27 ipc call welcome update <version>`.
+
 > Apple Color Emoji is downloaded during installation from the pinned [macOS 26 Linux font release](https://github.com/samuelngs/apple-emoji-ttf/releases/tag/macos-26-20260722-484daf4e) and checksum-verified; the 110 MB font is not stored in this Git repository. The upstream project states its MIT license does not cover Apple emoji assets and notes that use may have licensing implications. You are responsible for ensuring your use is permitted. To use another authorized copy, set `SHELL27_APPLE_EMOJI_PATH` or override `SHELL27_APPLE_EMOJI_URL` and `SHELL27_APPLE_EMOJI_SHA256`.
 
 ---
@@ -96,6 +98,8 @@ This fork extends upstream shell27 with multimedia features, desktop widgets, an
 - **Stocks & Cryptocurrency Widget (`StocksWidget.qml` & `stocks_fetcher.py`)**: Live market tracking (BTC, ETH, SOL, AAPL, NVDA, etc.) with interactive sparkline curves and gradient fills.
 - **Battery Widget (`BatteryWidget.qml` & `battery_reader.py`)**: Displays battery percentage, health, and power profile.
 - **Reminders Widget (`RemindersWidget.qml` & `Reminders.qml`)**: Interactive task checklist that syncs with `reminders.md` and plays Apple sound effects.
+- **AirDrop-style sharing (`AirDrop.qml` & `assets/shell27-airdrop.py`)**: Discovers LocalSend-compatible devices, asks before receiving, and saves accepted files to `~/Downloads`.
+- **First-run welcome (`SetupAssistant.qml`)**: Offers appearance and accent choices and links to System Settings. It does not install packages or alter network settings. Reopen with `qs -c shell27 ipc call welcome open`.
 
 ### Heavy GPU & CPU Optimizations (macOS App Nap)
 - **Desktop Occlusion Awareness**: Animated widgets (GIF, Canvas, Lyrics) detect when they are covered by application windows. Playback and decoders pause automatically, dropping idle resource usage to **0%**.
@@ -226,9 +230,9 @@ The two Quickshell configs are installed separately. The starter settings in `se
 | `BatteryWidget.qml`, `battery_reader.py` | Battery percentage, health status, and power profile widget. |
 | `RemindersWidget.qml`, `Reminders.qml` | Interactive task checklist that syncs with `reminders.md` and plays Apple sound effects. |
 | `lyrics_fetcher.py` | Asynchronous multi-source lyrics daemon with caching (LRCLIB + syncedlyrics). |
-| `AirDrop.qml`, `scripts/shell27-airdrop.py` | Native local sharing with animated radar UI. |
+| `AirDrop.qml`, `assets/shell27-airdrop.py` | Native local sharing with animated radar UI. |
 | `SPopUp.qml`, `Dissolve.qml`, `MorphText.qml`, `MorphGlyph.qml`, `WGlyph.qml`, `ClockGlyph.qml`, `Wheel.qml` | Shared UI pieces and effects. |
-| `liquidglass.frag` (+ `contourglow`, `tintcard`, `dust`, `burn`, `fade`) | Shaders. Prebuilt `.frag.qsb` files ship next to them; `liquidglass.frag` is recompiled with `qsb` on first run. |
+| `liquidglass.frag` (+ `contourglow`, `tintcard`, `dust`, `burn`, `fade`, `waterflow`) | Shaders. Prebuilt `.frag.qsb` files ship next to them; `liquidglass.frag` is recompiled with `qsb` on first run. |
 | `EmojiData.js` | Emoji fallback data for Spotlight (from [gemoji](https://github.com/github/gemoji), MIT). |
 | `shell27-update` | Update tool (installed to `~/.local/bin`, see [Updating](#updating)). The installer also writes `shell27-start`, the script the Hyprland autostart runs. |
 | `apple-logo-black.svg`, `apple-logo-white.svg` | Menu bar logo. |

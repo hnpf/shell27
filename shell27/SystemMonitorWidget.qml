@@ -45,7 +45,7 @@ Item {
     readonly property real u: s
     readonly property real radiusPx: 28 * s
 
-    readonly property bool dark: style === "dark" || (style === "liquid" && darkGlass)
+    readonly property bool dark: style === "light" ? false : (style === "dark" || darkGlass)
     readonly property bool glassOn: style === "liquid" && glassReady && wallUrl != ""
 
     width: (isSmall ? 158 : (isLarge ? 358 : 338)) * s
@@ -109,10 +109,11 @@ Item {
         visible: !w.glassOn
         radius: w.radiusPx
         gradient: Gradient {
-            GradientStop { position: 0.0; color: w.dark ? Qt.rgba(0.18, 0.18, 0.22, 0.92) : Qt.rgba(1.0, 1.0, 1.0, 0.92) }
-            GradientStop { position: 1.0; color: w.dark ? Qt.rgba(0.11, 0.11, 0.14, 0.92) : Qt.rgba(0.93, 0.93, 0.96, 0.92) }
+            GradientStop { position: 0.0; color: w.dark ? "#34343A" : "#FFFFFF" }
+            GradientStop { position: 0.45; color: w.dark ? "#28282E" : "#F5F5F7" }
+            GradientStop { position: 1.0; color: w.dark ? "#1D1D22" : "#E9E9EE" }
         }
-        border.color: w.dark ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(0, 0, 0, 0.08)
+        border.color: w.dark ? Qt.rgba(1, 1, 1, 0.20) : Qt.rgba(0, 0, 0, 0.12)
         border.width: 1
     }
 

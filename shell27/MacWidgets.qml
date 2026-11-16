@@ -48,7 +48,7 @@ Scope {
     // Control Center border colour (follows the wallpaper's dominant colour)
     readonly property color borderTint: (hub && hub.bar) ? hub.bar.menuBorderColor : "#8A9AB5"
 
-    // placed widgets: roles wid, wtype (weather | calendar | clock | player), wstyle, wsize, wmode (calendar: auto | light | dark), wx, wy
+    // placed widgets: roles wid, wtype, wstyle, wsize, wmode, wx, wy
     property alias model: wmodel
     ListModel { id: wmodel }
     readonly property int widgetCount: wmodel.count
@@ -56,7 +56,7 @@ Scope {
     property int rev: 0                    // bumped on every change to the list, so Settings bindings can re-evaluate count()
 
     readonly property var styleNames: ({ liquid: "Liquid Glass", normal: "Normal", light: "Light", dark: "Dark" })
-    readonly property var typeNames: ({ weather: "Weather", calendar: "Calendar", clock: "Clock", player: "Player", image: "Image", gif: "GIF", sysmon: "System Monitor" })
+    readonly property var typeNames: ({ weather: "Weather", calendar: "Calendar", clock: "Clock", player: "Player", image: "Image", gif: "GIF", battery: "Battery", sysmon: "System Monitor", stocks: "Stocks & Crypto", reminders: "Reminders" })
     readonly property var sizeNames: ({ small: "Small", medium: "Medium", large: "Large" })
     function dims(size) {
         var b = size === "large" ? [375, 385] : (size === "medium" ? [395, 185] : [185, 185]);
@@ -478,6 +478,81 @@ Scope {
                 root.applyLyrics(text);
             }
         }
+    }
+
+    readonly property var remModel: reminderListModel
+    FileView {
+        id: remFile
+        path: root.configDir + "/reminders.md"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoadFailed: setText("- [ ] Try the new widgets\n- [ ] Add a reminder\n")
+    }
+    readonly property var reminders: {
+        var text = remFile.loaded ? remFile.text() : "", lines = text.split("\n"), out = [];
+        for (var i = 0; i < lines.length; i++) {
+            var match = /^\s*[-*]\s*\[( |x|X)\]\s*(.*)$/.exec(lines[i]);
+            if (match) out.push({ line: i, done: match[1] !== " ", text: match[2] });
+        }
+        return out;
+    }
+    readonly property int remOpenCount: {
+        var items = reminders, count = 0;
+        for (var i = 0; i < items.length; i++) if (!items[i].done) count++;
+        return count;
+    }
+    ListModel { id: reminderListModel }
+    property bool remReady: false
+    function syncReminders() {
+        var items = reminders, i, j;
+        for (i = reminderListModel.count - 1; i >= 0; i--) {
+            var found = false;
+            for (j = 0; j < items.length; j++) if (items[j].text === reminderListModel.get(i).text) { found = true; break; }
+            if (!found) reminderListModel.remove(i);
+        }
+        for (var k = 0; k < items.length; k++) {
+            if (k >= reminderListModel.count || reminderListModel.get(k).text !== items[k].text) {
+                reminderListModel.insert(k, { line: items[k].line, done: items[k].done, text: items[k].text, fresh: remReady });
+            } else {
+                if (reminderListModel.get(k).done !== items[k].done) reminderListModel.setProperty(k, "done", items[k].done);
+                if (reminderListModel.get(k).line !== items[k].line) reminderListModel.setProperty(k, "line", items[k].line);
+            }
+        }
+        while (reminderListModel.count > items.length) reminderListModel.remove(reminderListModel.count - 1);
+        if (items.length > 0) remReady = true;
+    }
+    onRemindersChanged: syncReminders()
+    Component.onCompleted: syncReminders()
+    function toggleReminder(lineNumber) {
+        var lines = remFile.text().split("\n");
+        if (lineNumber < 0 || lineNumber >= lines.length) return;
+        lines[lineNumber] = /\[ \]/.test(lines[lineNumber]) ? lines[lineNumber].replace("[ ]", "[x]") : lines[lineNumber].replace(/\[(x|X)\]/, "[ ]");
+        remFile.setText(lines.join("\n"));
+        if (hub && hub.bar) hub.bar.playSound("tink", 0.6);
+    }
+    function addReminder(text) {
+        var value = String(text || "").trim();
+        if (value === "") return;
+        var current = remFile.loaded ? remFile.text() : "";
+        if (current !== "" && current.charAt(current.length - 1) !== "\n") current += "\n";
+        remFile.setText(current + "- [ ] " + value + "\n");
+        if (hub && hub.bar) hub.bar.playSound("pop", 0.5);
+    }
+    function setReminderText(lineNumber, text) {
+        var lines = remFile.text().split("\n");
+        if (lineNumber < 0 || lineNumber >= lines.length) return;
+        var value = String(text || "").trim();
+        if (value === "") { deleteReminder(lineNumber); return; }
+        lines[lineNumber] = lines[lineNumber].replace(/^(\s*[-*]\s*\[( |x|X)\]\s*).*$/, "$1" + value.replace(/\$/g, "$$$$"));
+        remFile.setText(lines.join("\n"));
+    }
+    function deleteReminder(lineNumber) {
+        var lines = remFile.text().split("\n");
+        if (lineNumber < 0 || lineNumber >= lines.length) return;
+        lines.splice(lineNumber, 1);
+        remFile.setText(lines.join("\n"));
+        if (hub && hub.bar) hub.bar.playSound("tink", 0.4);
     }
 
     // ───────────── weather data (Open-Meteo) ─────────────
