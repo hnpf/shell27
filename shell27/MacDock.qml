@@ -2515,7 +2515,7 @@ Scope {
                                     text: siriBackend.apiKey
                                     onTextChanged: {
                                         siriBackend.apiKey = text;
-                                        siriBackend.saveSettings();
+                                        siriBackend.saveApiKeyImmediately();
                                     }
                                 }
                             }

@@ -46,9 +46,10 @@ Item {
         { id: "google-images", label: "Google Images" }
     ]
 
-    readonly property string settingsPath: Quickshell.env("HOME") + "/.config/quickshell/shell27/siri_settings.json"
-    readonly property string geminiConfigPath: Quickshell.env("HOME") + "/.config/quickshell/shell27/gemini_config.json"
-    readonly property string daemonScriptPath: Quickshell.env("HOME") + "/.config/quickshell/shell27/scripts/siri_daemon.py"
+    readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
+    readonly property string settingsPath: root.configHome + "/quickshell/shell27/siri_settings.json"
+    readonly property string geminiConfigPath: root.configHome + "/quickshell/shell27/gemini_config.json"
+    readonly property string daemonScriptPath: root.configHome + "/quickshell/shell27/scripts/siri_daemon.py"
 
     property alias testVoiceProc: testVoiceProc
     property alias testApiProc: testApiProc
@@ -101,6 +102,12 @@ Item {
         saveDebounce.restart();
     }
 
+    function saveApiKeyImmediately() {
+        if (!root.isLoaded) return;
+        root.writeToDisk(false);
+        saveDebounce.restart();
+    }
+
     function syncWakeWordDaemon() {
         if (!root.isLoaded) return;
         if (daemonControlProc.running) {
@@ -127,7 +134,7 @@ Item {
         }
     }
 
-    function writeToDisk() {
+    function writeToDisk(notify) {
         var o = {
             enabled: root.siriEnabled,
             wake_word_enabled: root.wakeWordEnabled,
@@ -155,9 +162,10 @@ Item {
             model: root.geminiModel
         }, null, 2));
 
-        // Send IPC sync signal
-        reloadProc.command = ["qs", "-c", "shell27", "ipc", "call", "siri", "state", "idle"];
-        reloadProc.running = true;
+        if (notify !== false) {
+            reloadProc.command = ["qs", "-c", "shell27", "ipc", "call", "siri", "state", "idle"];
+            reloadProc.running = true;
+        }
     }
 
     Process {
