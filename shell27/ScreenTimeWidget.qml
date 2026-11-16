@@ -32,6 +32,7 @@ Item {
     property real glassGrain: 0.03
     property bool darkGlass: true
     property bool preview: false
+    property bool flat: false
     signal glassFailed()
 
     readonly property bool isSmall: size === "small"
@@ -65,7 +66,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        visible: w.style === "normal"
+        visible: !w.flat && w.style === "normal"
         radius: w.radiusPx
         gradient: Gradient {
             GradientStop { position: 0.0; color: w.dark ? "#3A3A3D" : "#FFFFFF" }
@@ -75,7 +76,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        visible: w.style === "liquid" && !w.glassOn
+        visible: !w.flat && w.style === "liquid" && !w.glassOn
         radius: w.radiusPx
         gradient: Gradient {
             GradientStop { position: 0.0; color: w.dark ? Qt.rgba(0.22, 0.22, 0.25, 0.82) : Qt.rgba(1.0, 1.0, 1.0, 0.88) }
@@ -196,6 +197,7 @@ Item {
     CornerBorder {
         z: 2
         anchors.fill: parent
+        visible: !w.flat
         cornerR: w.radiusPx
         dark: w.dark
         tint: w.borderTint
@@ -212,26 +214,31 @@ Item {
     }
     Text {
         x: w.pad - 1 * w.s; y: 30 * w.s
+        width: w.isMedium ? Math.max(0, graph.x - x - 8 * w.s) : undefined
         text: w.totalText
         color: w.fg
         font.family: Fonts.forWeight(Font.DemiBold, w.fam)
         font.pixelSize: (w.isSmall ? 34 : (w.isMedium ? 39 : 44)) * w.s
+        fontSizeMode: w.isMedium ? Text.Fit : Text.FixedSize
+        minimumPixelSize: 28 * w.s
         font.weight: Font.DemiBold
     }
     Text {
         x: w.pad; y: (w.isSmall ? 72 : 76) * w.s
+        width: w.isMedium ? Math.max(0, graph.x - x - 8 * w.s) : undefined
         text: w.trackingEnabled ? "Today" : "Tracking off"
         color: w.fgSub
         font.family: w.fam
         font.pixelSize: 12 * w.s
+        elide: Text.ElideRight
     }
 
     Canvas {
         id: graph
-        x: w.isSmall ? w.pad : (w.isMedium ? 126 * w.s : w.pad)
+        x: w.isSmall ? w.pad : (w.isMedium ? 152 * w.s : w.pad)
         y: w.isSmall ? 96 * w.s : (w.isMedium ? 30 * w.s : 100 * w.s)
-        width: w.isSmall ? w.width - 2 * w.pad : (w.isMedium ? w.width - 142 * w.s : w.width - 2 * w.pad)
-        height: w.isSmall ? 52 * w.s : (w.isMedium ? 112 * w.s : 124 * w.s)
+        width: w.isSmall ? w.width - 2 * w.pad : (w.isMedium ? w.width - 168 * w.s : w.width - 2 * w.pad)
+        height: w.isSmall ? 52 * w.s : (w.isMedium ? 92 * w.s : 124 * w.s)
         onWidthChanged: requestPaint()
         onHeightChanged: requestPaint()
         onPaint: {
@@ -280,13 +287,13 @@ Item {
 
     Rectangle {
         visible: w.isMedium
-        x: 112 * w.s; y: 19 * w.s
+        x: 140 * w.s; y: 19 * w.s
         width: 1; height: w.height - 38 * w.s
         color: w.line
     }
     Row {
         visible: w.isMedium
-        x: w.pad; y: w.height - 29 * w.s
+        x: w.pad; y: w.height - 18 * w.s
         spacing: 12 * w.s
         Repeater {
             model: w.categories.slice(0, 3)

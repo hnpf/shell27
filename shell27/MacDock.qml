@@ -5143,11 +5143,12 @@ Scope {
                 SCard {
                     t: pal
                     ScreenTimeWidget {
-                        width: parent.width - 24
+                        width: parent.width
                         height: 168
                         size: "medium"
                         style: "liquid"
                         preview: true
+                        flat: true
                         fam: root.fontFamily
                         darkGlass: root.dockDark
                         totalText: root.screenTimeSummaryText()
