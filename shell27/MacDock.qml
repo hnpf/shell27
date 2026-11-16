@@ -522,10 +522,12 @@ Scope {
         required property var t
         property string title: ""
         property string subtitle: ""
+        property string detail: ""
         property url iconSource: ""
         default property alias control: slot.data
         width: parent ? parent.width : 0
         height: Math.max(44, textCol.height + 22, slot.height + 20)
+        Behavior on height { NumberAnimation { duration: 210; easing.type: Easing.OutCubic } }
 
         Rectangle {
             visible: r.y > 0.5
@@ -568,6 +570,17 @@ Scope {
                 color: r.t.text2
                 font.family: root.fontForWeight(Font.Normal, r.t.fam)
                 font.pixelSize: 12
+            }
+            Text {
+                visible: r.detail !== ""
+                width: parent.width
+                text: r.detail
+                wrapMode: Text.WordWrap
+                color: r.t.text2
+                opacity: visible ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                font.family: root.fontForWeight(Font.Normal, r.t.fam)
+                font.pixelSize: 11
             }
         }
         Item {
@@ -4743,6 +4756,7 @@ Scope {
                 id: screenTimePane
                 spacing: 10
                 property string actionNotice: ""
+                property string actionNoticeKey: ""
                 property string editorMode: ""
                 property int editorIndex: -1
                 property string formName: ""
@@ -4752,20 +4766,25 @@ Scope {
                 property string formEnd: "07:00"
                 property string formDays: "Every day"
                 property bool formEnabled: true
-                function showActionNotice(msg) {
+                property string formError: ""
+                function showActionNotice(msg, key) {
                     screenTimePane.actionNotice = msg
+                    screenTimePane.actionNoticeKey = key
                     screenTimeNoticeTimer.restart()
                 }
                 function editCategory(index) {
+                    if (editorMode === "category" && editorIndex === index) { editorMode = ""; return }
                     var item = index >= 0 ? root.screenTimePreferences.categories[index] : null
                     screenTimePane.editorMode = "category"
                     screenTimePane.editorIndex = index
                     screenTimePane.formName = item ? item.name : ""
                     screenTimePane.formKeywords = item ? (item.keywords || "") : ""
                     screenTimePane.formLimit = item ? String(item.limitMinutes) : "60"
+                    screenTimePane.formError = ""
                     screenTimePane.actionNotice = ""
                 }
                 function editSchedule(index) {
+                    if (editorMode === "schedule" && editorIndex === index) { editorMode = ""; return }
                     var item = index >= 0 ? root.screenTimePreferences.schedules[index] : null
                     screenTimePane.editorMode = "schedule"
                     screenTimePane.editorIndex = index
@@ -4774,6 +4793,7 @@ Scope {
                     screenTimePane.formEnd = item ? item.end : "07:00"
                     screenTimePane.formDays = item ? item.days : "Every day"
                     screenTimePane.formEnabled = item ? !!item.enabled : true
+                    screenTimePane.formError = ""
                     screenTimePane.actionNotice = ""
                 }
                 function saveEditor() {
@@ -4784,15 +4804,262 @@ Scope {
                         ok = root.screenTimeSaveSchedule(formName, formStart, formEnd, formDays, formEnabled, editorIndex)
                     if (ok) {
                         editorMode = ""
-                        showActionNotice(I18n.tr("Saved"))
+                        formError = ""
                     } else {
-                        showActionNotice(editorMode === "category" ? I18n.tr("Enter a unique name and a valid daily limit") : I18n.tr("Enter a name and times in HH:MM format"))
+                        formError = editorMode === "category" ? I18n.tr("Enter a unique name and a valid daily limit") : I18n.tr("Enter a name and times in HH:MM format")
                     }
                 }
                 Timer {
                     id: screenTimeNoticeTimer
-                    interval: 1600
-                    onTriggered: screenTimePane.actionNotice = ""
+                    interval: 3200
+                    onTriggered: {
+                        screenTimePane.actionNotice = ""
+                        screenTimePane.actionNoticeKey = ""
+                    }
+                }
+
+                Component {
+                    id: categoryEditorComponent
+                    Rectangle {
+                        id: categoryPanel
+                        property int recordIndex: -1
+                        property bool expanded: false
+                        width: parent ? parent.width : 0
+                        implicitHeight: categoryForm.implicitHeight + 28
+                        radius: 11
+                        color: pal.dark ? "#242426" : "#F1F2F4"
+                        border.width: 1
+                        border.color: pal.cardBorder
+                        Column {
+                            id: categoryForm
+                            x: 14; y: 14
+                            width: parent.width - 28
+                            spacing: 9
+                            TextField {
+                                id: categoryNameField
+                                width: parent.width; height: 38
+                                text: screenTimePane.formName
+                                placeholderText: I18n.tr("Category name")
+                                placeholderTextColor: pal.text2
+                                color: pal.text
+                                font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 13
+                                leftPadding: 12; rightPadding: 12; topPadding: 7; bottomPadding: 7
+                                selectByMouse: true
+                                opacity: 0
+                                onTextChanged: screenTimePane.formName = text
+                                background: Rectangle {
+                                    radius: 7
+                                    color: pal.dark ? "#303033" : "#FFFFFF"
+                                    border.width: 1
+                                    border.color: categoryNameField.activeFocus ? pal.accent : pal.cardBorder
+                                }
+                            }
+                            TextField {
+                                id: categoryLimitField
+                                width: parent.width; height: 38
+                                text: screenTimePane.formLimit
+                                placeholderText: I18n.tr("Daily limit in minutes")
+                                placeholderTextColor: pal.text2
+                                validator: IntValidator { bottom: 1; top: 1440 }
+                                color: pal.text
+                                font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 13
+                                leftPadding: 12; rightPadding: 12; topPadding: 7; bottomPadding: 7
+                                selectByMouse: true
+                                opacity: 0
+                                onTextChanged: screenTimePane.formLimit = text
+                                background: Rectangle {
+                                    radius: 7
+                                    color: pal.dark ? "#303033" : "#FFFFFF"
+                                    border.width: 1
+                                    border.color: categoryLimitField.activeFocus ? pal.accent : pal.cardBorder
+                                }
+                            }
+                            TextField {
+                                id: categoryKeywordsField
+                                width: parent.width; height: 38
+                                text: screenTimePane.formKeywords
+                                placeholderText: I18n.tr("App name matches, comma separated")
+                                placeholderTextColor: pal.text2
+                                color: pal.text
+                                font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 13
+                                leftPadding: 12; rightPadding: 12; topPadding: 7; bottomPadding: 7
+                                selectByMouse: true
+                                opacity: 0
+                                onTextChanged: screenTimePane.formKeywords = text
+                                background: Rectangle {
+                                    radius: 7
+                                    color: pal.dark ? "#303033" : "#FFFFFF"
+                                    border.width: 1
+                                    border.color: categoryKeywordsField.activeFocus ? pal.accent : pal.cardBorder
+                                }
+                            }
+                            Text {
+                                visible: screenTimePane.formError !== "" && screenTimePane.editorMode === "category"
+                                width: parent.width
+                                text: screenTimePane.formError
+                                wrapMode: Text.WordWrap
+                                color: pal.danger
+                                font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 11
+                                opacity: visible ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: 130 } }
+                            }
+                            Row {
+                                id: categoryActions
+                                spacing: 8
+                                opacity: 0
+                                SButton { t: pal; text: I18n.tr("Save"); onClicked: screenTimePane.saveEditor() }
+                                SButton { t: pal; text: I18n.tr("Cancel"); onClicked: screenTimePane.editorMode = "" }
+                                SButton {
+                                    visible: categoryPanel.recordIndex >= 0
+                                    t: pal; text: I18n.tr("Delete")
+                                    onClicked: {
+                                        root.screenTimeRemoveCategory(categoryPanel.recordIndex)
+                                        screenTimePane.editorMode = ""
+                                    }
+                                }
+                            }
+                        }
+                        SequentialAnimation {
+                            id: categoryReveal
+                            PauseAnimation { duration: 25 }
+                            NumberAnimation { target: categoryNameField; property: "opacity"; to: 1; duration: 70; easing.type: Easing.OutCubic }
+                            PauseAnimation { duration: 28 }
+                            NumberAnimation { target: categoryLimitField; property: "opacity"; to: 1; duration: 70; easing.type: Easing.OutCubic }
+                            PauseAnimation { duration: 28 }
+                            NumberAnimation { target: categoryKeywordsField; property: "opacity"; to: 1; duration: 70; easing.type: Easing.OutCubic }
+                            PauseAnimation { duration: 28 }
+                            NumberAnimation { target: categoryActions; property: "opacity"; to: 1; duration: 90; easing.type: Easing.OutCubic }
+                        }
+                        onExpandedChanged: {
+                            if (!expanded) return
+                            categoryNameField.opacity = 0
+                            categoryLimitField.opacity = 0
+                            categoryKeywordsField.opacity = 0
+                            categoryActions.opacity = 0
+                            categoryReveal.restart()
+                        }
+                    }
+                }
+
+                Component {
+                    id: scheduleEditorComponent
+                    Rectangle {
+                        id: schedulePanel
+                        property int recordIndex: -1
+                        property bool expanded: false
+                        width: parent ? parent.width : 0
+                        implicitHeight: scheduleForm.implicitHeight + 28
+                        radius: 11
+                        color: pal.dark ? "#242426" : "#F1F2F4"
+                        border.width: 1
+                        border.color: pal.cardBorder
+                        Column {
+                            id: scheduleForm
+                            x: 14; y: 14
+                            width: parent.width - 28
+                            spacing: 9
+                            TextField {
+                                id: scheduleNameField
+                                width: parent.width; height: 38
+                                text: screenTimePane.formName
+                                placeholderText: I18n.tr("Schedule name")
+                                placeholderTextColor: pal.text2
+                                color: pal.text
+                                font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 13
+                                leftPadding: 12; rightPadding: 12; topPadding: 7; bottomPadding: 7
+                                selectByMouse: true; opacity: 0
+                                onTextChanged: screenTimePane.formName = text
+                                background: Rectangle { radius: 7; color: pal.dark ? "#303033" : "#FFFFFF"; border.width: 1; border.color: scheduleNameField.activeFocus ? pal.accent : pal.cardBorder }
+                            }
+                            Row {
+                                width: parent.width; spacing: 8
+                                TextField {
+                                    id: scheduleStartField
+                                    width: (parent.width - 8) / 2; height: 38
+                                    text: screenTimePane.formStart
+                                    placeholderText: I18n.tr("Start HH:MM")
+                                    placeholderTextColor: pal.text2
+                                    color: pal.text
+                                    font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 13
+                                    leftPadding: 12; rightPadding: 12; topPadding: 7; bottomPadding: 7
+                                    selectByMouse: true; opacity: 0
+                                    onTextChanged: screenTimePane.formStart = text
+                                    background: Rectangle { radius: 7; color: pal.dark ? "#303033" : "#FFFFFF"; border.width: 1; border.color: scheduleStartField.activeFocus ? pal.accent : pal.cardBorder }
+                                }
+                                TextField {
+                                    id: scheduleEndField
+                                    width: (parent.width - 8) / 2; height: 38
+                                    text: screenTimePane.formEnd
+                                    placeholderText: I18n.tr("End HH:MM")
+                                    placeholderTextColor: pal.text2
+                                    color: pal.text
+                                    font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 13
+                                    leftPadding: 12; rightPadding: 12; topPadding: 7; bottomPadding: 7
+                                    selectByMouse: true; opacity: 0
+                                    onTextChanged: screenTimePane.formEnd = text
+                                    background: Rectangle { radius: 7; color: pal.dark ? "#303033" : "#FFFFFF"; border.width: 1; border.color: scheduleEndField.activeFocus ? pal.accent : pal.cardBorder }
+                                }
+                            }
+                            TextField {
+                                id: scheduleDaysField
+                                width: parent.width; height: 38
+                                text: screenTimePane.formDays
+                                placeholderText: I18n.tr("Days, for example Mon-Fri")
+                                placeholderTextColor: pal.text2
+                                color: pal.text
+                                font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 13
+                                leftPadding: 12; rightPadding: 12; topPadding: 7; bottomPadding: 7
+                                selectByMouse: true; opacity: 0
+                                onTextChanged: screenTimePane.formDays = text
+                                background: Rectangle { radius: 7; color: pal.dark ? "#303033" : "#FFFFFF"; border.width: 1; border.color: scheduleDaysField.activeFocus ? pal.accent : pal.cardBorder }
+                            }
+                            Text {
+                                visible: screenTimePane.formError !== "" && screenTimePane.editorMode === "schedule"
+                                width: parent.width
+                                text: screenTimePane.formError
+                                wrapMode: Text.WordWrap
+                                color: pal.danger
+                                font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 11
+                                opacity: visible ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: 130 } }
+                            }
+                            Row {
+                                id: scheduleActions
+                                spacing: 8; opacity: 0
+                                SButton { t: pal; text: I18n.tr("Save"); onClicked: screenTimePane.saveEditor() }
+                                SButton { t: pal; text: I18n.tr("Cancel"); onClicked: screenTimePane.editorMode = "" }
+                                SButton {
+                                    visible: schedulePanel.recordIndex >= 0
+                                    t: pal; text: I18n.tr("Delete")
+                                    onClicked: {
+                                        root.screenTimeRemoveSchedule(schedulePanel.recordIndex)
+                                        screenTimePane.editorMode = ""
+                                    }
+                                }
+                            }
+                        }
+                        SequentialAnimation {
+                            id: scheduleReveal
+                            PauseAnimation { duration: 25 }
+                            NumberAnimation { target: scheduleNameField; property: "opacity"; to: 1; duration: 70; easing.type: Easing.OutCubic }
+                            PauseAnimation { duration: 28 }
+                            NumberAnimation { target: scheduleStartField; property: "opacity"; to: 1; duration: 70; easing.type: Easing.OutCubic }
+                            NumberAnimation { target: scheduleEndField; property: "opacity"; to: 1; duration: 70; easing.type: Easing.OutCubic }
+                            PauseAnimation { duration: 28 }
+                            NumberAnimation { target: scheduleDaysField; property: "opacity"; to: 1; duration: 70; easing.type: Easing.OutCubic }
+                            PauseAnimation { duration: 28 }
+                            NumberAnimation { target: scheduleActions; property: "opacity"; to: 1; duration: 90; easing.type: Easing.OutCubic }
+                        }
+                        onExpandedChanged: {
+                            if (!expanded) return
+                            scheduleNameField.opacity = 0
+                            scheduleStartField.opacity = 0
+                            scheduleEndField.opacity = 0
+                            scheduleDaysField.opacity = 0
+                            scheduleActions.opacity = 0
+                            scheduleReveal.restart()
+                        }
+                    }
                 }
 
                 SCard {
@@ -4800,154 +5067,7 @@ Scope {
                     SRow {
                         t: pal; title: I18n.tr("Screen Time tracking")
                         subtitle: I18n.tr("Collect app and category usage when enabled")
-                        SSwitch { t: pal; checked: root.screenTimeEnabled; onToggled: v => { root.screenTimeEnabled = v; screenTimePane.trackingEnabled = v; } }
-                    }
-                }
-
-                Text {
-                    visible: screenTimePane.actionNotice !== ""
-                    width: parent.width
-                    text: screenTimePane.actionNotice
-                    color: pal.text2
-                    font.family: root.fontForWeight(Font.Medium, pal.fam)
-                    font.pixelSize: 12
-                    horizontalAlignment: Text.AlignLeft
-                }
-
-                SCard {
-                    visible: screenTimePane.editorMode === "category"
-                    t: pal
-                    Column {
-                        width: parent.width - 28
-                        x: 14
-                        y: 12
-                        spacing: 8
-                        TextField {
-                            width: parent.width
-                            height: 36
-                            text: screenTimePane.formName
-                            placeholderText: I18n.tr("Category name")
-                            color: pal.text
-                            font.family: root.fontForWeight(Font.Normal, pal.fam)
-                            font.pixelSize: 13
-                            selectByMouse: true
-                            onTextChanged: screenTimePane.formName = text
-                            background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
-                        }
-                        TextField {
-                            width: parent.width
-                            height: 36
-                            text: screenTimePane.formLimit
-                            placeholderText: I18n.tr("Daily limit in minutes")
-                            validator: IntValidator { bottom: 1; top: 1440 }
-                            color: pal.text
-                            font.family: root.fontForWeight(Font.Normal, pal.fam)
-                            font.pixelSize: 13
-                            selectByMouse: true
-                            onTextChanged: screenTimePane.formLimit = text
-                            background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
-                        }
-                        TextField {
-                            width: parent.width
-                            height: 36
-                            text: screenTimePane.formKeywords
-                            placeholderText: I18n.tr("App name matches, comma separated")
-                            color: pal.text
-                            font.family: root.fontForWeight(Font.Normal, pal.fam)
-                            font.pixelSize: 13
-                            selectByMouse: true
-                            onTextChanged: screenTimePane.formKeywords = text
-                            background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
-                        }
-                        Row {
-                            spacing: 8
-                            SButton { t: pal; text: I18n.tr("Save"); onClicked: screenTimePane.saveEditor() }
-                            SButton { t: pal; text: I18n.tr("Cancel"); onClicked: screenTimePane.editorMode = "" }
-                            SButton {
-                                visible: screenTimePane.editorIndex >= 0
-                                t: pal; text: I18n.tr("Delete")
-                                onClicked: {
-                                    root.screenTimeRemoveCategory(screenTimePane.editorIndex)
-                                    screenTimePane.editorMode = ""
-                                }
-                            }
-                        }
-                    }
-                }
-
-                SCard {
-                    visible: screenTimePane.editorMode === "schedule"
-                    t: pal
-                    Column {
-                        width: parent.width - 28
-                        x: 14
-                        y: 12
-                        spacing: 8
-                        TextField {
-                            width: parent.width
-                            height: 36
-                            text: screenTimePane.formName
-                            placeholderText: I18n.tr("Schedule name")
-                            color: pal.text
-                            font.family: root.fontForWeight(Font.Normal, pal.fam)
-                            font.pixelSize: 13
-                            selectByMouse: true
-                            onTextChanged: screenTimePane.formName = text
-                            background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
-                        }
-                        Row {
-                            width: parent.width
-                            spacing: 8
-                            TextField {
-                                width: (parent.width - 8) / 2
-                                height: 36
-                                text: screenTimePane.formStart
-                                placeholderText: I18n.tr("Start HH:MM")
-                                color: pal.text
-                                font.family: root.fontForWeight(Font.Normal, pal.fam)
-                                font.pixelSize: 13
-                                selectByMouse: true
-                                onTextChanged: screenTimePane.formStart = text
-                                background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
-                            }
-                            TextField {
-                                width: (parent.width - 8) / 2
-                                height: 36
-                                text: screenTimePane.formEnd
-                                placeholderText: I18n.tr("End HH:MM")
-                                color: pal.text
-                                font.family: root.fontForWeight(Font.Normal, pal.fam)
-                                font.pixelSize: 13
-                                selectByMouse: true
-                                onTextChanged: screenTimePane.formEnd = text
-                                background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
-                            }
-                        }
-                        TextField {
-                            width: parent.width
-                            height: 36
-                            text: screenTimePane.formDays
-                            placeholderText: I18n.tr("Days, for example Mon-Fri")
-                            color: pal.text
-                            font.family: root.fontForWeight(Font.Normal, pal.fam)
-                            font.pixelSize: 13
-                            selectByMouse: true
-                            onTextChanged: screenTimePane.formDays = text
-                            background: Rectangle { radius: 8; color: pal.track; border.color: pal.cardBorder }
-                        }
-                        Row {
-                            spacing: 8
-                            SButton { t: pal; text: I18n.tr("Save"); onClicked: screenTimePane.saveEditor() }
-                            SButton { t: pal; text: I18n.tr("Cancel"); onClicked: screenTimePane.editorMode = "" }
-                            SButton {
-                                visible: screenTimePane.editorIndex >= 0
-                                t: pal; text: I18n.tr("Delete")
-                                onClicked: {
-                                    root.screenTimeRemoveSchedule(screenTimePane.editorIndex)
-                                    screenTimePane.editorMode = ""
-                                }
-                            }
-                        }
+                        SSwitch { t: pal; checked: root.screenTimeEnabled; onToggled: v => root.screenTimeEnabled = v }
                     }
                 }
 
@@ -5023,18 +5143,49 @@ Scope {
                     t: pal
                     Repeater {
                         model: root.screenTimePreferences.categories
-                        delegate: SRow {
+                        delegate: Column {
                             required property var modelData
                             required property int index
-                            t: pal
-                            title: modelData.name
-                            subtitle: root.screenTimeFormatSeconds(root.screenTimeCategoryTotal(modelData.name)) + " / " + root.screenTimeFormatSeconds(Number(modelData.limitMinutes) * 60) + " " + I18n.tr("today")
-                            SButton { t: pal; text: I18n.tr("View"); onClicked: screenTimePane.editCategory(index) }
+                            width: parent.width
+                            Rectangle { visible: index > 0; width: parent.width - 14; x: 14; height: visible ? 1 : 0; color: pal.sep }
+                            SRow {
+                                t: pal
+                                title: modelData.name
+                                subtitle: root.screenTimeFormatSeconds(root.screenTimeCategoryTotal(modelData.name)) + " / " + root.screenTimeFormatSeconds(Number(modelData.limitMinutes) * 60) + " " + I18n.tr("today")
+                                SButton { t: pal; text: I18n.tr("View"); onClicked: screenTimePane.editCategory(index) }
+                            }
+                            Loader {
+                                id: categoryEditorLoader
+                                property bool expanded: screenTimePane.editorMode === "category" && screenTimePane.editorIndex === index
+                                x: 14; width: parent.width - 28; clip: true
+                                height: expanded && item ? item.implicitHeight : 0
+                                opacity: expanded ? 1 : 0
+                                sourceComponent: categoryEditorComponent
+                                onLoaded: { item.recordIndex = index; item.expanded = expanded }
+                                onExpandedChanged: if (item) item.expanded = expanded
+                                Behavior on height { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                                Behavior on opacity { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
+                            }
                         }
                     }
-                    SRow {
-                        t: pal; title: I18n.tr("Add category")
-                        SButton { t: pal; text: I18n.tr("New"); onClicked: screenTimePane.editCategory(-1) }
+                    Column {
+                        width: parent.width
+                        Rectangle { visible: root.screenTimePreferences.categories.length > 0; width: parent.width - 14; x: 14; height: visible ? 1 : 0; color: pal.sep }
+                        SRow {
+                            t: pal; title: I18n.tr("Add category")
+                            SButton { t: pal; text: I18n.tr("New"); onClicked: screenTimePane.editCategory(-1) }
+                        }
+                        Loader {
+                            property bool expanded: screenTimePane.editorMode === "category" && screenTimePane.editorIndex === -1
+                            x: 14; width: parent.width - 28; clip: true
+                            height: expanded && item ? item.implicitHeight : 0
+                            opacity: expanded ? 1 : 0
+                            sourceComponent: categoryEditorComponent
+                            onLoaded: { item.recordIndex = -1; item.expanded = expanded }
+                            onExpandedChanged: if (item) item.expanded = expanded
+                            Behavior on height { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                            Behavior on opacity { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
+                        }
                     }
                 }
 
@@ -5043,22 +5194,52 @@ Scope {
                     t: pal
                     Repeater {
                         model: root.screenTimePreferences.schedules
-                        delegate: SRow {
+                        delegate: Column {
                             required property var modelData
                             required property int index
-                            t: pal
-                            title: modelData.name
-                            subtitle: modelData.days + " · " + modelData.start + " to " + modelData.end
-                            Row {
-                                spacing: 8
-                                SButton { t: pal; text: I18n.tr("Edit"); onClicked: screenTimePane.editSchedule(index) }
-                                SSwitch { t: pal; checked: !!modelData.enabled; onToggled: v => root.screenTimeSetScheduleEnabled(index, v) }
+                            width: parent.width
+                            Rectangle { visible: index > 0; width: parent.width - 14; x: 14; height: visible ? 1 : 0; color: pal.sep }
+                            SRow {
+                                t: pal
+                                title: modelData.name
+                                subtitle: modelData.days + " · " + modelData.start + " to " + modelData.end
+                                Row {
+                                    spacing: 8
+                                    SButton { t: pal; text: I18n.tr("Edit"); onClicked: screenTimePane.editSchedule(index) }
+                                    SSwitch { t: pal; checked: !!modelData.enabled; onToggled: v => root.screenTimeSetScheduleEnabled(index, v) }
+                                }
+                            }
+                            Loader {
+                                property bool expanded: screenTimePane.editorMode === "schedule" && screenTimePane.editorIndex === index
+                                x: 14; width: parent.width - 28; clip: true
+                                height: expanded && item ? item.implicitHeight : 0
+                                opacity: expanded ? 1 : 0
+                                sourceComponent: scheduleEditorComponent
+                                onLoaded: { item.recordIndex = index; item.expanded = expanded }
+                                onExpandedChanged: if (item) item.expanded = expanded
+                                Behavior on height { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                                Behavior on opacity { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
                             }
                         }
                     }
-                    SRow {
-                        t: pal; title: I18n.tr("Add Schedule")
-                        SButton { t: pal; text: I18n.tr("New"); onClicked: screenTimePane.editSchedule(-1) }
+                    Column {
+                        width: parent.width
+                        Rectangle { visible: root.screenTimePreferences.schedules.length > 0; width: parent.width - 14; x: 14; height: visible ? 1 : 0; color: pal.sep }
+                        SRow {
+                            t: pal; title: I18n.tr("Add Schedule")
+                            SButton { t: pal; text: I18n.tr("New"); onClicked: screenTimePane.editSchedule(-1) }
+                        }
+                        Loader {
+                            property bool expanded: screenTimePane.editorMode === "schedule" && screenTimePane.editorIndex === -1
+                            x: 14; width: parent.width - 28; clip: true
+                            height: expanded && item ? item.implicitHeight : 0
+                            opacity: expanded ? 1 : 0
+                            sourceComponent: scheduleEditorComponent
+                            onLoaded: { item.recordIndex = -1; item.expanded = expanded }
+                            onExpandedChanged: if (item) item.expanded = expanded
+                            Behavior on height { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                            Behavior on opacity { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
+                        }
                     }
                 }
 
@@ -5080,19 +5261,23 @@ Scope {
                     t: pal
                     SRow {
                         t: pal; title: I18n.tr("Ask to Browse")
-                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Ask to Browse coming soon")) }
+                        detail: screenTimePane.actionNoticeKey === "askBrowse" ? screenTimePane.actionNotice : ""
+                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Ask to Browse coming soon"), "askBrowse") }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Ask to Buy")
-                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Ask to Buy coming soon")) }
+                        detail: screenTimePane.actionNoticeKey === "askBuy" ? screenTimePane.actionNotice : ""
+                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Ask to Buy coming soon"), "askBuy") }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Communication Limits")
-                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Communication Limits coming soon")) }
+                        detail: screenTimePane.actionNoticeKey === "communicationLimits" ? screenTimePane.actionNotice : ""
+                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Communication Limits coming soon"), "communicationLimits") }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Communication Safety")
-                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Communication Safety coming soon")) }
+                        detail: screenTimePane.actionNoticeKey === "communicationSafety" ? screenTimePane.actionNotice : ""
+                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Communication Safety coming soon"), "communicationSafety") }
                     }
                 }
 
@@ -5100,7 +5285,8 @@ Scope {
                     t: pal
                     SRow {
                         t: pal; title: I18n.tr("Always Allowed")
-                        SButton { t: pal; text: I18n.tr("Edit"); onClicked: screenTimePane.showActionNotice(I18n.tr("Always Allowed coming soon")) }
+                        detail: screenTimePane.actionNoticeKey === "alwaysAllowed" ? screenTimePane.actionNotice : ""
+                        SButton { t: pal; text: I18n.tr("Edit"); onClicked: screenTimePane.showActionNotice(I18n.tr("Always Allowed coming soon"), "alwaysAllowed") }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Screen Distance")
@@ -5108,7 +5294,8 @@ Scope {
                     }
                     SRow {
                         t: pal; title: I18n.tr("Content & Privacy Restrictions")
-                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Content & Privacy Restrictions coming soon")) }
+                        detail: screenTimePane.actionNoticeKey === "contentPrivacy" ? screenTimePane.actionNotice : ""
+                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Content & Privacy Restrictions coming soon"), "contentPrivacy") }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Lock Screen Time Settings")
@@ -5122,7 +5309,8 @@ Scope {
                     }
                     SRow {
                         t: pal; title: I18n.tr("Turn off App & Website Activity")
-                        SButton { t: pal; text: I18n.tr("Disable"); onClicked: screenTimePane.showActionNotice(I18n.tr("Activity reset flow coming soon")) }
+                        detail: screenTimePane.actionNoticeKey === "activityReset" ? screenTimePane.actionNotice : ""
+                        SButton { t: pal; text: I18n.tr("Disable"); onClicked: screenTimePane.showActionNotice(I18n.tr("Activity reset flow coming soon"), "activityReset") }
                     }
                 }
             }
