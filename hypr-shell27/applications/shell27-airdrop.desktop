@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=AirDrop
+Comment=Share files with nearby LocalSend devices
+Exec=qs -c shell27 ipc call airdrop open
+Icon=network-transmit-receive
+Terminal=false
+Categories=Network;
+Keywords=share;send;files;localsend;
+StartupNotify=true
+

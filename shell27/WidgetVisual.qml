@@ -280,12 +280,15 @@ Item {
                 glassReady: host.glassState === "ready"
                 shaderUrl: "file://" + host.glassShaderOut
                 wallUrl: host.fileUrl(host.wallpaperFor(v.sname))
+                wallVideo: host.liveWallVideo
+                wallPaused: host.liveWallPaused
                 screenW: v.sw
                 screenH: v.sh
                 glassOpacity: host.glassOpacity
                 glassBlur: host.glassBlur
                 glassLiquid: host.glassLiquid
                 glassRim: host.glassRim
+                borderTint: host.borderTint
                 glassGrain: host.glassGrain
                 darkGlass: host.darkGlass
                 onOpenRemindersApp: {

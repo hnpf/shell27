@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=About This Linux
+Comment=View information about this system
+Exec=qs -c shell27 ipc call about open
+Icon=computer
+Terminal=false
+Categories=System;
+Keywords=about;system;linux;information;
+StartupNotify=true

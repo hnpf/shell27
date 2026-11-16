@@ -481,16 +481,21 @@ Scope {
     }
 
     readonly property var remModel: reminderListModel
+    property string reminderText: ""
     FileView {
         id: remFile
         path: root.configDir + "/reminders.md"
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
-        onLoadFailed: setText("- [ ] Try the new widgets\n- [ ] Add a reminder\n")
+        onLoaded: root.reminderText = text()
+        onLoadFailed: {
+            root.reminderText = "- [ ] Try the new widgets\n- [ ] Add a reminder\n";
+            setText(root.reminderText);
+        }
     }
     readonly property var reminders: {
-        var text = remFile.loaded ? remFile.text() : "", lines = text.split("\n"), out = [];
+        var lines = reminderText.split("\n"), out = [];
         for (var i = 0; i < lines.length; i++) {
             var match = /^\s*[-*]\s*\[( |x|X)\]\s*(.*)$/.exec(lines[i]);
             if (match) out.push({ line: i, done: match[1] !== " ", text: match[2] });
@@ -524,34 +529,38 @@ Scope {
     }
     onRemindersChanged: syncReminders()
     Component.onCompleted: syncReminders()
+    function saveReminders(text) {
+        reminderText = text;
+        remFile.setText(text);
+    }
     function toggleReminder(lineNumber) {
-        var lines = remFile.text().split("\n");
+        var lines = reminderText.split("\n");
         if (lineNumber < 0 || lineNumber >= lines.length) return;
         lines[lineNumber] = /\[ \]/.test(lines[lineNumber]) ? lines[lineNumber].replace("[ ]", "[x]") : lines[lineNumber].replace(/\[(x|X)\]/, "[ ]");
-        remFile.setText(lines.join("\n"));
+        saveReminders(lines.join("\n"));
         if (hub && hub.bar) hub.bar.playSound("tink", 0.6);
     }
     function addReminder(text) {
         var value = String(text || "").trim();
         if (value === "") return;
-        var current = remFile.loaded ? remFile.text() : "";
+        var current = reminderText;
         if (current !== "" && current.charAt(current.length - 1) !== "\n") current += "\n";
-        remFile.setText(current + "- [ ] " + value + "\n");
+        saveReminders(current + "- [ ] " + value + "\n");
         if (hub && hub.bar) hub.bar.playSound("pop", 0.5);
     }
     function setReminderText(lineNumber, text) {
-        var lines = remFile.text().split("\n");
+        var lines = reminderText.split("\n");
         if (lineNumber < 0 || lineNumber >= lines.length) return;
         var value = String(text || "").trim();
         if (value === "") { deleteReminder(lineNumber); return; }
         lines[lineNumber] = lines[lineNumber].replace(/^(\s*[-*]\s*\[( |x|X)\]\s*).*$/, "$1" + value.replace(/\$/g, "$$$$"));
-        remFile.setText(lines.join("\n"));
+        saveReminders(lines.join("\n"));
     }
     function deleteReminder(lineNumber) {
-        var lines = remFile.text().split("\n");
+        var lines = reminderText.split("\n");
         if (lineNumber < 0 || lineNumber >= lines.length) return;
         lines.splice(lineNumber, 1);
-        remFile.setText(lines.join("\n"));
+        saveReminders(lines.join("\n"));
         if (hub && hub.bar) hub.bar.playSound("tink", 0.4);
     }
 

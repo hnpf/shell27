@@ -4085,7 +4085,7 @@ Scope {
                                         if (!wgPane.wdg) return;
                                         var sz = addRow.sizeKeys[addRow.sizeIdx];
                                         if (addRow.modelData.type === "image") wgPane.wdg.pickImage("", sz);
-                                        else if (addRow.modelData.type === "gif") wgPane.wdg.pickGif("", modelData);
+                                        else if (addRow.modelData.type === "gif") wgPane.wdg.pickGif("", sz);
                                         else wgPane.wdg.addWidget(addRow.modelData.type, addRow.modelData.styles[addRow.styleIdx][0], sz);
                                     }
                                 }

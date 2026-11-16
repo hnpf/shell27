@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Clock
+Comment=Alarms, timers, stopwatch, and world clock
+Exec=qs -c shell27 ipc call clock open
+Icon=org.gnome.clocks
+Terminal=false
+Categories=Utility;
+Keywords=alarm;timer;stopwatch;world clock;
+StartupNotify=true
+

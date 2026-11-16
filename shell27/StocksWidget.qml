@@ -21,6 +21,8 @@ Item {
     property bool glassReady: false
     property url shaderUrl: ""
     property url wallUrl: ""
+    property string wallVideo: ""
+    property bool wallPaused: false
     property real screenW: 1920
     property real screenH: 1080
     property real glassOpacity: 0.42
@@ -129,38 +131,41 @@ Item {
             id: gl
             readonly property real margin: 72
             readonly property real padPx: 10
+            property bool moving: false
+            readonly property bool streaming: w.wallVideo !== "" || moving
+            readonly property string captureSignature: [w.wallUrl, w.wallVideo, w.screenX, w.screenY, w.screenW, w.screenH, w.width, w.height, w.glassBlur, w.shaderUrl].join("|")
+            onCaptureSignatureChanged: { moving = true; settle.restart(); }
+            property int captureStep: 0
+            function recapture() { captureStep = 0; captureTimer.restart(); }
+            Timer { id: settle; interval: 450; onTriggered: { gl.moving = false; gl.recapture(); } }
+            Timer {
+                id: captureTimer
+                interval: 60
+                onTriggered: {
+                    if (gl.captureStep === 0) sourceCapture.scheduleUpdate();
+                    else frosted.scheduleUpdate();
+                    gl.captureStep++;
+                    if (gl.captureStep < 2) captureTimer.restart();
+                }
+            }
+            Component.onCompleted: recapture()
             readonly property real ds: w.glassBlur >= 8 ? 0.5 : 1.0
             readonly property real bn: Math.min(1.0, w.glassBlur * 1.4 * ds / 64.0)
-
-            property bool updating: true
-            Timer {
-                id: settleTimer
-                interval: 350
-                onTriggered: gl.updating = false
-            }
-            function triggerUpdate() {
-                gl.updating = true;
-                settleTimer.restart();
-            }
-            Connections {
-                target: w
-                function onScreenXChanged() { gl.triggerUpdate(); }
-                function onScreenYChanged() { gl.triggerUpdate(); }
-                function onWallUrlChanged() { gl.triggerUpdate(); }
-                function onGlassBlurChanged() { gl.triggerUpdate(); }
-                function onGlassLiquidChanged() { gl.triggerUpdate(); }
-                function onWidthChanged() { gl.triggerUpdate(); }
-                function onHeightChanged() { gl.triggerUpdate(); }
-                function onEditingChanged() { if (!w.editing) gl.triggerUpdate(); }
-            }
-            Component.onCompleted: gl.triggerUpdate()
 
             Item {
                 id: backdrop
                 width: w.width + 2 * (gl.padPx + gl.margin)
                 height: w.height + 2 * (gl.padPx + gl.margin)
+                Rectangle {
+                    anchors.fill: parent
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "#2f6bff" }
+                        GradientStop { position: 0.5; color: "#b44cff" }
+                        GradientStop { position: 1.0; color: "#ff8a3d" }
+                    }
+                }
                 Image {
-                    id: bgImg
                     x: -(w.screenX - gl.padPx - gl.margin)
                     y: -(w.screenY - gl.padPx - gl.margin)
                     width: w.screenW; height: w.screenH
@@ -169,22 +174,31 @@ Item {
                     asynchronous: true
                     sourceSize.width: w.screenW
                     smooth: true
-                    onStatusChanged: if (status === Image.Ready) gl.triggerUpdate()
+                    onStatusChanged: if (status === Image.Ready) { gl.moving = true; settle.restart(); }
+                }
+                LiveWall {
+                    x: -(w.screenX - gl.padPx - gl.margin)
+                    y: -(w.screenY - gl.padPx - gl.margin)
+                    width: w.screenW
+                    height: w.screenH
+                    video: w.wallVideo
+                    live: w.wallVideo !== ""
+                    paused: w.wallPaused
                 }
             }
 
             ShaderEffectSource {
-                id: bsrc
+                id: sourceCapture
                 sourceItem: backdrop
                 hideSource: true
-                live: w.editing || gl.updating
+                live: gl.streaming
                 visible: false
                 textureSize: Qt.size(Math.max(1, Math.round(backdrop.width * gl.ds)), Math.max(1, Math.round(backdrop.height * gl.ds)))
             }
 
             MultiEffect {
                 id: blurFx
-                source: bsrc
+                source: sourceCapture
                 width: backdrop.width * gl.ds
                 height: backdrop.height * gl.ds
                 blurEnabled: gl.bn > 0.001
@@ -198,7 +212,7 @@ Item {
             ShaderEffectSource {
                 id: frosted
                 sourceItem: blurFx
-                live: w.editing || gl.updating
+                live: gl.streaming
                 visible: false
             }
 
