@@ -6324,8 +6324,8 @@ Scope {
         var name = String(it.name || "").toLowerCase();
         if (icon === siriIconPath.toLowerCase() || icon === remindersIconPath.toLowerCase()
                 || icon === airdropIconPath.toLowerCase() || icon.charAt(0) === "/"
-                || icon.indexOf("file://") === 0 || appId.indexOf("forkgram") >= 0 || name.indexOf("forkgram") >= 0)
-            return 0.91;
+                || icon.indexOf("file://") === 0 || appId.indexOf("forkgram") >= 0 || name.indexOf("forkgram") >= 0) // yes this is a shit hack, but forkgrams icon is also just a png with a lot of empty space around it
+            return 0.90;
         return 1;
     }
     // icon of a dock cell; the Trash switches to the "full" icon while there is something in it

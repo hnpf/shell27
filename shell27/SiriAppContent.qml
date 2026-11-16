@@ -241,35 +241,7 @@ Scope {
         win.raise();
         win.requestActivate();
     }
-    function beginResize(edges, point) { win.resizeState = { edges: edges, x: point.x, y: point.y, w: win.width, h: win.height }; }
     function windowSelector() { return 'window = "title:^(' + win.title + ')$"'; }
-    function endResize(point) {
-        if (!win.resizeState) return;
-        var state = win.resizeState;
-        win.resizeState = null;
-        var dx = point.x - state.x, dy = point.y - state.y;
-        var newWidth = state.w, newHeight = state.h;
-        if (state.edges & Qt.RightEdge) newWidth += dx;
-        if (state.edges & Qt.LeftEdge) newWidth -= dx;
-        if (state.edges & Qt.BottomEdge) newHeight += dy;
-        if (state.edges & Qt.TopEdge) newHeight -= dy;
-        newWidth = Math.max(695, Math.round(newWidth));
-        newHeight = Math.max(560, Math.round(newHeight));
-        if (newWidth === win.width && newHeight === win.height) return;
-        var selector = windowSelector();
-        var clients = root.hub ? (root.hub.glassClients || []) : [];
-        var origin = null;
-        for (var i = 0; i < clients.length; i++) {
-            if (clients[i].title === win.title && clients[i].mapped) { origin = clients[i].at; break; }
-        }
-        if (!origin) origin = [win.x, win.y];
-        Hyprland.dispatch('hl.dsp.window.resize({ x = ' + newWidth + ', y = ' + newHeight + ', "exact", ' + selector + ' })');
-        if (origin && ((state.edges & Qt.LeftEdge) || (state.edges & Qt.TopEdge))) {
-            var x = (state.edges & Qt.LeftEdge) ? origin[0] + state.w - newWidth : origin[0];
-            var y = (state.edges & Qt.TopEdge) ? origin[1] + state.h - newHeight : origin[1];
-            Hyprland.dispatch('hl.dsp.window.move({ x = ' + x + ', y = ' + y + ', ' + selector + ' })');
-        }
-    }
     function setView(grid) { gridView = grid; }
     function searchMessages() {
         if (messageSearch === "") return [];
@@ -329,7 +301,6 @@ Scope {
         color: "transparent"
         flags: Qt.Window | Qt.FramelessWindowHint
         property int floatTries: 0
-        property var resizeState: null
         onVisibleChanged: if (visible) { floatTries = 0; floatTimer.restart(); }
         onClosing: close => { close.accepted = false; win.visible = false; }
         Shortcut { sequences: ["Escape", "Ctrl+W"]; onActivated: win.visible = false }
@@ -344,7 +315,6 @@ Scope {
                 Hyprland.dispatch('hl.dsp.window.set_prop({ prop = "border_size", value = "0", ' + sel + ' })');
                 Hyprland.dispatch('hl.dsp.window.set_prop({ prop = "rounding", value = "12", ' + sel + ' })');
                 if (win.floatTries >= 2) {
-                    Hyprland.dispatch('hl.dsp.window.resize({ x = 868, y = 715, "exact", ' + sel + ' })');
                     Hyprland.dispatch('hl.dsp.window.center({ ' + sel + ' })');
                 }
                 if (++win.floatTries >= 4) stop();
@@ -371,14 +341,14 @@ Scope {
                 border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.14)
                 z: 900
             }
-            MouseArea { x: 12; y: 0; width: parent.width - 24; height: 6; z: 1000; cursorShape: Qt.SizeVerCursor; onPressed: m => root.beginResize(Qt.TopEdge, mapToItem(null, m.x, m.y)); preventStealing: true; onReleased: m => root.endResize(mapToItem(null, m.x, m.y)); }
-            MouseArea { x: 12; y: parent.height - 6; width: parent.width - 24; height: 6; z: 1000; cursorShape: Qt.SizeVerCursor; onPressed: m => root.beginResize(Qt.BottomEdge, mapToItem(null, m.x, m.y)); preventStealing: true; onReleased: m => root.endResize(mapToItem(null, m.x, m.y)); }
-            MouseArea { x: 0; y: 12; width: 6; height: parent.height - 24; z: 1000; cursorShape: Qt.SizeHorCursor; onPressed: m => root.beginResize(Qt.LeftEdge, mapToItem(null, m.x, m.y)); preventStealing: true; onReleased: m => root.endResize(mapToItem(null, m.x, m.y)); }
-            MouseArea { x: parent.width - 6; y: 12; width: 6; height: parent.height - 24; z: 1000; cursorShape: Qt.SizeHorCursor; onPressed: m => root.beginResize(Qt.RightEdge, mapToItem(null, m.x, m.y)); preventStealing: true; onReleased: m => root.endResize(mapToItem(null, m.x, m.y)); }
-            MouseArea { x: 0; y: 0; width: 12; height: 12; z: 1001; cursorShape: Qt.SizeFDiagCursor; onPressed: m => root.beginResize(Qt.TopEdge | Qt.LeftEdge, mapToItem(null, m.x, m.y)); preventStealing: true; onReleased: m => root.endResize(mapToItem(null, m.x, m.y)); }
-            MouseArea { x: parent.width - 12; y: 0; width: 12; height: 12; z: 1001; cursorShape: Qt.SizeBDiagCursor; onPressed: m => root.beginResize(Qt.TopEdge | Qt.RightEdge, mapToItem(null, m.x, m.y)); preventStealing: true; onReleased: m => root.endResize(mapToItem(null, m.x, m.y)); }
-            MouseArea { x: 0; y: parent.height - 12; width: 12; height: 12; z: 1001; cursorShape: Qt.SizeBDiagCursor; onPressed: m => root.beginResize(Qt.BottomEdge | Qt.LeftEdge, mapToItem(null, m.x, m.y)); preventStealing: true; onReleased: m => root.endResize(mapToItem(null, m.x, m.y)); }
-            MouseArea { x: parent.width - 12; y: parent.height - 12; width: 12; height: 12; z: 1001; cursorShape: Qt.SizeFDiagCursor; onPressed: m => root.beginResize(Qt.BottomEdge | Qt.RightEdge, mapToItem(null, m.x, m.y)); preventStealing: true; onReleased: m => root.endResize(mapToItem(null, m.x, m.y)); }
+            MouseArea { x: 12; y: 0; width: parent.width - 24; height: 6; z: 1000; cursorShape: Qt.SizeVerCursor; onPressed: win.startSystemResize(Qt.TopEdge) }
+            MouseArea { x: 12; y: parent.height - 6; width: parent.width - 24; height: 6; z: 1000; cursorShape: Qt.SizeVerCursor; onPressed: win.startSystemResize(Qt.BottomEdge) }
+            MouseArea { x: 0; y: 12; width: 6; height: parent.height - 24; z: 1000; cursorShape: Qt.SizeHorCursor; onPressed: win.startSystemResize(Qt.LeftEdge) }
+            MouseArea { x: parent.width - 6; y: 12; width: 6; height: parent.height - 24; z: 1000; cursorShape: Qt.SizeHorCursor; onPressed: win.startSystemResize(Qt.RightEdge) }
+            MouseArea { x: 0; y: 0; width: 12; height: 12; z: 1001; cursorShape: Qt.SizeFDiagCursor; onPressed: win.startSystemResize(Qt.TopEdge | Qt.LeftEdge) }
+            MouseArea { x: parent.width - 12; y: 0; width: 12; height: 12; z: 1001; cursorShape: Qt.SizeBDiagCursor; onPressed: win.startSystemResize(Qt.TopEdge | Qt.RightEdge) }
+            MouseArea { x: 0; y: parent.height - 12; width: 12; height: 12; z: 1001; cursorShape: Qt.SizeBDiagCursor; onPressed: win.startSystemResize(Qt.BottomEdge | Qt.LeftEdge) }
+            MouseArea { x: parent.width - 12; y: parent.height - 12; width: 12; height: 12; z: 1001; cursorShape: Qt.SizeFDiagCursor; onPressed: win.startSystemResize(Qt.BottomEdge | Qt.RightEdge) }
 
             Rectangle {
                 id: sidebar
