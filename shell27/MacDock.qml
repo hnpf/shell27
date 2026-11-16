@@ -794,6 +794,32 @@ Scope {
                     }
                 }
             }
+            // screen time (rounded hourglass)
+            Item {
+                visible: gl.kind === "screentime"; anchors.fill: parent
+                Canvas {
+                    anchors.fill: parent
+                    onPaint: {
+                        var c = getContext("2d");
+                        c.reset();
+                        c.strokeStyle = "white";
+                        c.lineWidth = 1.7;
+                        c.lineJoin = "round";
+                        c.lineCap = "round";
+                        c.beginPath();
+                        c.moveTo(3.2, 3.2); c.lineTo(12.8, 3.2); c.lineTo(10.2, 7.6); c.lineTo(10.2, 8.5); c.lineTo(12.8, 12.8); c.lineTo(3.2, 12.8); c.lineTo(5.8, 8.5); c.lineTo(5.8, 7.6); c.closePath();
+                        c.stroke();
+                        c.beginPath();
+                        c.moveTo(5.8, 7.6); c.lineTo(10.2, 7.6);
+                        c.moveTo(5.8, 8.5); c.lineTo(10.2, 8.5);
+                        c.stroke();
+                    }
+                }
+                Rectangle {
+                    x: 4; y: 2; width: 8; height: 12; radius: 2
+                    color: "transparent"; border.width: 1.2; border.color: "white"
+                }
+            }
             // about
             Item {
                 visible: gl.kind === "about"; anchors.fill: parent
@@ -4469,6 +4495,16 @@ Scope {
                 id: screenTimePane
                 spacing: 10
                 property bool trackingEnabled: true
+                property string actionNotice: ""
+                function showActionNotice(msg) {
+                    screenTimePane.actionNotice = msg
+                    screenTimeNoticeTimer.restart()
+                }
+                Timer {
+                    id: screenTimeNoticeTimer
+                    interval: 1600
+                    onTriggered: screenTimePane.actionNotice = ""
+                }
 
                 SCard {
                     t: pal
@@ -4477,6 +4513,16 @@ Scope {
                         subtitle: I18n.tr("Collect app and category usage when enabled")
                         SSwitch { t: pal; checked: screenTimePane.trackingEnabled; onToggled: v => screenTimePane.trackingEnabled = v }
                     }
+                }
+
+                Text {
+                    visible: screenTimePane.actionNotice !== ""
+                    width: parent.width
+                    text: screenTimePane.actionNotice
+                    color: pal.text2
+                    font.family: root.fontForWeight(Font.Medium, pal.fam)
+                    font.pixelSize: 12
+                    horizontalAlignment: Text.AlignLeft
                 }
 
                 SLabel { t: pal; header: true; text: I18n.tr("At a glance") }
@@ -4551,21 +4597,21 @@ Scope {
                     SRow {
                         t: pal; title: I18n.tr("Entertainment")
                         subtitle: I18n.tr("1h 30m today")
-                        SButton { t: pal; text: I18n.tr("View") }
+                        SButton { t: pal; text: I18n.tr("View"); onClicked: screenTimePane.showActionNotice(I18n.tr("Entertainment allowance coming soon")) }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Games")
                         subtitle: I18n.tr("45m today")
-                        SButton { t: pal; text: I18n.tr("View") }
+                        SButton { t: pal; text: I18n.tr("View"); onClicked: screenTimePane.showActionNotice(I18n.tr("Games allowance coming soon")) }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Social Media")
                         subtitle: I18n.tr("1h 05m today")
-                        SButton { t: pal; text: I18n.tr("View") }
+                        SButton { t: pal; text: I18n.tr("View"); onClicked: screenTimePane.showActionNotice(I18n.tr("Social Media allowance coming soon")) }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Add category")
-                        SButton { t: pal; text: I18n.tr("New") }
+                        SButton { t: pal; text: I18n.tr("New"); onClicked: screenTimePane.showActionNotice(I18n.tr("New category flow coming soon")) }
                     }
                 }
 
@@ -4584,7 +4630,7 @@ Scope {
                     }
                     SRow {
                         t: pal; title: I18n.tr("Add Schedule")
-                        SButton { t: pal; text: I18n.tr("New") }
+                        SButton { t: pal; text: I18n.tr("New"); onClicked: screenTimePane.showActionNotice(I18n.tr("Schedule editor coming soon")) }
                     }
                 }
 
@@ -4606,19 +4652,19 @@ Scope {
                     t: pal
                     SRow {
                         t: pal; title: I18n.tr("Ask to Browse")
-                        SButton { t: pal; text: I18n.tr("Manage") }
+                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Ask to Browse coming soon")) }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Ask to Buy")
-                        SButton { t: pal; text: I18n.tr("Manage") }
+                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Ask to Buy coming soon")) }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Communication Limits")
-                        SButton { t: pal; text: I18n.tr("Manage") }
+                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Communication Limits coming soon")) }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Communication Safety")
-                        SButton { t: pal; text: I18n.tr("Manage") }
+                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Communication Safety coming soon")) }
                     }
                 }
 
@@ -4626,7 +4672,7 @@ Scope {
                     t: pal
                     SRow {
                         t: pal; title: I18n.tr("Always Allowed")
-                        SButton { t: pal; text: I18n.tr("Edit") }
+                        SButton { t: pal; text: I18n.tr("Edit"); onClicked: screenTimePane.showActionNotice(I18n.tr("Always Allowed coming soon")) }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Screen Distance")
@@ -4634,7 +4680,7 @@ Scope {
                     }
                     SRow {
                         t: pal; title: I18n.tr("Content & Privacy Restrictions")
-                        SButton { t: pal; text: I18n.tr("Manage") }
+                        SButton { t: pal; text: I18n.tr("Manage"); onClicked: screenTimePane.showActionNotice(I18n.tr("Content & Privacy Restrictions coming soon")) }
                     }
                     SRow {
                         t: pal; title: I18n.tr("Lock Screen Time Settings")
@@ -4648,7 +4694,7 @@ Scope {
                     }
                     SRow {
                         t: pal; title: I18n.tr("Turn off App & Website Activity")
-                        SButton { t: pal; text: I18n.tr("Disable") }
+                        SButton { t: pal; text: I18n.tr("Disable"); onClicked: screenTimePane.showActionNotice(I18n.tr("Activity reset flow coming soon")) }
                     }
                 }
             }

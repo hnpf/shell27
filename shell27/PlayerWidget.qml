@@ -435,25 +435,64 @@ Item {
         }
 
         // ── subtitle: artist - album, scrolling when it does not fit ──
-        MarqueeText {
+        Item {
             id: subItem
             x: (w.textX - 17) * w.k
             y: w.subCY * w.k - height / 2
             width: (w.wr - (w.textX - 17) - (w.mx - 17) - (w.isMedium ? 50 : 0)) * w.k
+            height: (w.isSmall ? 18 : 21) * w.k * 1.3
             opacity: w.lyricsView ? 0 : 1
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
             layer.enabled: opacity > 0 && opacity < 0.999
             layer.sourceRect: Qt.rect(-12, -8, width + 24, height + 16)
             layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: Math.min(1, (1 - subItem.opacity) * 0.9) }
-            text: w.shownSub
-            color: w.fg2
-            fam: w.fam
-            pixelSize: (w.isSmall ? 18 : 21) * w.k
-            weight: Font.Medium
-            fade: 20 * w.k
-            startPad: 17 * w.k
-            animate: !w.preview && w.playing
+            property bool overflow: subProbe.implicitWidth > width
+            property real scrollX: 0
+            Text {
+                id: subProbe
+                visible: false
+                text: w.shownSub
+                color: w.fg2
+                font.family: Fonts.forWeight(Font.Medium, w.fam)
+                font.pixelSize: (w.isSmall ? 18 : 21) * w.k
+                font.weight: Font.Medium
+            }
+            Row {
+                x: 17 * w.k + subItem.scrollX
+                spacing: 18 * w.k
+                Text {
+                    text: w.shownSub
+                    color: w.fg2
+                    font.family: Fonts.forWeight(Font.Medium, w.fam)
+                    font.pixelSize: (w.isSmall ? 18 : 21) * w.k
+                    font.weight: Font.Medium
+                    verticalAlignment: Text.AlignVCenter
+                }
+                Text {
+                    visible: subItem.overflow
+                    text: w.shownSub
+                    color: w.fg2
+                    font.family: Fonts.forWeight(Font.Medium, w.fam)
+                    font.pixelSize: (w.isSmall ? 18 : 21) * w.k
+                    font.weight: Font.Medium
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+            SequentialAnimation {
+                running: subItem.overflow && !w.preview && w.playing && subItem.visible
+                loops: Animation.Infinite
+                onRunningChanged: if (!running) subItem.scrollX = 0
+                PauseAnimation { duration: 1800 }
+                NumberAnimation {
+                    target: subItem
+                    property: "scrollX"
+                    from: 0
+                    to: -(subProbe.implicitWidth + 18 * w.k)
+                    duration: Math.max(1, ((subProbe.implicitWidth + 18 * w.k) / 34.0) * 1000)
+                    easing.type: Easing.Linear
+                }
+            }
         }
 
         // ── small: play / pause at the top right ──
