@@ -397,6 +397,7 @@ Scope {
     property bool ccMigRec: false              // one-time: add the Screen Recording tile to an existing Control Center layout
     property bool ccMigStage: false            // one-time: add Stage Manager tile to Control Center
     property bool barMigApps: false            // one-time: add built-in app shortcuts to existing menu-bar layouts
+    property bool barMigSysMon: false           // one-time: migrate the old System Monitor visibility setting
     property bool stageManager: true           // macOS 3D Stage Manager enabled
     property bool recording: false
     property int recSecs: 0
@@ -419,7 +420,7 @@ Scope {
         "spotlightEnabled", "reduceMotion", "ccEnabled", "notificationsEnabled", "clockAppEnabled", "ccStyle", "barLogoMode", "barCustomLogoPath", "barWidgets", "weekStartsMonday", "terminal", "launcher",
         "filesCmd", "clipboardCmd", "appUsage", "clipHistory", "clipAutoPaste", "emojiRecent", "screenshotDir", "screenshotSave", "screenshotClipboard", "screenshotNotify", "nightTemp", "ccControls", "ccMigRec", "wallpaperDir", "wallpaperFavs", "wallpaperCmd", "wallpaperVideo", "wpRestorePath", "uiSounds", "gamingMode", "gamingAuto", "ccMigGame", "lockArtBackground",
         "lockClockStyle", "switcherStyle", "lockClockFont", "lockClockWeight", "lockClockMaterial", "lockClockIntensity", "lockClockTint", "lockClockDate", "autoContrast", "wallpaperAppearance", "wpPairLight", "wpPairDark",
-        "notifDnd", "dnd", "nightOn", "keepAwake", "stageManager", "ccMigStage", "barMigApps",
+        "notifDnd", "dnd", "nightOn", "keepAwake", "stageManager", "ccMigStage", "barMigApps", "barMigSysMon",
         "kbRepeatRate", "kbRepeatDelay", "mouseSens", "mouseNatural", "tpNatural", "tpTap", "tpDwt", "tpScroll"]
     // Optional bar widgets; tray and Spotlight use their existing showTray/showSearch settings.
     property var barWidgets: ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "bluetooth", "siri", "airdrop", "reminders", "privacy", "controlCenter", "clock"]
@@ -549,6 +550,9 @@ Scope {
     // Lock Screen: starts shell27-lock via IPC helper; does nothing if already locked
     function lockScreen() {
         sh('sh ~/.config/quickshell/shell27-lock/lock-via-ipc.sh');
+    }
+    function switchUser() {
+        sh('sh ~/.config/quickshell/shell27-lock/lock-via-ipc.sh; busctl --system call org.freedesktop.DisplayManager /org/freedesktop/DisplayManager/Seat0 org.freedesktop.DisplayManager.Seat SwitchToGreeter');
     }
     function sleepMachine() {
         sh('sh ~/.config/quickshell/shell27-lock/lock-via-ipc.sh; sleep 0.5; systemctl suspend');
@@ -1086,6 +1090,15 @@ Scope {
                     line(9 + Math.cos(g2) * 5.6, 9 + Math.sin(g2) * 5.6, 9 + Math.cos(g2) * 7.6, 9 + Math.sin(g2) * 7.6);
                 }
                 circ(9, 9, 5.6); ctx.stroke();
+            } else if (k === "user") {
+                ctx.lineWidth = 1.4;
+                circ(9, 9, 7.7); ctx.stroke();
+                circ(9, 6.1, 1.8); ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(4.5, 13.8);
+                ctx.bezierCurveTo(4.3, 12.5, 5.7, 9.5, 9, 9.5);
+                ctx.bezierCurveTo(12.3, 9.5, 13.7, 12.5, 13.5, 13.8);
+                ctx.closePath(); ctx.fill();
             } else if (k.indexOf("m_") === 0) {
                 // ── Apple-menu icons (drawn after the macOS ones; 18x18 grid, 1.5 px strokes) ──
                 ctx.lineWidth = 1.4;
@@ -2476,7 +2489,7 @@ Scope {
         id: sysResTimer
         interval: 2000
         repeat: true
-        running: root.barEnabled && (root.showCpuRam || root.barWidgetEnabled("cpuRam") || ui.pop === "sys")
+        running: root.barEnabled && (root.barWidgetEnabled("cpuRam") || ui.pop === "sys")
         triggeredOnStart: true
         onTriggered: {
             if (!sysResProc.running) sysResProc.running = true;
@@ -4104,7 +4117,9 @@ Scope {
 
     function menuModelFor(name) {
         var m = [], i;
-        if (name === "apple") {
+        if (name === "user") {
+            m.push(ico(mc(I18n.tr("Switch User\u2026"), function () { root.switchUser(); }), "m_logout"));
+        } else if (name === "apple") {
             m.push(ico(mi("About This Linux", "", function () {
                 if (hub && hub.about) hub.about.open();
                 else sh(terminal + " -e sh -c 'fastfetch || neofetch; echo; read -p \"Press Enter\" _'");
@@ -5156,7 +5171,7 @@ Scope {
         barEnabled = true;
         darkMode = true; appearanceMode = "dark"; accent = "#0a84ff"; fontFamily = "Inter"; glassOpacity = 0.42; glassBlur = 21; glassLiquid = 1.48; barBgOpacity = 0.10; glassRealtime = false; liveWallGlass = false;
         barStyle = "liquid"; use24h = true; showDate = true; showSeconds = false; showBatteryPercent = true;
-        showTray = true; showSearch = true; showAudioHub = true;
+        showCpuRam = true; showTray = true; showSearch = true; showAudioHub = true;
         spotlightEnabled = true; ccEnabled = true; notificationsEnabled = true; clockAppEnabled = true; ccStyle = "tiles";
         barLogoMode = "arch"; barCustomLogoPath = "";
         barWidgets = ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "bluetooth", "siri", "airdrop", "reminders", "privacy", "controlCenter", "clock"];
@@ -5210,6 +5225,10 @@ Scope {
                 if (bw.indexOf("airdrop") < 0) bw.push("airdrop");
                 if (bw.indexOf("reminders") < 0) bw.push("reminders");
                 root.barWidgets = bw;
+            }
+            if (!root.barMigSysMon) {
+                root.barMigSysMon = true;
+                if (!root.showCpuRam) root.setBarWidget("cpuRam", false);
             }
             root.settingsReady = true;
             inputApplyT.restart();
@@ -6201,7 +6220,7 @@ Scope {
                     }
                     return any ? Qt.rect(x0 - 64, y0 - 64, x1 - x0 + 128, y1 - y0 + 128) : Qt.rect(0, 0, 0, 0);
                 }
-                readonly property bool isMenu: ["apple", "app", "file", "edit", "view", "window", "help"].indexOf(pop) >= 0
+                readonly property bool isMenu: ["apple", "app", "file", "edit", "view", "window", "help", "user"].indexOf(pop) >= 0
                 readonly property bool anyVisible: menuPop.visible || cc.visible || cal.visible || wifiPop.visible || btPop.visible || trayPop.visible || notifPop.visible || toastArea.visible || volPop.visible || kbPop.visible || hubPop.visible
                 onAnyVisibleChanged: root.popCount += (anyVisible ? 1 : -1)
                 onPopChanged: {
@@ -6264,9 +6283,9 @@ Scope {
                     if (pop === name) { pop = ""; return; }
                     if (name === "spot") { spCalm = spReqCalm; spReqCalm = false; }
                     menuX = x;
-                    if (["apple", "app", "file", "edit", "view", "window", "help"].indexOf(name) >= 0) menuDropX = x;
+                    if (["apple", "app", "file", "edit", "view", "window", "help", "user"].indexOf(name) >= 0) menuDropX = x;
                     if (["apple", "app", "file", "edit", "view", "window", "help"].indexOf(name) >= 0) root.refreshActive();
-                    if (["apple", "app", "file", "edit", "view", "window", "help"].indexOf(name) >= 0) menuModel = root.menuModelFor(name);
+                    if (["apple", "app", "file", "edit", "view", "window", "help", "user"].indexOf(name) >= 0) menuModel = root.menuModelFor(name);
                     if (name === "cal") { var d = new Date(); calYear = d.getFullYear(); calMonth = d.getMonth(); }
                     pop = name;
                 }
@@ -7096,7 +7115,7 @@ Scope {
                         // System Monitor (CPU, RAM, GPU, Disk, Temp, Net)
                         Item {
                             id: sysResBtn
-                            visible: root.showCpuRam || root.barWidgetEnabled("cpuRam")
+                            visible: root.barWidgetEnabled("cpuRam")
                             width: visible ? (sysResRow.width + 12) : 0
                             height: 28
                             Rectangle {
@@ -7315,6 +7334,30 @@ Scope {
                             Glyph { anchors.centerIn: parent; width: 15; height: 15; kind: "search"; color: bpal.fg }
                             MouseArea { anchors.fill: parent; onClicked: { if (root.launcher !== "") { ui.pop = ""; root.search(); } else ui.openPop("spot", 0); } }
 }
+                        // User menu: switch to SDDM's greeter without ending this session.
+                        Item {
+                            id: userSwitchBtn
+                            visible: root.ccEnabled && root.barWidgetEnabled("controlCenter")
+                            width: visible ? 28 : 0; height: 28
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: parent.width - 2; height: parent.height - 6; radius: 12
+                                color: (ui.pop === "user" || userSwitchMa.containsMouse) ? bpal.hover : "transparent"
+                            }
+                            Glyph {
+                                anchors.centerIn: parent
+                                width: 16; height: 16
+                                kind: "user"
+                                color: bpal.fg
+                            }
+                            MouseArea {
+                                id: userSwitchMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: ui.openPop("user", userSwitchBtn.mapToItem(ui, 0, 0).x + userSwitchBtn.width / 2)
+                            }
+                        }
                         // control center
                         Item {
                             id: ccBtn

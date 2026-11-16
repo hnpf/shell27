@@ -441,6 +441,7 @@ Item {
             y: w.subCY * w.k - height / 2
             width: (w.wr - (w.textX - 17) - (w.mx - 17) - (w.isMedium ? 50 : 0)) * w.k
             height: (w.isSmall ? 18 : 21) * w.k * 1.3
+            clip: true
             opacity: w.lyricsView ? 0 : 1
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
@@ -480,7 +481,7 @@ Item {
                 }
             }
             SequentialAnimation {
-                running: subItem.overflow && !w.preview && w.playing && subItem.visible
+                running: subItem.overflow && !w.preview && subItem.visible
                 loops: Animation.Infinite
                 onRunningChanged: if (!running) subItem.scrollX = 0
                 PauseAnimation { duration: 1800 }

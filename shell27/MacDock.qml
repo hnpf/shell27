@@ -2957,6 +2957,11 @@ Scope {
                         SSwitch { t: pal; checked: root.bar ? root.bar.barWidgetEnabled("reminders") : true; onToggled: v => { if (root.bar) root.bar.setBarWidget("reminders", v); } }
                     }
                     SRow {
+                        t: pal; title: I18n.tr("System Monitor")
+                        subtitle: I18n.tr("Show CPU, memory and other live system stats in the menu bar")
+                        SSwitch { t: pal; checked: root.bar ? root.bar.barWidgetEnabled("cpuRam") : true; onToggled: v => { if (root.bar) root.bar.setBarWidget("cpuRam", v); } }
+                    }
+                    SRow {
                         t: pal; title: I18n.tr("Volume")
                         SSwitch { t: pal; checked: root.bar ? root.bar.barWidgetEnabled("volume") : true; onToggled: v => { if (root.bar) root.bar.setBarWidget("volume", v); } }
                     }
