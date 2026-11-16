@@ -41,6 +41,7 @@ hl.bind("SUPER + Space",      hl.dsp.exec_cmd(qs .. "spotlight toggle"))
 hl.bind("ALT + TAB",          hl.dsp.exec_cmd(qs .. "switcher next"))
 hl.bind("CTRL + ALT + W",     hl.dsp.exec_cmd(qs .. "wallpapers toggle"))
 hl.bind("PRINT",              hl.dsp.exec_cmd(qs .. "screenshot region"))
+hl.bind("SUPER + SHIFT + R",      hl.dsp.exec_cmd("qs kill -c shell27; sleep 0.5; qs -c shell27"))
 
 -- Siri Voice-only Mode
 hl.bind("SUPER + F5", hl.dsp.exec_cmd("qs -c shell27 ipc call siri voice_toggle"))
