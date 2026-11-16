@@ -56,7 +56,9 @@ Item {
         return values.map(function(value) { return Math.max(0, Number(value) || 0); });
     }
     function formatSeconds(value) {
-        var minutes = Math.floor((Number(value) || 0) / 60);
+        var seconds = Math.max(0, Number(value) || 0);
+        var minutes = Math.floor(seconds / 60);
+        if (minutes < 1) return Math.floor(seconds) + "s";
         if (minutes < 60) return minutes + "m";
         return Math.floor(minutes / 60) + "h " + (minutes % 60) + "m";
     }

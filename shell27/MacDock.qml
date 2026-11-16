@@ -178,6 +178,9 @@ Scope {
     property var screenTimeData: ({ date: "", totalSeconds: 0, categories: {}, apps: {}, hourlySeconds: [] })
     property string screenTimeCurrentAppKey: ""
     property string screenTimeCurrentAppName: ""
+    property string screenTimeLastSampleAppId: ""
+    property string screenTimeLastSampleAppName: ""
+    property double screenTimeLastSampleMs: 0
     property bool screenTimeReady: false
     readonly property string screenTimeDataPath: configDir + "/screentime.json"
     property var screenTimePreferences: ({ categories: [], schedules: [] })
@@ -280,10 +283,14 @@ Scope {
         var m = Math.floor((s % 3600) / 60);
         if (h > 0) return h + "h " + m + "m";
         if (m > 0) return m + "m";
-        return s + "s";
+        return Number(s.toFixed(2)) + "s";
+    }
+    function screenTimeDateKey(date) {
+        var d = date || new Date();
+        return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
     }
     function screenTimeDefaultData() {
-        return { date: new Date().toISOString().slice(0, 10), totalSeconds: 0, categories: { "Games": 0, "Entertainment": 0, "Social Media": 0, "Productivity": 0, "Utilities": 0, "Other": 0 }, apps: {}, hourlySeconds: Array(24).fill(0) };
+        return { date: root.screenTimeDateKey(), totalSeconds: 0, categories: { "Games": 0, "Entertainment": 0, "Social Media": 0, "Productivity": 0, "Utilities": 0, "Other": 0 }, apps: {}, hourlySeconds: Array(24).fill(0) };
     }
     function screenTimeCategoryTotal(categoryName) {
         var d = root.screenTimeData;
@@ -301,10 +308,16 @@ Scope {
         var d = root.screenTimeData;
         var totals = d && d.categories ? d.categories : {};
         var configured = root.screenTimePreferences && root.screenTimePreferences.categories ? root.screenTimePreferences.categories : [];
-        var out = [];
+        var out = [], seen = {};
         for (var i = 0; i < configured.length; i++) {
             var name = configured[i].name;
             out.push({ name: name, seconds: Number(totals[name]) || 0 });
+            seen[name] = true;
+        }
+        var trackedNames = Object.keys(totals);
+        for (var j = 0; j < trackedNames.length; j++) {
+            var trackedName = trackedNames[j];
+            if (!seen[trackedName]) out.push({ name: trackedName, seconds: Number(totals[trackedName]) || 0 });
         }
         out.sort(function(a, b) { return b.seconds - a.seconds; });
         return out.slice(0, 3);
@@ -345,13 +358,13 @@ Scope {
     function screenTimeEnsureData() {
         var d = root.screenTimeData;
         if (!d || typeof d !== "object") d = root.screenTimeDefaultData();
-        if (!d.date) d.date = new Date().toISOString().slice(0, 10);
+        if (!d.date) d.date = root.screenTimeDateKey();
         if (!d.categories || typeof d.categories !== "object") d.categories = root.screenTimeDefaultData().categories;
         if (!d.apps || typeof d.apps !== "object") d.apps = {};
         if (!Array.isArray(d.hourlySeconds)) d.hourlySeconds = Array(24).fill(0);
         while (d.hourlySeconds.length < 24) d.hourlySeconds.push(0);
         d.hourlySeconds = d.hourlySeconds.slice(0, 24).map(function(value) { return Number(value) || 0; });
-        if (d.date !== new Date().toISOString().slice(0, 10)) {
+        if (d.date !== root.screenTimeDateKey()) {
             d = root.screenTimeDefaultData();
         }
         root.screenTimeData = d;
@@ -360,7 +373,7 @@ Scope {
         if (!root.screenTimeEnabled || !Number.isFinite(seconds) || seconds <= 0) return;
         root.screenTimeEnsureData();
         var d = root.screenTimeData;
-        var day = new Date().toISOString().slice(0, 10);
+        var day = root.screenTimeDateKey();
         if (d.date !== day) {
             d = root.screenTimeDefaultData();
             d.date = day;
@@ -377,17 +390,44 @@ Scope {
         d.apps[key].name = name;
         d.apps[key].category = cat;
         d.apps[key].seconds = (Number(d.apps[key].seconds) || 0) + seconds;
-        root.screenTimeData = d;
-        root.screenTimeStore.setText(JSON.stringify(d, null, 2));
+        root.screenTimeData = Object.assign({}, d);
+        screenTimeStore.setText(JSON.stringify(root.screenTimeData, null, 2));
+    }
+    function screenTimeRecordSample(active) {
+        var now = Date.now();
+        if (root.screenTimeLastSampleMs > 0 && root.screenTimeLastSampleAppId) {
+            var elapsed = Math.min(20000, Math.max(0, now - root.screenTimeLastSampleMs)) / 1000;
+            root.screenTimeAddUsage(root.screenTimeLastSampleAppId, root.screenTimeLastSampleAppName, elapsed);
+        }
+        var appId = active ? String(active.app_id || active.class || active.initialClass || "") : "";
+        var appName = active ? String(active.title || active.initialTitle || appId) : "";
+        if (!appId && !appName) {
+            root.screenTimeLastSampleMs = 0;
+            root.screenTimeLastSampleAppId = "";
+            root.screenTimeLastSampleAppName = "";
+            root.screenTimeCurrentAppKey = "";
+            root.screenTimeCurrentAppName = "";
+            return;
+        }
+        root.screenTimeCurrentAppKey = root.screenTimeKeyOf(appId, appName);
+        root.screenTimeCurrentAppName = appName;
+        root.screenTimeLastSampleAppId = appId || appName;
+        root.screenTimeLastSampleAppName = appName || appId;
+        root.screenTimeLastSampleMs = now;
     }
     onScreenTimeEnabledChanged: {
         if (screenTimeEnabled) {
             screenTimeEnsureData();
-            if (screenTimeReady) screenTimePollTimer.restart();
+            screenTimeLastSampleMs = 0;
+            screenTimeLastSampleAppId = "";
+            screenTimePollTimer.restart();
             if (screenTimeProbe.running) screenTimeProbe.running = false;
             screenTimeProbe.running = true;
         } else {
             screenTimePollTimer.stop();
+            screenTimeLastSampleMs = 0;
+            screenTimeLastSampleAppId = "";
+            screenTimeLastSampleAppName = "";
             screenTimeCurrentAppKey = "";
             screenTimeCurrentAppName = "";
         }
@@ -398,7 +438,8 @@ Scope {
         repeat: true
         onTriggered: {
             if (!root.screenTimeEnabled) { stop(); return; }
-            root.screenTimeProbe.running = true;
+            screenTimeProbe.running = false;
+            screenTimeProbe.running = true;
         }
     }
     Process {
@@ -407,18 +448,15 @@ Scope {
         command: ["hyprctl", "-j", "activewindow"]
         stdout: StdioCollector {
             onStreamFinished: {
-                if (!root.screenTimeEnabled || !text || text.trim() === "") return;
-                try {
-                    var active = JSON.parse(text);
-                    if (!active || (!active.app_id && !active.title)) return;
-                    var appId = active.app_id || "";
-                    var appName = active.title || appId || "Unknown app";
-                    root.screenTimeCurrentAppKey = root.screenTimeKeyOf(appId, appName);
-                    root.screenTimeCurrentAppName = appName;
-                    root.screenTimeAddUsage(appId, appName, 10);
-                } catch (err) {
-                    // ignore invalid data while the compositor is busy or a window is transient
+                if (root.screenTimeEnabled && text && text.trim() !== "") {
+                    try {
+                        var active = JSON.parse(text);
+                        root.screenTimeRecordSample(active);
+                    } catch (err) {
+                        // ignore invalid data while the compositor is busy or a window is transient
+                    }
                 }
+                screenTimeProbe.running = false;
             }
         }
     }
