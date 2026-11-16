@@ -3179,12 +3179,15 @@ Scope {
                                 required property int index
                                 width: pv.base
                                 height: pv.base
+                                readonly property real artScale: root.iconArtScale(modelData)
                                 readonly property int mid: Math.min(2, pv.apps.length - 1)
                                 readonly property int d: Math.abs(index - mid)
                                 readonly property real f: d === 0 ? 1 : (d === 1 ? 0.5 : (d === 2 ? 0.12 : 0))
                                 Image {
                                     id: pimg
-                                    anchors.fill: parent
+                                    width: pv.base * pi.artScale
+                                    height: width
+                                    anchors.centerIn: parent
                                     visible: false
                                     source: root.iconSrc(pi.modelData.icon)
                                     sourceSize: Qt.size(96, 96)
@@ -6309,6 +6312,17 @@ Scope {
         if (icon.charAt(0) === "/") return "file://" + icon;
         return Quickshell.iconPath(icon, "application-x-executable");
     }
+    function iconArtScale(it) {
+        if (!it) return 1;
+        var icon = String(it.icon || "").toLowerCase();
+        var appId = String(it.appId || it.key || "").toLowerCase();
+        var name = String(it.name || "").toLowerCase();
+        if (icon === siriIconPath.toLowerCase() || icon === remindersIconPath.toLowerCase()
+                || icon === airdropIconPath.toLowerCase() || icon.charAt(0) === "/"
+                || icon.indexOf("file://") === 0 || appId.indexOf("forkgram") >= 0 || name.indexOf("forkgram") >= 0)
+            return 0.91;
+        return 1;
+    }
     // icon of a dock cell; the Trash switches to the "full" icon while there is something in it
     function cellIconSrc(it) {
         if (it && it.special === "trash" && trashFull) {
@@ -7868,6 +7882,8 @@ Scope {
 
                                 readonly property Item iconImg: img
                                 readonly property bool leavingCell: modelData.leaving === true
+                                readonly property real artScale: root.iconArtScale(modelData)
+                                readonly property real artBottomInset: root.iconSize * 0.99 * cell.s * cell.appear * (1 - cell.artScale) / 2
                                 property real appear: modelData.fresh ? 0 : 1
                                 Behavior on appear { NumberAnimation { duration: cell.leavingCell ? root.leaveMs : 320; easing.type: cell.leavingCell ? Easing.InOutCubic : Easing.OutCubic } }
                                 Component.onCompleted: { heldTl = thumbWin; Qt.callLater(function () { cell.appear = cell.leavingCell ? 0 : 1; cell.bounceStep(); }); }
@@ -7903,11 +7919,11 @@ Scope {
                                     // icon art drawn at ~99%: the dock and the cells keep their size. Whole pixels only: at rest this was
                                     // 51.48 px wide and centred on a fractional x, so the GPU re-sampled the icon texture (blurry) until the
                                     // magnification made it big enough that the blur was no longer noticeable
-                                    width: Math.max(1, Math.round(root.iconSize * 0.99 * cell.s * cell.appear))
+                                    width: Math.max(1, Math.round(root.iconSize * 0.99 * cell.artScale * cell.s * cell.appear))
                                     height: width
                                     x: Math.round((parent.width - width) / 2)
                                     anchors.bottom: parent.bottom
-                                    anchors.bottomMargin: Math.round(lift)
+                                    anchors.bottomMargin: Math.round(lift + cell.artBottomInset)
                                     source: cell.isSep ? "" : root.cellIconSrc(cell.modelData)
                                     sourceSize: Qt.size(Math.ceil(root.iconSize * root.magnification * 1.25),
                                                         Math.ceil(root.iconSize * root.magnification * 1.25))

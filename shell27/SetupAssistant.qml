@@ -73,7 +73,7 @@ Scope {
         id: completionCheck
         command: [
             "python3", "-c",
-            "import json,sys\ntry:\n d=json.load(open(sys.argv[1],encoding='utf-8'))\nexcept FileNotFoundError:\n try:\n  old=open(sys.argv[2],encoding='utf-8').read().strip()=='completed'\n except Exception:\n  old=False\n sys.exit(0 if old else 1)\nexcept Exception:\n sys.exit(1)\nsys.exit(0 if d.get('no')=='yeah' else 1)",
+            "import json,sys\ntry:\n d=json.load(open(sys.argv[1],encoding='utf-8'))\nexcept FileNotFoundError:\n try:\n  old=open(sys.argv[2],encoding='utf-8').read().strip()=='completed'\n except Exception:\n  old=False\n sys.exit(0 if old else 1)\nexcept Exception:\n sys.exit(1)\nsys.exit(0 if d.get('on') in (True,'true') or d.get('no')=='yeah' else 1)",
             root.completionPath, root.legacyCompletionPath
         ]
         onExited: code => {
