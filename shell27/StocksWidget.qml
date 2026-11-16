@@ -29,6 +29,7 @@ Item {
     property real glassBlur: 5
     property real glassLiquid: 1.0
     property real glassRim: 0.45
+    property color borderTint: "#8A9AB5"
     property real glassGrain: 0.03
     property bool darkGlass: true
 
@@ -49,6 +50,20 @@ Item {
 
     // Active selected index for small view
     property int selectedIndex: 0
+    QtObject {
+        id: stockButtonWd
+        readonly property bool hasPlayer: true
+        readonly property bool dark: w.dark
+        readonly property bool preview: false
+        readonly property bool editing: w.editing
+        readonly property string fam: w.fam
+    }
+
+    function cycleAsset() {
+        if (!stockList || stockList.length < 2) return;
+        selectedIndex = (selectedIndex + 1) % stockList.length;
+        sCanvas.requestPaint();
+    }
 
     // Assets data
     property var stockList: []
@@ -59,6 +74,7 @@ Item {
         : (stockList && stockList.length > 0 ? stockList[0] : { "symbol": "—", "name": "Market data unavailable", "price": null, "change24h": 0, "currency": "$", "sparkline": [] })
 
     readonly property string stocksScript: decodeURIComponent(Qt.resolvedUrl("stocks_fetcher.py").toString().replace(/^file:\/\//, ""))
+    readonly property string stocksLibDir: decodeURIComponent(Qt.resolvedUrl("lib/").toString().replace(/^file:\/\//, ""))
 
     function formatPrice(val, curr) {
         if (val === undefined || val === null) return "—";
@@ -71,7 +87,7 @@ Item {
     // Process for fetching live stock and crypto data
     Process {
         id: stockProc
-        command: ["python3", w.stocksScript]
+        command: ["env", "LD_LIBRARY_PATH=" + w.stocksLibDir, "python3", w.stocksScript]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -114,11 +130,18 @@ Item {
         visible: !w.glassOn
         radius: w.radiusPx
         gradient: Gradient {
-            GradientStop { position: 0.0; color: w.dark ? Qt.rgba(0.18, 0.18, 0.22, 0.92) : Qt.rgba(1.0, 1.0, 1.0, 0.92) }
-            GradientStop { position: 1.0; color: w.dark ? Qt.rgba(0.11, 0.11, 0.14, 0.92) : Qt.rgba(0.93, 0.93, 0.96, 0.92) }
+            GradientStop { position: 0.0; color: w.style === "liquid" ? (w.dark ? Qt.rgba(0.22, 0.22, 0.25, 0.82) : Qt.rgba(1.0, 1.0, 1.0, 0.88)) : (w.dark ? Qt.rgba(0.18, 0.18, 0.22, 0.92) : Qt.rgba(1.0, 1.0, 1.0, 0.92)) }
+            GradientStop { position: 1.0; color: w.style === "liquid" ? (w.dark ? Qt.rgba(0.13, 0.13, 0.15, 0.82) : Qt.rgba(0.92, 0.92, 0.95, 0.88)) : (w.dark ? Qt.rgba(0.11, 0.11, 0.14, 0.92) : Qt.rgba(0.93, 0.93, 0.96, 0.92)) }
         }
-        border.color: w.dark ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(0, 0, 0, 0.08)
-        border.width: 1
+        Rectangle {
+            anchors.fill: parent
+            radius: parent.radius
+            visible: w.style === "liquid"
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, w.dark ? 0.10 : 0.35) }
+                GradientStop { position: 0.6; color: Qt.rgba(1, 1, 1, 0.0) }
+            }
+        }
     }
 
     readonly property real tint: Math.min(0.92, dark ? 0.25 + glassOpacity * 0.8 : 0.45 + glassOpacity * 0.9)
@@ -204,6 +227,7 @@ Item {
                 blurEnabled: gl.bn > 0.001
                 blur: gl.bn
                 blurMax: 64
+                autoPaddingEnabled: false
                 saturation: 0.15
                 contrast: 0.05
                 visible: false
@@ -242,20 +266,21 @@ Item {
                 property real saturation: 1.25
                 property real dark: w.dark ? 1 : 0
                 property real debug: 0
-                property real shadowAmt: 1
+                property real shadowAmt: 0
+                property real flatInner: 1
                 property real rimTint: 1
-                property real ringW: 1
+                property real ringW: 0
             }
         }
     }
 
-    Rectangle {
+    CornerBorder {
+        z: 2
         anchors.fill: parent
-        visible: !w.glassOn
-        radius: w.radiusPx
-        color: "transparent"
-        border.width: 1
-        border.color: w.dark ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(1, 1, 1, 0.70)
+        cornerR: w.radiusPx
+        dark: w.dark
+        tint: w.borderTint
+        lineW: 0.8
     }
 
     // ───────────── Content UI ─────────────
@@ -296,31 +321,19 @@ Item {
                 }
             }
 
-            // Switcher pill button
-            Rectangle {
-                width: 22 * w.u
-                height: 22 * w.u
-                radius: 11 * w.u
+            PlayerBtn {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                color: w.dark ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0, 0, 0, 0.06)
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "⇄"
-                    font.pixelSize: 11 * w.u
-                    color: w.dark ? "white" : "#1C1C1E"
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (w.stockList.length === 0) return;
-                        w.selectedIndex = (w.selectedIndex + 1) % w.stockList.length;
-                        sCanvas.requestPaint();
-                    }
-                }
+                width: 30 * w.u
+                height: width
+                wd: stockButtonWd
+                kind: "swap"
+                col: w.dark ? "white" : "#1C1C1E"
+                gw: 16 * w.u
+                gh: 16 * w.u
+                idleFill: true
+                enabledBtn: true
+                onClicked: w.cycleAsset()
             }
         }
 

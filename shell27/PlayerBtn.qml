@@ -91,7 +91,7 @@ Item {
         anchors.fill: parent
         enabled: !b.wd.preview && !b.wd.editing && b.wd.hasPlayer && b.enabledBtn
         onClicked: {
-            if (b.kind === "next" || b.kind === "prev") { b.nudgeDir = b.kind === "next" ? 1 : -1; nudgeAnim.restart(); }
+            if (b.kind === "next" || b.kind === "prev" || b.kind === "swap") { b.nudgeDir = b.kind === "prev" ? -1 : 1; nudgeAnim.restart(); }
             b.clicked();
         }
     }

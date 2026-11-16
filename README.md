@@ -160,24 +160,24 @@ You can configure your API key in either of two ways:
 **The whole desktop:** widgets, the menu bar on top and the Dock at the bottom.
 
 <p align="center">
-  <img width="100%" alt="shell27 desktop: widgets, the menu bar on top and the Dock at the bottom" src="https://github.com/user-attachments/assets/600f75bc-b4d1-442d-bec5-41ee7dfa5023" />
+  <img width="100%" alt="shell27 desktop: widgets, the menu bar on top and the Dock at the bottom" src="github/demos-screenshots/desktop.png" />
 </p>
 
 <p align="center">
-  <img width="486" height="674" alt="image" src="https://github.com/user-attachments/assets/95f97669-3d3e-4859-965d-affcb1499f6a" />
+  <img width="486" height="674" alt="image" src="github/demos-screenshots/widgets.png" />
 
 </p>
 
 **The Dock,** with Liquid Glass.
 
 <p align="center">
-  <img width="100%" alt="The shell27 Dock with Liquid Glass" src="https://github.com/user-attachments/assets/edf45f8f-b71a-4bc5-9880-46dafbebf47c" />
+  <img width="100%" alt="The shell27 Dock with Liquid Glass" src="github/demos-screenshots/dock.png" />
 </p>
 
 **Control Center (New)**
 
 <p align="center">
-  <img width="313" height="510" alt="image" src="https://github.com/user-attachments/assets/cb6c5708-5786-4328-89bd-24737d39e482" />
+  <img width="313" height="510" alt="image" src="github/demos-screenshots/controlcenter.png" />
 </p>
 
 ### shell27-lock
@@ -185,12 +185,12 @@ You can configure your API key in either of two ways:
 <table align="center">
   <tr>
     <td align="center" width="50%">
-      <img width="100%" alt="shell27-lock lock screen" src="https://github.com/user-attachments/assets/6ef28e50-612f-4e7b-9822-c0aa0168a6ae" />
+      <img width="100%" alt="shell27-lock lock screen" src="github/demos-screenshots/shell27-lock/lockscreenmediaplayer.png" />
       <br>
       <sub>Lock screen</sub>
     </td>
     <td align="center" width="50%">
-      <img width="100%" alt="shell27-lock lock screen with the media player" src="https://github.com/user-attachments/assets/0d15dc6f-8def-47dc-8e42-fa2959e7e5eb" />
+      <img width="100%" alt="shell27-lock lock screen with the media player" src="github/demos-screenshots/shell27-lock/lockscreen.png" />
       <br>
       <sub>Lock screen media player</sub>
           <td align="center" width="50%">

@@ -46,7 +46,6 @@ Item {
                 glassBlur: host.glassBlur
                 glassLiquid: host.glassLiquid
                 glassRim: host.glassRim
-                borderTint: host.borderTint
                 glassGrain: host.glassGrain
                 darkGlass: host.darkGlass
                 editing: host.editing
@@ -259,6 +258,7 @@ Item {
                 glassBlur: host.glassBlur
                 glassLiquid: host.glassLiquid
                 glassRim: host.glassRim
+                borderTint: host.borderTint
                 glassGrain: host.glassGrain
                 darkGlass: host.darkGlass
                 editing: host.editing

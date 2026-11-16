@@ -391,6 +391,16 @@ Scope {
         return out;
     }
     function pr(i, k) { var r = playerRects[i]; return r ? r[k] : 0; }
+    readonly property var stockButtonRects: {
+        var r = rev, scale = widgetScale, unit = scale * 168 / 158, out = [];
+        for (var i = 0; i < wmodel.count; i++) {
+            var m = wmodel.get(i);
+            if (m.wtype !== "stocks" || m.wsize !== "small") continue;
+            out.push([m.wx + 168 * scale - 48 * unit, m.wy + 15 * unit, 30 * unit, 30 * unit]);
+        }
+        return out;
+    }
+    function sr(i, k) { var r = stockButtonRects[i]; return r ? r[k] : 0; }
 
     // ───────────── lyrics (LRCLIB synced first; Genius plain-text fallback) ─────────────
     property bool lyricsWanted: false
@@ -771,10 +781,11 @@ Scope {
             WlrLayershell.layer: WlrLayer.Bottom
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-            // click-through unless editing; only the Player widgets (up to 4) take clicks, for their buttons
+            // click-through unless editing; Player widgets and Stocks swap buttons take clicks
             mask: Region {
                 item: root.editing ? ui : null
-                regions: [ Region { item: hit0 }, Region { item: hit1 }, Region { item: hit2 }, Region { item: hit3 } ]
+                regions: [ Region { item: hit0 }, Region { item: hit1 }, Region { item: hit2 }, Region { item: hit3 },
+                           Region { item: stockHit0 }, Region { item: stockHit1 }, Region { item: stockHit2 }, Region { item: stockHit3 } ]
             }
 
             Item {
@@ -785,6 +796,10 @@ Scope {
                 Item { id: hit1; x: root.pr(1, 0); y: root.pr(1, 1); width: root.pr(1, 2); height: root.pr(1, 3) }
                 Item { id: hit2; x: root.pr(2, 0); y: root.pr(2, 1); width: root.pr(2, 2); height: root.pr(2, 3) }
                 Item { id: hit3; x: root.pr(3, 0); y: root.pr(3, 1); width: root.pr(3, 2); height: root.pr(3, 3) }
+                Item { id: stockHit0; x: root.sr(0, 0); y: root.sr(0, 1); width: root.sr(0, 2); height: root.sr(0, 3) }
+                Item { id: stockHit1; x: root.sr(1, 0); y: root.sr(1, 1); width: root.sr(1, 2); height: root.sr(1, 3) }
+                Item { id: stockHit2; x: root.sr(2, 0); y: root.sr(2, 1); width: root.sr(2, 2); height: root.sr(2, 3) }
+                Item { id: stockHit3; x: root.sr(3, 0); y: root.sr(3, 1); width: root.sr(3, 2); height: root.sr(3, 3) }
 
                 Rectangle {   // slight dim while editing
                     anchors.fill: parent

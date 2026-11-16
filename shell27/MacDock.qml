@@ -881,6 +881,7 @@ Scope {
             { id: "notifications", sec: 4, name: "Notifications", wg: "bell",      c1: "#FF5E57", c2: "#E8342A", keys: "alerts banners popups do not disturb screenshot" },
             { id: "sound",      sec: 4, name: "Sound",           wg: "speaker",    c1: "#FF5E7E", c2: "#E8344F", keys: "volume output input microphone speakers headphones effects ui sounds" },
             { id: "focus",      sec: 4, name: "Focus",           wg: "moon",       c1: "#7D7AFF", c2: "#5856D6", keys: "do not disturb keep awake sleep" },
+            { id: "screentime", sec: 4, name: "Screen Time",     wg: "moon",       c1: "#8C7BFF", c2: "#5A6CFF", keys: "screen time app usage digital wellbeing focus allowance schedules downtime" },
             // 5 · Security & Accounts
             { id: "lockscreen", sec: 5, name: "Lock Screen",     wg: "lock",       c1: "#3A3A3C", c2: "#1C1C1E", keys: "lock password album lyrics media clock" },
             { id: "users",      sec: 5, name: "Users & Groups",  wg: "smile",      c1: "#3D9BFF", c2: "#0A6CFF", keys: "account user name picture avatar" },
@@ -1816,7 +1817,7 @@ Scope {
                         wifi: paneWifi, bluetooth: paneBt, network: paneNetwork, battery: paneBattery,
                         general: paneGeneral, appearance: paneAppearance, siri: paneSiri, controlcenter: paneCC, dock: paneDesktopDock,
                         displays: paneDisplays, menubar: paneMenuBar, wallpaper: paneWallpaper,
-                        notifications: paneNotif, sound: paneSound, focus: paneFocus,
+                        notifications: paneNotif, sound: paneSound, focus: paneFocus, screentime: paneScreenTime,
                         widgets: paneWidgets, lockscreen: paneLock, users: paneUsers, keyboard: paneKeyboard, mouse: paneMouse, trackpad: paneTrackpad,
                         apps: paneApps, about: paneAbout
                     })[prefsWindow.panes[prefsWindow.cur].id]
@@ -4456,6 +4457,198 @@ Scope {
                         t: pal; title: I18n.tr("Keep Awake")
                         subtitle: I18n.tr("Stop the computer from going to sleep or locking")
                         SSwitch { t: pal; checked: root.bar ? root.bar.keepAwake : false; onToggled: v => { if (root.bar) root.bar.keepAwake = v; } }
+                    }
+                }
+            }
+        }
+
+        // ── Screen Time ──
+        Component {
+            id: paneScreenTime
+            Column {
+                id: screenTimePane
+                spacing: 10
+                property bool trackingEnabled: true
+
+                SCard {
+                    t: pal
+                    SRow {
+                        t: pal; title: I18n.tr("Screen Time tracking")
+                        subtitle: I18n.tr("Collect app and category usage when enabled")
+                        SSwitch { t: pal; checked: screenTimePane.trackingEnabled; onToggled: v => screenTimePane.trackingEnabled = v }
+                    }
+                }
+
+                SLabel { t: pal; header: true; text: I18n.tr("At a glance") }
+                SCard {
+                    t: pal
+                    ScreenTimeWidget {
+                        width: parent.width - 24
+                        height: 138
+                        totalText: "2h 14m"
+                    }
+                    Row {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.margins: 18
+                        anchors.top: parent.top
+                        anchors.topMargin: 78
+                        spacing: 8
+                        Item {
+                            width: (parent.width - 24) / 4; height: 42
+                            Text {
+                                anchors.centerIn: parent
+                                text: I18n.tr("Today") + "\n2h 14m"
+                                horizontalAlignment: Text.AlignHCenter
+                                color: pal.text
+                                font.family: root.fontForWeight(Font.Normal, pal.fam)
+                                font.pixelSize: 11
+                                lineHeight: 1.25
+                            }
+                        }
+                        Item {
+                            width: (parent.width - 24) / 4; height: 42
+                            Text {
+                                anchors.centerIn: parent
+                                text: I18n.tr("Entertainment") + "\n44m"
+                                horizontalAlignment: Text.AlignHCenter
+                                color: pal.text2
+                                font.family: root.fontForWeight(Font.Normal, pal.fam)
+                                font.pixelSize: 11
+                                lineHeight: 1.25
+                            }
+                        }
+                        Item {
+                            width: (parent.width - 24) / 4; height: 42
+                            Text {
+                                anchors.centerIn: parent
+                                text: I18n.tr("Games") + "\n39m"
+                                horizontalAlignment: Text.AlignHCenter
+                                color: pal.text2
+                                font.family: root.fontForWeight(Font.Normal, pal.fam)
+                                font.pixelSize: 11
+                                lineHeight: 1.25
+                            }
+                        }
+                        Item {
+                            width: (parent.width - 24) / 4; height: 42
+                            Text {
+                                anchors.centerIn: parent
+                                text: I18n.tr("Social") + "\n51m"
+                                horizontalAlignment: Text.AlignHCenter
+                                color: pal.text2
+                                font.family: root.fontForWeight(Font.Normal, pal.fam)
+                                font.pixelSize: 11
+                                lineHeight: 1.25
+                            }
+                        }
+                    }
+                }
+
+                SLabel { t: pal; header: true; text: I18n.tr("Time Allowances") }
+                SCard {
+                    t: pal
+                    SRow {
+                        t: pal; title: I18n.tr("Entertainment")
+                        subtitle: I18n.tr("1h 30m today")
+                        SButton { t: pal; text: I18n.tr("View") }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Games")
+                        subtitle: I18n.tr("45m today")
+                        SButton { t: pal; text: I18n.tr("View") }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Social Media")
+                        subtitle: I18n.tr("1h 05m today")
+                        SButton { t: pal; text: I18n.tr("View") }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Add category")
+                        SButton { t: pal; text: I18n.tr("New") }
+                    }
+                }
+
+                SLabel { t: pal; header: true; text: I18n.tr("Schedules") }
+                SCard {
+                    t: pal
+                    SRow {
+                        t: pal; title: I18n.tr("School Hours")
+                        subtitle: I18n.tr("Mon–Fri · 8:00 AM to 3:00 PM")
+                        SSwitch { t: pal; checked: false }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Bedtime")
+                        subtitle: I18n.tr("Mon–Fri · 10:00 PM to 7:00 AM")
+                        SSwitch { t: pal; checked: true }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Add Schedule")
+                        SButton { t: pal; text: I18n.tr("New") }
+                    }
+                }
+
+                SLabel { t: pal; header: true; text: I18n.tr("Downtime") }
+                SCard {
+                    t: pal
+                    SRow {
+                        t: pal; title: I18n.tr("Turn on downtime until tomorrow")
+                        SSwitch { t: pal; checked: false }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Scheduled")
+                        SSwitch { t: pal; checked: true }
+                    }
+                }
+
+                SLabel { t: pal; header: true; text: I18n.tr("Parental Controls") }
+                SCard {
+                    t: pal
+                    SRow {
+                        t: pal; title: I18n.tr("Ask to Browse")
+                        SButton { t: pal; text: I18n.tr("Manage") }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Ask to Buy")
+                        SButton { t: pal; text: I18n.tr("Manage") }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Communication Limits")
+                        SButton { t: pal; text: I18n.tr("Manage") }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Communication Safety")
+                        SButton { t: pal; text: I18n.tr("Manage") }
+                    }
+                }
+
+                SCard {
+                    t: pal
+                    SRow {
+                        t: pal; title: I18n.tr("Always Allowed")
+                        SButton { t: pal; text: I18n.tr("Edit") }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Screen Distance")
+                        SSwitch { t: pal; checked: false }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Content & Privacy Restrictions")
+                        SButton { t: pal; text: I18n.tr("Manage") }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Lock Screen Time Settings")
+                        subtitle: I18n.tr("Use a passcode to secure Screen Time settings")
+                        SSwitch { t: pal; checked: true }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Share across devices")
+                        subtitle: I18n.tr("Saved state only for now")
+                        SSwitch { t: pal; checked: false }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Turn off App & Website Activity")
+                        SButton { t: pal; text: I18n.tr("Disable") }
                     }
                 }
             }

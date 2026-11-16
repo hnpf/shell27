@@ -41,6 +41,12 @@ Canvas {
             tri(0.04 * W, 0.50 * W, 0.08 * H, 0.92 * H, 0.07 * H);
             tri(0.50 * W, 0.96 * W, 0.08 * H, 0.92 * H, 0.07 * H);
             c.restore();
+        } else if (kind === "swap") {
+            c.lineWidth = 0.09 * H;
+            c.beginPath(); c.moveTo(0.12 * W, 0.32 * H); c.lineTo(0.88 * W, 0.32 * H); c.stroke();
+            arrowHead(0.94 * W, 0.32 * H, 1, 0.18 * W);
+            c.beginPath(); c.moveTo(0.88 * W, 0.68 * H); c.lineTo(0.12 * W, 0.68 * H); c.stroke();
+            arrowHead(0.06 * W, 0.68 * H, -1, 0.18 * W);
         } else if (kind === "shuffle") {
             c.lineWidth = 0.11 * H;
             c.beginPath();
