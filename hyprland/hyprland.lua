@@ -386,6 +386,15 @@ hl.window_rule({
 })
 
 hl.window_rule({
+    name = "shell27-reminders-float",
+    match = { title = "^Reminders$" },
+    float           = true,
+    center          = true,
+    size            = "796 671",
+    persistent_size = true,
+})
+
+hl.window_rule({
     name = "suppress-maximize-events",
     match = { class = ".*" },
     suppress_event = "maximize",

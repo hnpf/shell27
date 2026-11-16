@@ -352,6 +352,7 @@ LIBS=(
     "qt6-shadertools:shader tools"
     "qt6-multimedia-ffmpeg|qt6-multimedia:QtMultimedia (video wallpapers; shell27 and shell27-lock fail to load without it)"
     "upower:battery and power status (Quickshell UPower)"
+    "openssl:Python HTTPS support for LocalSend AirDrop"
     "inter-font|ttf-inter:the Inter font"
     "noto-fonts:fallback fonts"
     "noto-fonts-emoji:emoji font"
@@ -394,7 +395,8 @@ pkg_for() {
                 qt6-wayland) echo qt6-qtwayland ;; qt6-svg) echo qt6-qtsvg ;; networkmanager) echo NetworkManager ;;
                 bluez-utils) echo bluez ;; "inter-font|ttf-inter") echo rsms-inter-fonts ;;
                 noto-fonts) echo google-noto-sans-fonts ;; noto-fonts-emoji) echo "google-noto-color-emoji-fonts|google-noto-emoji-fonts" ;;
-                imagemagick) echo ImageMagick ;; python) echo python3 ;; awww|mpvpaper|cliphist) echo "$p" ;; *) printf '%s' "${p%%|*}" ;;
+                imagemagick) echo ImageMagick ;; python) echo python3 ;; openssl) echo openssl-libs ;;
+                awww|mpvpaper|cliphist) echo "$p" ;; *) printf '%s' "${p%%|*}" ;;
              esac ;;
         apt) case "$p" in
                 pipewire) echo pipewire-bin ;; pipewire-pulse) echo pipewire-pulse ;; qt6-shadertools) echo qt6-shader-baker ;;
@@ -402,6 +404,7 @@ pkg_for() {
                 networkmanager) echo network-manager ;; bluez-utils) echo bluez ;; libnotify) echo libnotify-bin ;;
                 "inter-font|ttf-inter") echo fonts-inter ;; noto-fonts) echo fonts-noto-core ;;
                 noto-fonts-emoji) echo fonts-noto-color-emoji ;; python) echo python3 ;; qt6-declarative|qt6-wayland|qt6-svg) echo "" ;;
+                openssl) echo "libssl3t64|libssl3" ;;
                 *) printf '%s' "${p%%|*}" ;;
              esac ;;
     esac

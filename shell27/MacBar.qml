@@ -90,15 +90,13 @@ Scope {
     // true while a screen recording / screen share runs: the glass's live window captures sit out (see shell.qml: hub.captureQuiet)
     readonly property bool captureQuiet: hub ? hub.captureQuiet : recording
     // windows opening / closing: the glass's live captures pause (it keeps its last frame; the source stays attached) - see shell.qml: hub.glassHold
-    readonly property bool captureHeld: hub ? hub.barHold : false
-
     // ───────────── CONFIG (all persisted to settings.json) ─────────────
     property bool barEnabled: true           // the menu bar strip itself
     // every part of the shell can be switched off on its own (the installer's feature picker writes these too)
     property bool spotlightEnabled: true     // Spotlight (the magnifier / its keybind)
-    property bool reduceMotion: false        // Spotlight: no pop / stagger / slide animations (settings.json: "reduceMotion": true)
-    property bool ccEnabled: true            // Control Center
-    property string ccStyle: "tiles"         // tiles = every control its own glass | macos = one frosted panel behind them
+    property bool reduceMotion: false         // Spotlight: no pop / stagger / slide
+    property bool ccEnabled: true             // Control Center
+    property string ccStyle: "tiles"          // tiles = every control its own glass | macos = one frosted panel
     property bool notificationsEnabled: true // banners + Notification Center (off = no D-Bus daemon at all, so mako/dunst can take over)
     property bool clockAppEnabled: true      // the Clock app (alarms and timers still ring while it is on)
     readonly property bool barLayerNeeded: barEnabled || spotlightEnabled || ccEnabled || notificationsEnabled
@@ -398,6 +396,7 @@ Scope {
     property var ccControls: ["wifi", "nowplaying", "bluetooth", "airplane", "focus", "record", "nightshift", "keepawake", "display", "sound"]
     property bool ccMigRec: false              // one-time: add the Screen Recording tile to an existing Control Center layout
     property bool ccMigStage: false            // one-time: add Stage Manager tile to Control Center
+    property bool barMigApps: false            // one-time: add built-in app shortcuts to existing menu-bar layouts
     property bool stageManager: true           // macOS 3D Stage Manager enabled
     property bool recording: false
     property int recSecs: 0
@@ -420,10 +419,10 @@ Scope {
         "spotlightEnabled", "reduceMotion", "ccEnabled", "notificationsEnabled", "clockAppEnabled", "ccStyle", "barLogoMode", "barCustomLogoPath", "barWidgets", "weekStartsMonday", "terminal", "launcher",
         "filesCmd", "clipboardCmd", "appUsage", "clipHistory", "clipAutoPaste", "emojiRecent", "screenshotDir", "screenshotSave", "screenshotClipboard", "screenshotNotify", "nightTemp", "ccControls", "ccMigRec", "wallpaperDir", "wallpaperFavs", "wallpaperCmd", "wallpaperVideo", "wpRestorePath", "uiSounds", "gamingMode", "gamingAuto", "ccMigGame", "lockArtBackground",
         "lockClockStyle", "switcherStyle", "lockClockFont", "lockClockWeight", "lockClockMaterial", "lockClockIntensity", "lockClockTint", "lockClockDate", "autoContrast", "wallpaperAppearance", "wpPairLight", "wpPairDark",
-        "notifDnd", "dnd", "nightOn", "keepAwake", "stageManager", "ccMigStage",
+        "notifDnd", "dnd", "nightOn", "keepAwake", "stageManager", "ccMigStage", "barMigApps",
         "kbRepeatRate", "kbRepeatDelay", "mouseSens", "mouseNatural", "tpNatural", "tpTap", "tpDwt", "tpScroll"]
     // Optional bar widgets; tray and Spotlight use their existing showTray/showSearch settings.
-    property var barWidgets: ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "bluetooth", "siri", "privacy", "controlCenter", "clock"]
+    property var barWidgets: ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "bluetooth", "siri", "airdrop", "reminders", "privacy", "controlCenter", "clock"]
     function barWidgetEnabled(id) { return barWidgets.indexOf(id) >= 0; }
     function resolvedBarLogoUrl() {
         var p = String(barCustomLogoPath || "").trim();
@@ -2265,8 +2264,8 @@ Scope {
     readonly property string appName: {
         if (activeAppId === "") return I18n.tr("Desktop");
         // shell27's own windows (all "org.quickshell")
-        if (activeAppId === "org.quickshell") return (activeTl.title === "Clock" || activeTl.title === "App Store") ? I18n.tr(activeTl.title)
-                                                     : (activeTl.title === "System Settings" ? I18n.tr("System Settings") : "shell27");
+        if (activeAppId === "org.quickshell") return (activeTl.title === "Clock" || activeTl.title === "App Store" || activeTl.title === "Reminders") ? I18n.tr(activeTl.title)
+                                 : (activeTl.title === "System Settings" ? I18n.tr("System Settings") : "shell27");
         var e = lookup(activeAppId);
         return e ? e.name : activeAppId;
     }
@@ -3573,7 +3572,7 @@ Scope {
     }
     IpcHandler {
         target: "spotlight"
-        function toggle(): void { root.search(); }
+        function toggle(): void { root.spotOpen("home"); }
         function clipboard(): void { root.spotOpen("clip"); }
         function emoji(): void { root.spotOpen("emoji"); }
         function apps(): void { root.spotOpen("apps"); }
@@ -3584,8 +3583,10 @@ Scope {
     // new entry also gets a timestamp in ~/.cache/macbar/clip-times so the list can say "Copied 4:11 pm".
     property string clipState: "unknown"      // unknown | ok | external | missing
     property var clipEntries: []              // newest first
+    property var clipFavorites: []
     property bool clipLoading: false
     readonly property string clipDir: Quickshell.env("HOME") + "/.cache/macbar"
+    readonly property string clipFavoritesPath: clipDir + "/clip-favorites"
     readonly property string appleEmojiFontPath: (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/fonts/apple-emoji/AppleColorEmoji-Linux.ttf"
     FontLoader {
         id: appleEmojiFontLoader
@@ -3599,12 +3600,24 @@ Scope {
     readonly property string clipListCmd: [
         "if ! command -v cliphist >/dev/null 2>&1; then echo '@@MISSING@@'; exit 0; fi",
         "d=\"$HOME/.cache/macbar\"; mkdir -p \"$d/clip\"; t=\"$d/clip-times\"; touch \"$t\"",
-        "l=$(mktemp); cliphist list 2>/dev/null | head -n 300 > \"$l\"",
+        "touch \"$d/clip-favorites\"; l=$(mktemp); a=$(mktemp); cliphist list 2>/dev/null > \"$a\"",
+        "awk -F '\\t' 'FILENAME == ARGV[1] { f[$1]=1; next } FNR <= 300 || $1 in f' \"$d/clip-favorites\" \"$a\" | awk -F '\\t' '!seen[$1]++' > \"$l\"",
         "awk -F'\\t' -v now=\"$(date +%s)\" 'FILENAME==ARGV[1]{s[$1]=1;next} !($1 in s){print $1\"\\t\"now}' \"$t\" \"$l\" >> \"$t\"",
         "tail -n 3000 \"$t\" > \"$t.tmp\" && mv \"$t.tmp\" \"$t\"",
         "awk -F'\\t' '$2 ~ /^\\[\\[ binary data/ {print $1}' \"$l\" | head -n 30 | while read -r id; do [ -s \"$d/clip/$id.img\" ] || cliphist decode \"$id\" > \"$d/clip/$id.img\" 2>/dev/null; done",
         "find \"$d/clip\" -type f -mtime +3 -delete 2>/dev/null",
-        "cat \"$l\"; echo '@@TIMES@@'; cat \"$t\"; rm -f \"$l\""
+        "cat \"$l\"; echo '@@TIMES@@'; cat \"$t\"; rm -f \"$l\" \"$a\""
+    ].join("\n")
+    readonly property string clipClearCmd: [
+        "d=\"$HOME/.cache/macbar\"; f=\"$d/clip-favorites\"; t=\"$d/clip-times\"; touch \"$f\" \"$t\"",
+        "cliphist list | cut -f1 | while IFS= read -r id; do",
+        "  [ -n \"$id\" ] || continue",
+        "  grep -Fqx \"$id\" \"$f\" 2>/dev/null && continue",
+        "  printf '%s\\t\\n' \"$id\" | cliphist delete",
+        "  rm -f \"$d/clip/$id.img\"",
+        "done",
+        "tmp=$(mktemp)",
+        "awk -F '\\t' 'FILENAME == ARGV[1] { fav[$1]=1; next } $1 in fav' \"$f\" \"$t\" > \"$tmp\" && mv -f \"$tmp\" \"$t\""
     ].join("\n")
 
     function clipStart() {
@@ -3648,6 +3661,38 @@ Scope {
                 root.clipEntries = root.clipParse(text);
             }
         }
+    }
+    FileView {
+        id: clipFavoritesStore
+        path: root.clipFavoritesPath
+        printErrors: false
+        onLoaded: root.loadClipFavorites(text())
+        onLoadFailed: root.clipFavorites = []
+    }
+    function loadClipFavorites(text) {
+        var lines = text.trim().split(/\s+/), ids = [];
+        for (var i = 0; i < lines.length; i++)
+            if (/^\d+$/.test(lines[i]) && ids.indexOf(lines[i]) < 0) ids.push(lines[i]);
+        clipFavorites = ids;
+        clipEntries = clipSortEntries(clipEntries);
+    }
+    function clipIsFavorite(id) { return clipFavorites.indexOf(String(id)) >= 0; }
+    function clipSortEntries(entries) {
+        var favorites = [], recent = [];
+        for (var i = 0; i < entries.length; i++) {
+            if (clipIsFavorite(entries[i].id)) favorites.push(entries[i]);
+            else recent.push(entries[i]);
+        }
+        favorites.sort(function (a, b) { return clipFavorites.indexOf(String(a.id)) - clipFavorites.indexOf(String(b.id)); });
+        return favorites.concat(recent);
+    }
+    function clipToggleFavorite(en) {
+        if (!en) return;
+        var id = String(en.id), ids = clipFavorites.slice(), at = ids.indexOf(id);
+        if (at >= 0) ids.splice(at, 1); else ids.push(id);
+        clipFavorites = ids;
+        clipFavoritesStore.setText(ids.join("\n") + (ids.length ? "\n" : ""));
+        clipEntries = clipSortEntries(clipEntries);
     }
     function clipWhen(ts) {
         if (!ts) return "";
@@ -3693,7 +3738,7 @@ Scope {
             var id = lines[i].substring(0, tab);
             res.push(clipEntry(id, lines[i].substring(tab + 1), times[id] || 0));
         }
-        return res;
+        return clipSortEntries(res);
     }
     function clipRunner(en) { return function () { root.clipPick(en, undefined); }; }
     function clipFiltered(q) {
@@ -3704,6 +3749,7 @@ Scope {
             if (q !== "" && en.text.toLowerCase().indexOf(q) < 0 && en.label.toLowerCase().indexOf(q) < 0) continue;
             var it = {};
             for (var k in en) it[k] = en[k];
+            it.favorite = clipIsFavorite(en.id);
             it.confirm = false;
             it.run = clipRunner(en);
             out.push(it);
@@ -3729,12 +3775,14 @@ Scope {
         if (!en) return;
         var id = parseInt(en.id);
         if (isNaN(id)) return;
+        if (clipIsFavorite(id)) clipToggleFavorite(en);
         clipEntries = clipEntries.filter(function (x) { return x.id !== en.id; });
         sh("printf '%s\\t\\n' " + id + " | cliphist delete; rm -f \"$HOME/.cache/macbar/clip/" + id + ".img\"");
     }
     function clipClear() {
-        clipEntries = [];
-        sh("cliphist wipe; rm -f \"$HOME/.cache/macbar/clip-times\" \"$HOME/.cache/macbar/clip/\"*");
+        clipEntries = clipSortEntries(clipEntries.filter(function (x) { return clipIsFavorite(x.id); }));
+        ui.spSel = 0;
+        sh(clipClearCmd);
     }
     // paste into the app that had focus before Spotlight (terminals paste with Ctrl+Shift+V)
     property var pasteFn: null
@@ -3843,10 +3891,12 @@ Scope {
 
     // the shell27 logo: the icon of shell27's own windows in the Alt+Tab switcher
     readonly property string logoPath: decodeURIComponent(String(Qt.resolvedUrl("apple-logo-white.svg")).replace(/^file:\/\//, ""))
+    readonly property string remindersIconPath: decodeURIComponent(String(Qt.resolvedUrl("assets/reminders-app.png")).replace(/^file:\/\//, ""))
     // ── applications for Spotlight ──
     function iconSrc(name) {
         var fb = Quickshell.iconPath("application-x-executable", true);
         if (!name) return fb;
+        if (name === "reminders-app" || name === "shell27-reminders") return "file://" + remindersIconPath;
         if (name.indexOf("/") === 0) return "file://" + name;
         var p = Quickshell.iconPath(name, true);
         return p !== "" ? p : fb;
@@ -5090,7 +5140,7 @@ Scope {
         showTray = true; showSearch = true; showAudioHub = true;
         spotlightEnabled = true; ccEnabled = true; notificationsEnabled = true; clockAppEnabled = true; ccStyle = "tiles";
         barLogoMode = "arch"; barCustomLogoPath = "";
-        barWidgets = ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "bluetooth", "privacy", "controlCenter", "clock"];
+        barWidgets = ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "bluetooth", "siri", "airdrop", "reminders", "privacy", "controlCenter", "clock"];
         ccControls = ccDefault.slice();
         uiScaleAuto = true; uiScaleManual = 1.0;
     }
@@ -5134,6 +5184,13 @@ Scope {
                     cs.splice(ki >= 0 ? ki + 1 : cs.length, 0, "stagemanager");
                     root.ccControls = cs;
                 }
+            }
+            if (!root.barMigApps) {
+                root.barMigApps = true;
+                var bw = root.barWidgets.slice();
+                if (bw.indexOf("airdrop") < 0) bw.push("airdrop");
+                if (bw.indexOf("reminders") < 0) bw.push("reminders");
+                root.barWidgets = bw;
             }
             root.settingsReady = true;
             inputApplyT.restart();
@@ -6867,40 +6924,95 @@ Scope {
     }
 }
 
-                        // Siri (classic Siri menu bar widget)
+                        // AirDrop: left click opens nearby sharing; right click starts a fresh scan.
                         Item {
-                            id: siriBtn
-                            visible: root.barWidgetEnabled("siri")
-                            width: root.barWidgetEnabled("siri") ? 26 : 0; height: 28
+                            id: airDropBtn
+                            visible: root.barWidgetEnabled("airdrop")
+                            width: root.barWidgetEnabled("airdrop") ? 26 : 0; height: 28
+                            readonly property var app: root.hub ? root.hub.airdrop : null
                             Rectangle {
                                 anchors.centerIn: parent
                                 width: parent.width - 2; height: parent.height - 6; radius: 12
-                                color: (siriMa.containsMouse || (root.hub && root.hub.siri && root.hub.siri.active)) ? bpal.hover : "transparent"
+                                color: (airDropMa.containsMouse || (airDropBtn.app && airDropBtn.app.scanning)) ? bpal.hover : "transparent"
                             }
                             Image {
                                 anchors.centerIn: parent
                                 width: 17; height: 17
-                                source: "assets/siri-classic.svg"
+                                source: "assets/airdrop-symbolic.svg"
                                 sourceSize: Qt.size(34, 34)
                                 fillMode: Image.PreserveAspectFit
                                 smooth: true
                                 mipmap: true
-                                scale: siriMa.pressed ? 0.88 : (siriMa.containsMouse ? 1.08 : 1.0)
+                                scale: airDropMa.pressed ? 0.88 : (airDropMa.containsMouse ? 1.08 : 1.0)
                                 Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
                             }
+                            Rectangle {
+                                visible: airDropBtn.app && airDropBtn.app.ready
+                                x: parent.width / 2 + 3; y: parent.height / 2 + 2
+                                width: 5; height: 5; radius: 2.5
+                                color: "#30D158"
+                                border.width: 1; border.color: bpal.dark ? "#111" : "white"
+                            }
                             MouseArea {
-                                id: siriMa
+                                id: airDropMa
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: mouse => {
-                                    if (mouse.button === Qt.RightButton) {
-                                        root.openSettings("siri");
-                                    } else {
-                                        if (root.hub) root.hub.toggleSiri();
-                                    }
+                                    if (!airDropBtn.app) return;
+                                    if (mouse.button === Qt.RightButton) airDropBtn.app.scan();
+                                    else airDropBtn.app.open();
                                 }
+                            }
+                        }
+
+                        // Reminders: a symbolic list icon carries a count of open tasks.
+                        Item {
+                            id: remindersBtn
+                            visible: root.barWidgetEnabled("reminders")
+                            width: root.barWidgetEnabled("reminders") ? 28 : 0; height: 28
+                            readonly property int openCount: root.hub && root.hub.widgets ? root.hub.widgets.remOpenCount : 0
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: parent.width - 2; height: parent.height - 6; radius: 12
+                                color: remindersMa.containsMouse ? bpal.hover : "transparent"
+                            }
+                            Image {
+                                anchors.centerIn: parent
+                                width: 18; height: 15.43
+                                source: "assets/reminders-symbolic.svg"
+                                sourceSize: Qt.size(112, 96)
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
+                                mipmap: false
+                                layer.enabled: true
+                                layer.effect: MultiEffect {
+                                    colorization: 1.0
+                                    colorizationColor: bpal.fg
+                                }
+                                scale: remindersMa.pressed ? 0.88 : (remindersMa.containsMouse ? 1.08 : 1.0)
+                                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                            }
+                            Rectangle {
+                                visible: remindersBtn.openCount > 0
+                                x: parent.width / 2 + 2; y: parent.height / 2 - 9
+                                width: 12; height: 12; radius: 6
+                                color: "#FF453A"
+                                border.width: 1; border.color: bpal.dark ? "#111" : "white"
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: remindersBtn.openCount > 9 ? "9+" : String(remindersBtn.openCount)
+                                    color: "white"
+                                    font.family: bpal.fam; font.pixelSize: 7; font.weight: Font.Bold
+                                }
+                            }
+                            MouseArea {
+                                id: remindersMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: if (root.hub && root.hub.reminders) root.hub.reminders.open()
                             }
                         }
 
@@ -7218,6 +7330,44 @@ Scope {
     }
                             MouseArea { anchors.fill: parent; onClicked: ui.openPop("cc", 0) }
 }
+
+                        // Siri (classic Siri menu bar widget)
+                        Item {
+                            id: siriBtn
+                            visible: root.barWidgetEnabled("siri")
+                            width: root.barWidgetEnabled("siri") ? 26 : 0; height: 28
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: parent.width - 2; height: parent.height - 6; radius: 12
+                                color: (siriMa.containsMouse || (root.hub && root.hub.siri && root.hub.siri.active)) ? bpal.hover : "transparent"
+                            }
+                            Image {
+                                anchors.centerIn: parent
+                                width: 17; height: 17
+                                source: "assets/siri-symbolic.svg"
+                                sourceSize: Qt.size(34, 34)
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
+                                mipmap: true
+                                scale: siriMa.pressed ? 0.88 : (siriMa.containsMouse ? 1.08 : 1.0)
+                                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                            }
+                            MouseArea {
+                                id: siriMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: mouse => {
+                                    if (mouse.button === Qt.RightButton) {
+                                        root.openSettings("siri");
+                                    } else {
+                                        if (root.hub) root.hub.toggleSiri();
+                                    }
+                                }
+                            }
+                        }
+
                         // clock
                         Item {
                             id: clockBtn
@@ -13398,7 +13548,7 @@ Scope {
         }
                                 Text {
                                     x: 62; y: 9
-                                    width: parent.width - 62 - 56
+                                    width: parent.width - 62 - 100
                                     elide: Text.ElideRight
                                     text: cr.modelData ? cr.modelData.title : ""
                                     color: cr.sel ? "white" : panelPal.fg
@@ -13406,7 +13556,7 @@ Scope {
         }
                                 Text {
                                     x: 62; y: 31
-                                    width: parent.width - 62 - 56
+                                    width: parent.width - 62 - 100
                                     elide: Text.ElideRight
                                     text: cr.modelData ? cr.modelData.sub : ""
                                     color: cr.sel ? Qt.rgba(1, 1, 1, 0.8) : panelPal.fg2
@@ -13415,7 +13565,7 @@ Scope {
                                 Glyph {
                                     visible: cr.sel
                                     anchors.right: parent.right
-                                    anchors.rightMargin: 18
+                                    anchors.rightMargin: 50
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: 18; height: 18
                                     kind: "return"; color: "white"
@@ -13442,6 +13592,78 @@ Scope {
             }
                                     onClicked: if (!dragged) ui.spActivate(cr.index)
         }
+                                Item {
+                                    id: clipFavoriteButton
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 32; height: 32
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        radius: 10
+                                        color: favoriteMouse.containsMouse
+                                            ? (cr.sel ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.14))
+                                            : "transparent"
+                                        Behavior on color { ColorAnimation { duration: 130 } }
+                                    }
+                                    Canvas {
+                                        anchors.centerIn: parent
+                                        width: 18; height: 18
+                                        antialiasing: true
+                                        property bool filled: cr.modelData.favorite
+                                        property color iconColor: cr.modelData.favorite ? (cr.sel ? "white" : root.accent) : (cr.sel ? "white" : panelPal.fg2)
+                                        onFilledChanged: requestPaint()
+                                        onIconColorChanged: requestPaint()
+                                        onPaint: {
+                                            var ctx = getContext("2d");
+                                            ctx.reset();
+                                            ctx.lineWidth = 1.5;
+                                            ctx.lineJoin = "round";
+                                            ctx.lineCap = "round";
+                                            ctx.fillStyle = filled ? iconColor : "transparent";
+                                            ctx.strokeStyle = iconColor;
+                                            var points = [];
+                                            for (var i = 0; i < 10; i++) {
+                                                var angle = -Math.PI / 2 + i * Math.PI / 5;
+                                                var radius = i % 2 === 0 ? 7.4 : 3.35;
+                                                points.push({ x: 9 + Math.cos(angle) * radius, y: 9 + Math.sin(angle) * radius });
+                                            }
+                                            var incoming = [], outgoing = [];
+                                            for (var j = 0; j < points.length; j++) {
+                                                var prev = points[(j + points.length - 1) % points.length];
+                                                var curr = points[j];
+                                                var next = points[(j + 1) % points.length];
+                                                var beforeLen = Math.hypot(curr.x - prev.x, curr.y - prev.y);
+                                                var afterLen = Math.hypot(next.x - curr.x, next.y - curr.y);
+                                                var cut = Math.min(0.32, 0.9 / beforeLen, 0.9 / afterLen);
+                                                incoming.push({ x: curr.x + (prev.x - curr.x) * cut, y: curr.y + (prev.y - curr.y) * cut });
+                                                outgoing.push({ x: curr.x + (next.x - curr.x) * cut, y: curr.y + (next.y - curr.y) * cut });
+                                            }
+                                            ctx.beginPath();
+                                            ctx.moveTo(incoming[0].x, incoming[0].y);
+                                            for (var k = 0; k < points.length; k++) {
+                                                ctx.quadraticCurveTo(points[k].x, points[k].y, outgoing[k].x, outgoing[k].y);
+                                                var nextIndex = (k + 1) % points.length;
+                                                ctx.lineTo(incoming[nextIndex].x, incoming[nextIndex].y);
+                                            }
+                                            ctx.closePath();
+                                            if (filled) ctx.fill();
+                                            ctx.stroke();
+                                        }
+                                    }
+                                    MouseArea {
+                                        id: favoriteMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onEntered: { if (ui.spSel !== cr.index) { ui.spHover = true; ui.spSel = cr.index; } }
+                                        onClicked: {
+                                            root.clipToggleFavorite(cr.modelData);
+                                            ui.spSel = cr.index;
+                                            ui.spHover = true;
+                                        }
+                                    }
+                                }
     }
 }
 

@@ -13,19 +13,27 @@ local network, and sending is two HTTPS-less HTTP calls.
 import fcntl
 import hashlib
 import http.server
+import io
+import ipaddress
 import json
 import mimetypes
 import os
 import random
 import socket
-import ssl
 import struct
 import string
+import subprocess
 import sys
 import threading
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+
+try:
+    import ssl
+except ImportError:
+    ssl = None
 
 MULTICAST = "224.0.0.167"
 PORT = 53317
@@ -59,6 +67,65 @@ def _ipv4_interfaces():
         if addr and not addr.startswith("127."):
             out.append((name, addr))
     return out
+
+
+def _ipv4_networks():
+    """Return the practical local subnet for each usable IPv4 interface.
+
+    LocalSend's protocol calls this the HTTP "legacy" discovery mode.  It is
+    not legacy in the sense of being obsolete: it is the required fallback for
+    Wi-Fi access points that suppress multicast (a common mobile setting).
+    Large corporate/VPN ranges are narrowed to the local /24 around this host;
+    probing an entire /16 would make clicking Search unexpectedly noisy.
+    """
+    out = []
+    for name, addr in _ipv4_interfaces():
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            mask = socket.inet_ntoa(fcntl.ioctl(
+                s.fileno(), 0x891b,                          # SIOCGIFNETMASK
+                struct.pack("256s", name[:15].encode()))[20:24])
+            net = ipaddress.IPv4Network(addr + "/" + mask, strict=False)
+            # A /24 is the useful, safe fallback for unusually broad routes.
+            if net.prefixlen < 24:
+                net = ipaddress.IPv4Network(addr + "/24", strict=False)
+            out.append(net)
+        except (OSError, ValueError):
+            pass
+        finally:
+            s.close()
+    return out
+
+
+def _legacy_scan(callback, timeout=0.8):
+    """Discover LocalSend peers by registering with neighbouring local IPs.
+
+    Multicast remains the fast path. This short, bounded HTTP scan is the
+    protocol's documented fallback and makes discovery work on networks that
+    permit normal LocalSend traffic but filter multicast frames.
+    """
+    targets, own = set(), _own_addresses()
+    for net in _ipv4_networks():
+        for host in net.hosts():
+            ip = str(host)
+            if ip not in own:
+                targets.add(ip)
+
+    def probe(ip):
+        for scheme in ("https", "http"):
+            try:
+                d = _post("%s://%s:%s/api/localsend/v2/register" % (scheme, ip, PORT), ME, timeout=timeout)
+                if isinstance(d, dict) and d.get("fingerprint"):
+                    d.setdefault("port", PORT)
+                    d.setdefault("protocol", scheme)
+                    callback(d, (ip, int(d.get("port", PORT))))
+                return
+            except Exception:
+                continue
+
+    # A /24 completes quickly without making UI discovery wait for each dead IP.
+    with ThreadPoolExecutor(max_workers=48) as pool:
+        list(pool.map(probe, targets))
 
 
 def _join_all(sock):
@@ -171,6 +238,30 @@ ME = {
 def discover(seconds=3.0):
     """Announce ourselves and print every device that answers."""
     seen = {}
+    legacy = []
+    legacy_lock = threading.Lock()
+
+    def remember(d, addr):
+        fp = d.get("fingerprint")
+        if not fp or fp in seen or _is_self(d, addr):
+            return
+        seen[fp] = True
+        _register_with(addr[0], d.get("port", PORT), d.get("protocol", "http"))
+        print(json.dumps({
+            "alias": d.get("alias", addr[0]),
+            "ip": addr[0],
+            "port": d.get("port", PORT),
+            "deviceModel": d.get("deviceModel", ""),
+            "deviceType": d.get("deviceType", "desktop"),
+            "protocol": d.get("protocol", "http"),
+            "fingerprint": fp,
+        }), flush=True)
+
+    def from_legacy(d, addr):
+        # Worker threads must not mutate the UI-facing set or print directly.
+        with legacy_lock:
+            legacy.append((d, addr))
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
@@ -189,9 +280,17 @@ def discover(seconds=3.0):
         _announce(sock, payload)
         time.sleep(0.15)
 
+    # LocalSend's documented non-multicast fallback. It runs concurrently with
+    # the UDP listener so a phone can be found even when the AP drops multicast.
+    threading.Thread(target=_legacy_scan, args=(from_legacy,), daemon=True).start()
+
     sock.settimeout(0.4)
     end = time.time() + float(seconds)
     while time.time() < end:
+        with legacy_lock:
+            pending, legacy[:] = legacy[:], []
+        for d, addr in pending:
+            remember(d, addr)
         try:
             data, addr = sock.recvfrom(8192)
         except socket.timeout:
@@ -202,48 +301,90 @@ def discover(seconds=3.0):
             d = json.loads(data.decode())
         except (ValueError, UnicodeDecodeError):
             continue
-        fp = d.get("fingerprint")
-        if not fp or fp in seen or _is_self(d, addr):
-            continue
-        seen[fp] = True
-        _register_with(addr[0], d.get("port", PORT), d.get("protocol", "http"))
-        print(json.dumps({
-            "alias": d.get("alias", addr[0]),
-            "ip": addr[0],
-            "port": d.get("port", PORT),
-            "deviceModel": d.get("deviceModel", ""),
-            "deviceType": d.get("deviceType", "desktop"),
-            "protocol": d.get("protocol", "http"),
-            "fingerprint": fp,
-        }), flush=True)
+        before = len(seen)
+        remember(d, addr)
         # answering an announce is what makes us visible on their screen
-        if d.get("announce"):
+        if len(seen) != before and d.get("announce"):
             reply = dict(ME, announce=False)
             try:
                 sock.sendto(json.dumps(reply).encode(), addr)
             except OSError:
                 pass
+    with legacy_lock:
+        pending = legacy[:]
+    for d, addr in pending:
+        remember(d, addr)
     return 0
 
 
 # LocalSend serves HTTPS with a certificate it signed itself, so verification can only ever fail.
-_TLS = ssl.create_default_context()
-_TLS.check_hostname = False
-_TLS.verify_mode = ssl.CERT_NONE
+_TLS = ssl.create_default_context() if ssl else None
+if _TLS:
+    _TLS.check_hostname = False
+    _TLS.verify_mode = ssl.CERT_NONE
 
 
 def _open(req, timeout):
     if req.full_url.startswith("https://"):
+        if not _TLS:
+            raise OSError("Python SSL support is unavailable")
         return urllib.request.urlopen(req, timeout=timeout, context=_TLS)
     return urllib.request.urlopen(req, timeout=timeout)
 
 
+def _curl_request(url, data=None, input_stream=None, content_type="application/json", timeout=10):
+    command = ["curl", "--silent", "--show-error", "--insecure", "--max-time", str(timeout),
+               "--header", "Content-Type: " + content_type, "--data-binary", "@-",
+               "--write-out", "\n%{http_code}", url]
+    try:
+        if input_stream is None:
+            result = subprocess.run(command, input=data, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, timeout=timeout + 5)
+        else:
+            result = subprocess.run(command, stdin=input_stream, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, timeout=timeout + 5)
+    except subprocess.TimeoutExpired as e:
+        raise OSError("HTTPS request timed out") from e
+
+    marker = result.stdout.rfind(b"\n")
+    if marker < 0:
+        raise OSError(result.stderr.decode(errors="replace").strip() or "curl returned no HTTP status")
+    body = result.stdout[:marker]
+    try:
+        status = int(result.stdout[marker + 1:].strip())
+    except ValueError as e:
+        raise OSError("curl returned an invalid HTTP status") from e
+    if result.returncode:
+        raise OSError(result.stderr.decode(errors="replace").strip() or "curl HTTPS request failed")
+    if status >= 400:
+        raise urllib.error.HTTPError(url, status, "HTTP %d" % status, None, io.BytesIO(body))
+    return body
+
+
 def _post(url, obj, timeout=10):
+    if url.startswith("https://") and not _TLS:
+        body = _curl_request(url, json.dumps(obj).encode(), timeout=timeout)
+        return json.loads(body.decode()) if body.strip() else {}
     req = urllib.request.Request(url, data=json.dumps(obj).encode(),
                                  headers={"Content-Type": "application/json"}, method="POST")
     with _open(req, timeout) as r:
         body = r.read().decode()
     return json.loads(body) if body.strip() else {}
+
+
+def _http_error_detail(error):
+    try:
+        body = error.read().decode(errors="replace").strip()
+    except OSError:
+        return ""
+    if not body:
+        return ""
+    try:
+        parsed = json.loads(body)
+        body = parsed.get("message", body) if isinstance(parsed, dict) else body
+    except ValueError:
+        pass
+    return str(body)[:240]
 
 
 def send(ip, port, paths, protocol=None):
@@ -277,10 +418,13 @@ def send(ip, port, paths, protocol=None):
             break
         except urllib.error.HTTPError as e:
             # the device answered, so this is its decision, not the wrong scheme
+            detail = _http_error_detail(e)
             msg = "declined" if e.code in (403, 204) else ("busy" if e.code == 409 else "HTTP %s" % e.code)
+            if detail and msg not in ("declined", "busy"):
+                msg += ": " + detail
             print(json.dumps({"event": "error", "message": msg}), flush=True)
             return 1
-        except (OSError, ssl.SSLError) as e:
+        except (OSError, ssl.SSLError if ssl else OSError) as e:
             last = e
             continue
     if base is None:
@@ -301,12 +445,16 @@ def send(ip, port, paths, protocol=None):
         print(json.dumps({"event": "sending", "file": os.path.basename(path)}), flush=True)
         try:
             with open(path, "rb") as fh:
-                req = urllib.request.Request(url, data=fh.read(),
-                                             headers={"Content-Type": "application/octet-stream"}, method="POST")
-                _open(req, 600).read()
+                if base.startswith("https://") and not _TLS:
+                    _curl_request(url, input_stream=fh, content_type="application/octet-stream", timeout=600)
+                else:
+                    req = urllib.request.Request(url, data=fh.read(),
+                                                 headers={"Content-Type": "application/octet-stream"}, method="POST")
+                    _open(req, 600).read()
             sent += 1
         except OSError as e:
-            print(json.dumps({"event": "error", "file": os.path.basename(path), "message": str(e)}), flush=True)
+            detail = _http_error_detail(e) if isinstance(e, urllib.error.HTTPError) else str(e)
+            print(json.dumps({"event": "error", "file": os.path.basename(path), "message": detail}), flush=True)
     print(json.dumps({"event": "done", "sent": sent, "total": len(files)}), flush=True)
     return 0 if sent else 1
 
@@ -501,14 +649,15 @@ def _read_answers():
 
 
 
-def _announce_on_request(sock):
-    """`search` on stdin: say hello again, so anything new answers."""
+def _announce_on_request(sock, on_device):
+    """`search` on stdin: retry both multicast and HTTP fallback discovery."""
     while True:
         PING.wait()
         PING.clear()
         for _ in range(3):
             _announce(sock)
             time.sleep(0.2)
+        threading.Thread(target=_legacy_scan, args=(on_device,), daemon=True).start()
 
 
 def _die_with_parent():
@@ -548,7 +697,8 @@ def serve():
         print(json.dumps({"event": "error", "message": "port %d is busy" % PORT}), flush=True)
         return 1
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    print(json.dumps({"event": "ready", "alias": ALIAS, "port": PORT, "downloads": DOWNLOADS}), flush=True)
+    print(json.dumps({"event": "ready", "alias": ALIAS, "port": PORT, "downloads": DOWNLOADS,
+                      "https": bool(_TLS)}), flush=True)
 
     # answer every announce on the network, so we show up on their screen without them searching
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -565,7 +715,22 @@ def serve():
     _announce(sock)
     sock.settimeout(1.0)
     announced = ANNOUNCED
-    threading.Thread(target=_announce_on_request, args=(sock,), daemon=True).start()
+
+    def report_device(d, addr):
+        """Send one peer record to the QML UI, from either discovery method."""
+        fp = d.get("fingerprint")
+        if not fp or _is_self(d, addr) or announced.get(fp) == addr[0]:
+            return
+        announced[fp] = addr[0]
+        _register_with(addr[0], d.get("port", PORT), d.get("protocol", "http"))
+        print(json.dumps({"event": "device", "alias": d.get("alias", addr[0]), "ip": addr[0],
+                          "port": d.get("port", PORT), "deviceModel": d.get("deviceModel", ""),
+                          "deviceType": d.get("deviceType", "desktop"),
+                          "protocol": d.get("protocol", "http"),
+                          "fingerprint": fp}), flush=True)
+
+    threading.Thread(target=_announce_on_request, args=(sock, report_device), daemon=True).start()
+    threading.Thread(target=_legacy_scan, args=(report_device,), daemon=True).start()
     # interfaces come and go (the hotspot, a cable, a VPN): rejoin and say hello again every now and then,
     # so a device that appears on a new network still finds us without anyone pressing Search
     def _keepalive():
@@ -599,13 +764,7 @@ def serve():
                 except OSError:
                     pass
             continue
-        announced[d.get("fingerprint")] = addr[0]
-        _register_with(addr[0], d.get("port", PORT), d.get("protocol", "http"))
-        print(json.dumps({"event": "device", "alias": d.get("alias", addr[0]), "ip": addr[0],
-                          "port": d.get("port", PORT), "deviceModel": d.get("deviceModel", ""),
-                          "deviceType": d.get("deviceType", "desktop"),
-                          "protocol": d.get("protocol", "http"),
-                          "fingerprint": d.get("fingerprint", addr[0])}), flush=True)
+        report_device(d, addr)
         if d.get("announce"):
             try:
                 sock.sendto(json.dumps(dict(ME, announce=False)).encode(), addr)

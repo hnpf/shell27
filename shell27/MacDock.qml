@@ -2638,6 +2638,16 @@ Scope {
                         SSwitch { t: pal; checked: root.bar ? root.bar.barWidgetEnabled("siri") : true; onToggled: v => { if (root.bar) root.bar.setBarWidget("siri", v); } }
                     }
                     SRow {
+                        t: pal; title: I18n.tr("AirDrop")
+                        subtitle: I18n.tr("Show nearby sharing in the menu bar")
+                        SSwitch { t: pal; checked: root.bar ? root.bar.barWidgetEnabled("airdrop") : true; onToggled: v => { if (root.bar) root.bar.setBarWidget("airdrop", v); } }
+                    }
+                    SRow {
+                        t: pal; title: I18n.tr("Reminders")
+                        subtitle: I18n.tr("Show your open reminders in the menu bar")
+                        SSwitch { t: pal; checked: root.bar ? root.bar.barWidgetEnabled("reminders") : true; onToggled: v => { if (root.bar) root.bar.setBarWidget("reminders", v); } }
+                    }
+                    SRow {
                         t: pal; title: I18n.tr("Volume")
                         SSwitch { t: pal; checked: root.bar ? root.bar.barWidgetEnabled("volume") : true; onToggled: v => { if (root.bar) root.bar.setBarWidget("volume", v); } }
                     }
@@ -5425,6 +5435,8 @@ Scope {
     // shell27's own windows share the app id "org.quickshell"; use the Apple mark unless a window has a specific app identity.
     readonly property string appsIconPath: decodeURIComponent(String(Qt.resolvedUrl("assets/apps-dock.svg")).replace(/^file:\/\//, ""))
     readonly property string logoPath: decodeURIComponent(String(Qt.resolvedUrl("apple-logo-white.svg")).replace(/^file:\/\//, ""))
+    readonly property string remindersIconPath: decodeURIComponent(String(Qt.resolvedUrl("assets/reminders-app.png")).replace(/^file:\/\//, ""))
+    readonly property string airdropIconPath: decodeURIComponent(String(Qt.resolvedUrl("assets/airdrop-app.png")).replace(/^file:\/\//, ""))
     function isShellApp(appId) { return appId === "org.quickshell"; }
 
     function lookup(appId) {
@@ -5457,6 +5469,8 @@ Scope {
 
     function iconSrc(icon) {
         if (!icon) return Quickshell.iconPath("application-x-executable");
+        if (icon === "reminders-app" || icon === "shell27-reminders") return "file://" + remindersIconPath;
+        if (icon === "shell27-airdrop") return "file://" + airdropIconPath;
         if (icon.charAt(0) === "/") return "file://" + icon;
         return Quickshell.iconPath(icon, "application-x-executable");
     }
@@ -5530,6 +5544,8 @@ Scope {
     function appOf(tl) {
         if (tl.appId !== "org.quickshell") return tl.appId;
         if (tl.title === "Clock") return "shell27-clock";
+        if (tl.title === "Reminders") return "shell27-reminders";
+        if (tl.title === "AirDrop") return "shell27-airdrop";
         if (tl.title === "System Settings") return settingsAppKey;
         return tl.appId;
     }
@@ -5760,7 +5776,7 @@ Scope {
             var ek = e.id.toLowerCase();
             if (seen[ek]) continue;
             seen[ek] = true;
-            list.push({ kind: "app", key: ek, appId: e.id, name: e.name, icon: e.icon, entry: e,
+            list.push({ kind: "app", key: ek, appId: e.id, name: e.name, icon: ek === "shell27-airdrop" ? airdropIconPath : e.icon, entry: e,
                         running: !!running[ek], pinned: true });
         }
 
@@ -5771,9 +5787,11 @@ Scope {
             var e2 = lookup(extras[x].appId);
             var own = isShellApp(extras[x].appId);
             var settingsApp = extras[x].appId === settingsAppKey;
+            var remindersApp = extras[x].appId === "shell27-reminders";
+            var airdropApp = extras[x].appId === "shell27-airdrop";
             list.push({ kind: "app", key: extras[x].key, appId: e2 ? e2.id : extras[x].appId,
-                        name: settingsApp ? "System Settings" : (own ? "shell27" : (e2 ? e2.name : extras[x].appId)),
-                        icon: settingsApp ? "systemsettings" : (own ? logoPath : (e2 ? e2.icon : extras[x].appId.toLowerCase())),
+                        name: settingsApp ? "System Settings" : (remindersApp ? "Reminders" : (airdropApp ? "AirDrop" : (own ? "shell27" : (e2 ? e2.name : extras[x].appId)))),
+                        icon: settingsApp ? "systemsettings" : (remindersApp ? remindersIconPath : (airdropApp ? airdropIconPath : (own ? logoPath : (e2 ? e2.icon : extras[x].appId.toLowerCase())))),
                         entry: settingsApp ? null : e2, running: true, pinned: false, special: settingsApp ? "settings" : "" });
         }
 
@@ -5789,10 +5807,12 @@ Scope {
                 var wid = winIdFor(tl);
                 liveWins.push(tl);
                 if (winAge(tl) < 200) { if (!youngWin.running) youngWin.start(); continue; }     // no preview (= no capture) for brand-new windows
-                var own3 = isShellApp(tl.appId);
+                var own3 = isShellApp(tl.appId) && appOf(tl) === tl.appId;
+                var remindersWin = appOf(tl) === "shell27-reminders";
+                var airdropWin = appOf(tl) === "shell27-airdrop";
                 winItems.push({ kind: "win", key: "win:" + wid, tl: tl,
-                                name: own3 ? (tl.title || "shell27") : (e3 ? e3.name : tl.appId),
-                                icon: own3 ? logoPath : (e3 ? e3.icon : tl.appId.toLowerCase()),
+                                name: remindersWin ? "Reminders" : (airdropWin ? "AirDrop" : (own3 ? (tl.title || "shell27") : (e3 ? e3.name : tl.appId))),
+                                icon: remindersWin ? remindersIconPath : (airdropWin ? airdropIconPath : (own3 ? logoPath : (e3 ? e3.icon : tl.appId.toLowerCase()))),
                                 entry: null, running: false, pinned: false });
             }
         }

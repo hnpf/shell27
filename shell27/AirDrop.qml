@@ -8,6 +8,7 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 
 Scope {
     id: root
@@ -45,7 +46,11 @@ Scope {
                 if (t === "") return;
                 var d;
                 try { d = JSON.parse(t); } catch (e) { return; }
-                if (d.event === "ready") { root.ready = true; }
+                if (d.event === "ready") {
+                    root.ready = true;
+                    root.status = d.https ? "" : "HTTP only (Python SSL unavailable)";
+                }
+                else if (d.event === "error") { root.status = d.message || "AirDrop failed to start"; }
                 else if (d.event === "device") root.addPeer(d);
                 else if (d.event === "ask") { root.incoming = d; if (root.bar) root.bar.playSound("pop", 0.8); win.visible = true; win.raise(); }
                 else if (d.event === "accepted" || d.event === "declined") { root.incoming = null; }
@@ -144,11 +149,15 @@ Scope {
                     if (d.event === "asking") root.setPeer(root.sendingTo, "sending", "Waiting for them to accept…");
                     else if (d.event === "sending") root.setPeer(root.sendingTo, "sending", "Sending " + d.file);
                     else if (d.event === "done") { root.setPeer(root.sendingTo, "done", "Sent"); doneT.restart(); if (root.bar) root.bar.playSound("tink", 0.7); }
-                    else if (d.event === "error") root.setPeer(root.sendingTo, "error", d.message === "declined" ? "Declined" : "Failed");
+                    else if (d.event === "error") root.setPeer(root.sendingTo, "error", d.message === "declined" ? "Declined" : (d.message || "Failed"));
                 } catch (e) { }
             }
         }
-        onExited: if (exitCode !== 0) root.setPeer(root.sendingTo, "error", "Failed");
+        onExited: {
+            var i = root.peerIndex(root.sendingTo);
+            if (exitCode !== 0 && i >= 0 && root.peers[i].state === "sending")
+                root.setPeer(root.sendingTo, "error", "Failed");
+        }
     }
     Timer { id: doneT; interval: 2400; onTriggered: { root.setPeer(root.sendingTo, "idle", ""); root.sendingTo = ""; } }
 
@@ -214,6 +223,16 @@ Scope {
         win.visible = true; win.raise(); win.requestActivate();
         scan();
     }
+    function registerAirDropRule(force) {
+        var rule = 'hl.window_rule({ name = "shell27-airdrop-float", match = { title = "^AirDrop$" }, float = true, center = true, border_size = 0 })';
+        Quickshell.execDetached(["hyprctl", "eval", force ? ("shell27_airdrop_rule = " + rule) : ("shell27_airdrop_rule = shell27_airdrop_rule or " + rule)]);
+    }
+    Timer { id: ruleReload; interval: 400; onTriggered: root.registerAirDropRule(true) }
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) { if (event.name === "configreloaded") ruleReload.restart(); }
+    }
+    Component.onCompleted: root.registerAirDropRule(false)
     IpcHandler {
         target: "airdrop"
         function open() { root.open(); }
@@ -575,7 +594,7 @@ Scope {
                     Text {
                         id: discLabel
                         x: 6; anchors.verticalCenter: parent.verticalCenter
-                        text: root.receiving ? (root.ready ? "Everyone on this network" : "Starting\u2026") : "No one"
+                        text: root.receiving ? (root.ready ? (root.status || "Everyone on this network") : (root.status || "Starting\u2026")) : "No one"
                         color: pal.text; font.family: root.fam; font.pixelSize: 12; font.weight: Font.DemiBold
                     }
                     ADGlyph {
