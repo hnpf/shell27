@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Siri
+Comment=Chat with Siri
+Exec=qs -c shell27 ipc call siri_app open
+Icon=/home/virex/.config/quickshell/shell27/assets/siri-app.png
+Terminal=false
+StartupNotify=true
+Categories=Network;Chat;

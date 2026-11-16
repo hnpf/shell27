@@ -13,6 +13,7 @@ Item {
     property real screenY: y
     property bool preview: false
     property bool editing: false
+    property bool adding: false
 
     // host / hub
     property var host: null
@@ -256,10 +257,10 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 20; height: 20; radius: 10
                 visible: opacity > 0.01
-                opacity: w.editing ? 0 : ((headHover.hovered || adding) ? 1 : 0)
+                opacity: w.editing ? 0 : ((headHover.hovered || w.adding) ? 1 : 0)
                 Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
                 color: addMa.containsMouse ? Qt.rgba(w.blue.r, w.blue.g, w.blue.b, 0.22) : "transparent"
-                rotation: adding ? 45 : 0
+                rotation: w.adding ? 45 : 0
                 Behavior on rotation { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 2 } }
                 scale: addMa.pressed ? 0.88 : 1
                 Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutQuint } }
@@ -271,7 +272,7 @@ Item {
                     id: addMa
                     anchors.fill: parent; anchors.margins: -4
                     hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                    onClicked: { adding = !adding; if (adding) newInput.forceActiveFocus(); }
+                    onClicked: { w.adding = !w.adding; if (w.adding) newInput.forceActiveFocus(); }
                 }
             }
 
@@ -285,8 +286,6 @@ Item {
                 onClicked: w.openRemindersApp()
             }
         }
-
-        property bool adding: false
 
         Flickable {
             id: remFlick
@@ -305,9 +304,9 @@ Item {
 
                 Item {
                     width: parent.width
-                    height: adding ? 22 : 0
+                    height: w.adding ? 22 : 0
                     clip: true
-                    opacity: adding ? 1 : 0
+                    opacity: w.adding ? 1 : 0
                     Behavior on height { NumberAnimation { duration: 280; easing.type: Easing.OutQuint } }
                     Behavior on opacity { NumberAnimation { duration: 220 } }
 
@@ -323,7 +322,7 @@ Item {
                         color: w.fg; font.family: w.fam; font.pixelSize: 13
                         selectByMouse: false
                         onAccepted: { w.addReminder(text); text = ""; }
-                        Keys.onEscapePressed: { text = ""; adding = false; }
+                        Keys.onEscapePressed: { text = ""; w.adding = false; }
                         Text { visible: parent.text === ""; text: "New Reminder"; color: w.fg2; font: parent.font }
                     }
                 }

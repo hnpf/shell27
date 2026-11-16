@@ -786,7 +786,17 @@ Scope {
             }
             var k = kind, i2;
 
-            if (k === "arch") {
+            if (k === "grid") {
+                for (i2 = 0; i2 < 4; i2++) {
+                    var gx = 2.5 + (i2 % 2) * 7.1, gy = 2.5 + Math.floor(i2 / 2) * 7.1;
+                    ctx.beginPath(); ctx.rect(gx, gy, 5.2, 5.2); ctx.stroke();
+                }
+            } else if (k === "list") {
+                for (i2 = 0; i2 < 3; i2++) {
+                    circ(3, 4 + i2 * 5, 0.8); ctx.fill();
+                    line(6, 4 + i2 * 5, 16, 4 + i2 * 5);
+                }
+            } else if (k === "arch") {
                 ctx.translate(0.43, 0);
                 ctx.beginPath();
                 ctx.moveTo(8.54, 0.45);
@@ -2264,8 +2274,12 @@ Scope {
     readonly property string appName: {
         if (activeAppId === "") return I18n.tr("Desktop");
         // shell27's own windows (all "org.quickshell")
-        if (activeAppId === "org.quickshell") return (activeTl.title === "Clock" || activeTl.title === "App Store" || activeTl.title === "Reminders") ? I18n.tr(activeTl.title)
-                                 : (activeTl.title === "System Settings" ? I18n.tr("System Settings") : "shell27");
+        if (activeAppId === "org.quickshell") {
+            if (String(activeTl.title || "").indexOf("Siri - ") === 0) return "Siri";
+            if (activeTl.title === "Clock" || activeTl.title === "App Store" || activeTl.title === "Reminders") return I18n.tr(activeTl.title);
+            if (activeTl.title === "System Settings") return I18n.tr("System Settings");
+            return "shell27";
+        }
         var e = lookup(activeAppId);
         return e ? e.name : activeAppId;
     }
@@ -4108,6 +4122,7 @@ Scope {
             var id = activeAppId.toLowerCase(), kind = appKind(id), has = activeAppId !== "";
             var aw = (has && activeWin && String(activeWin["class"]).toLowerCase() === id) ? activeWin : null;
             var term = kind === "terminal", browser = kind === "browser", files = kind === "files", editor = kind === "editor";
+            var siriAppFocused = activeTl && String(activeTl.title || "").indexOf("Siri - ") === 0;
             var floating = aw ? aw.floating === true : false, fsMode = aw ? Number(aw.fullscreen) : 0;
             var n = appName;
 
@@ -4181,7 +4196,11 @@ Scope {
                 m.push(mi("Clipboard History\u2026", "", function () { root.spotOpen("clip"); }));
                 m.push(mi("Emoji & Symbols", "", function () { root.spotOpen("emoji"); }));
             } else if (name === "view") {
-                if (has) {
+                if (siriAppFocused && hub && hub.siriApp) {
+                    m.push(ico(mchk("As Grid", "", hub.siriApp.gridView, function () { hub.siriApp.setView(true); }), "grid"));
+                    m.push(ico(mchk("As List", "", !hub.siriApp.gridView, function () { hub.siriApp.setView(false); }), "list"));
+                    m.push(msep());
+                } else if (has) {
                     m.push(mi(fsMode === 2 ? "Exit Full Screen" : "Enter Full Screen", "", disp('hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" })')));
                     m.push(msep());
                     m.push(mchk("Floating", "", floating, disp('hl.dsp.window.float({ action = "toggle" })')));

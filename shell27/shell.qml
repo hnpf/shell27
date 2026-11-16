@@ -24,6 +24,7 @@ import "CaptureGate.js" as CaptureGate
 import "modules"
 
 ShellRoot {
+    id: shellRoot
     // The UI font ("Open Runde") ships with shell27: registered here, first, so every Text below can use it
     // without installing anything. (The installer also copies it to ~/.local/share/fonts.)
     FontLoader { id: uiFontLoader; source: Qt.resolvedUrl("assets/fonts/OpenRunde-Regular.otf") }
@@ -51,6 +52,7 @@ ShellRoot {
         property var about: aboutApp
         property var stagemanager: stageManager
         property var siri: null
+        property var siriApp: null
         property var typeToSiri: null
         function openSettings(pane) { macDock.openPrefs(pane); }
         function toggleSiri() {
@@ -393,6 +395,12 @@ ShellRoot {
     StageManager { id: stageManager; hub: sharedHub; enabled: macBar.stageManager }
     SiriEdgeGlow { id: siriEdgeGlow; hub: sharedHub }
     TypeToSiri { id: typeToSiri; edgeGlow: siriEdgeGlow; hub: sharedHub }
+    SiriAppContent { id: siriApp; hub: sharedHub }
+    property var siriAppWindows: []
+    Component {
+        id: siriAppWindowComponent
+        SiriAppContent { hub: sharedHub }
+    }
 
     // qs -c shell27 ipc call siri activate true | false
     // qs -c shell27 ipc call siri toggle
@@ -433,6 +441,19 @@ ShellRoot {
             typeToSiri.close();
         }
     }
+    IpcHandler {
+        target: "siri_app"
+        function open() { siriApp.open(); }
+        function view(mode: string) { siriApp.setView(mode === "grid"); }
+        function response(chatId: string, text: string) { siriApp.receiveResponse(chatId, text); }
+        function user_message(chatId: string, text: string) { siriApp.appendMessage(chatId, "user", text, ""); }
+        function sources(chatId: string, text: string) { siriApp.setSources(chatId, text); }
+        function voice_state(chatId: string, active: bool) { if (siriApp.activeChat === chatId) siriApp.voiceActive = active; }
+        function new_window(chatId: string) {
+            var app = siriAppWindowComponent.createObject(sharedHub, { "initialChatId": chatId, "openOnStart": true });
+            if (app) shellRoot.siriAppWindows = shellRoot.siriAppWindows.concat([app]);
+        }
+    }
 
     Component.onCompleted: {
         sharedHub.bar = macBar;
@@ -442,6 +463,7 @@ ShellRoot {
         sharedHub.stagemanager = stageManager;
         sharedHub.desktop = desktopIcons;
         sharedHub.siri = siriEdgeGlow;
+        sharedHub.siriApp = siriApp;
         sharedHub.typeToSiri = typeToSiri;
         sharedHub.aiSettings = aiSettings;
         siriEdgeGlow.typeToSiri = typeToSiri;

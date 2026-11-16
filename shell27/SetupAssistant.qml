@@ -11,6 +11,8 @@ Scope {
     property bool checked: false
     property bool welcomeUpdate: false
     property bool appearancePreviewChanged: false
+    readonly property string completionPath: Quickshell.env("HOME") + "/.config/shell27/is-welcome-or-not.json"
+    readonly property string legacyCompletionPath: Quickshell.env("HOME") + "/.config/shell27/.setup-completed"
 
     function setAppearance(mode) {
         if (bar && bar.appearanceMode === mode) return;
@@ -34,7 +36,6 @@ Scope {
     function open() {
         welcomeUpdate = false;
         appearancePreviewChanged = false;
-        win.visibility = Window.Windowed;
         win.visible = true;
         win.raise();
         win.requestActivate();
@@ -48,45 +49,58 @@ Scope {
         completed = true;
         welcomeUpdate = false;
         win.visible = false;
-        completeFile.setText("completed\n");
+        saveCompletion(true);
+    }
+    function saveCompletion(isCompleted) {
+        completionWriter.command = [
+            "python3", "-c",
+            "import json,os,sys\np=sys.argv[1]\nt=p+'.tmp'\nos.makedirs(os.path.dirname(p),exist_ok=True)\nf=open(t,'w',encoding='utf-8')\njson.dump({'on':sys.argv[2]},f)\nf.write('\\n')\nf.close()\nos.replace(t,p)",
+            completionPath, isCompleted ? "true" : "false"
+        ];
+        completionWriter.running = true;
     }
     function showUpdate(version) {
         welcomeUpdate = true;
         appearancePreviewChanged = false;
         updateVersion = version || "new version";
-        win.visibility = Window.Windowed;
         win.visible = true;
         win.raise();
         win.requestActivate();
     }
 
     property string updateVersion: ""
-    FileView {
-        id: completeFile
-        path: Quickshell.env("HOME") + "/.config/shell27/.setup-completed"
-        printErrors: false
-        onLoaded: {
-            root.completed = text().trim() === "completed";
+    Process {
+        id: completionCheck
+        command: [
+            "python3", "-c",
+            "import json,sys\ntry:\n d=json.load(open(sys.argv[1],encoding='utf-8'))\nexcept FileNotFoundError:\n try:\n  old=open(sys.argv[2],encoding='utf-8').read().strip()=='completed'\n except Exception:\n  old=False\n sys.exit(0 if old else 1)\nexcept Exception:\n sys.exit(1)\nsys.exit(0 if d.get('no')=='yeah' else 1)",
+            root.completionPath, root.legacyCompletionPath
+        ]
+        onExited: code => {
+            root.completed = code === 0;
             root.checked = true;
-            if (!root.completed) Qt.callLater(root.open);
+            if (root.completed) root.saveCompletion(true);
+            else Qt.callLater(root.open);
         }
-        onLoadFailed: {
-            root.completed = false;
-            root.checked = true;
-            Qt.callLater(root.open);
-        }
+    }
+    Process {
+        id: completionWriter
+        running: false
+        onExited: code => { if (code !== 0) console.warn("[Welcome] Could not save completion state"); }
+    }
+    Component.onCompleted: {
+        root.registerWelcomeRule(false);
+        completionCheck.running = true;
     }
     Timer { id: ruleReload; interval: 400; onTriggered: root.registerWelcomeRule(true) }
     Connections {
         target: Hyprland
         function onRawEvent(event) { if (event.name === "configreloaded") ruleReload.restart(); }
     }
-    Component.onCompleted: root.registerWelcomeRule(false)
-
     IpcHandler {
         target: "welcome"
         function open() { root.open(); }
-        function reset() { root.completed = false; completeFile.setText(""); root.open(); }
+        function reset() { root.completed = false; root.saveCompletion(false); root.open(); }
         function update(version: string) { root.showUpdate(version); }
     }
 
@@ -99,7 +113,6 @@ Scope {
         minimumHeight: 440
         visible: false
         color: "transparent"
-        visibility: Window.Windowed
         flags: Qt.Window | Qt.FramelessWindowHint
         onClosing: close => { close.accepted = false; root.finish(); }
 

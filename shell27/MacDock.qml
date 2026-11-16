@@ -435,12 +435,12 @@ Scope {
             }
             root.screenTimeEnsureData();
             root.screenTimeReady = true;
-            if (root.screenTimeEnabled) root.screenTimePollTimer.restart();
+            if (root.screenTimeEnabled) screenTimePollTimer.restart();
         }
         onLoadFailed: {
             root.screenTimeData = root.screenTimeDefaultData();
             root.screenTimeReady = true;
-            if (root.screenTimeEnabled) root.screenTimePollTimer.restart();
+            if (root.screenTimeEnabled) screenTimePollTimer.restart();
         }
     }
     property int iconSize: 52
@@ -6271,6 +6271,7 @@ Scope {
     readonly property string logoPath: decodeURIComponent(String(Qt.resolvedUrl("apple-logo-white.svg")).replace(/^file:\/\//, ""))
     readonly property string remindersIconPath: decodeURIComponent(String(Qt.resolvedUrl("assets/reminders-app.png")).replace(/^file:\/\//, ""))
     readonly property string airdropIconPath: decodeURIComponent(String(Qt.resolvedUrl("assets/airdrop-app.png")).replace(/^file:\/\//, ""))
+    readonly property string siriIconPath: decodeURIComponent(String(Qt.resolvedUrl("assets/siri-app.png")).replace(/^file:\/\//, ""))
     function isShellApp(appId) { return appId === "org.quickshell"; }
 
     function lookup(appId) {
@@ -6377,6 +6378,7 @@ Scope {
     // Give shell27 windows with distinct identities their own Dock entries.
     function appOf(tl) {
         if (tl.appId !== "org.quickshell") return tl.appId;
+        if (String(tl.title || "").indexOf("Siri - ") === 0) return "siri";
         if (tl.title === "Clock") return "shell27-clock";
         if (tl.title === "Reminders") return "shell27-reminders";
         if (tl.title === "AirDrop") return "shell27-airdrop";
@@ -6623,9 +6625,10 @@ Scope {
             var settingsApp = extras[x].appId === settingsAppKey;
             var remindersApp = extras[x].appId === "shell27-reminders";
             var airdropApp = extras[x].appId === "shell27-airdrop";
+            var siriApp = extras[x].appId === "siri";
             list.push({ kind: "app", key: extras[x].key, appId: e2 ? e2.id : extras[x].appId,
-                        name: settingsApp ? "System Settings" : (remindersApp ? "Reminders" : (airdropApp ? "AirDrop" : (own ? "shell27" : (e2 ? e2.name : extras[x].appId)))),
-                        icon: settingsApp ? "systemsettings" : (remindersApp ? remindersIconPath : (airdropApp ? airdropIconPath : (own ? logoPath : (e2 ? e2.icon : extras[x].appId.toLowerCase())))),
+                        name: settingsApp ? "System Settings" : (remindersApp ? "Reminders" : (airdropApp ? "AirDrop" : (siriApp ? "Siri" : (own ? "shell27" : (e2 ? e2.name : extras[x].appId))))),
+                        icon: siriApp ? siriIconPath : (settingsApp ? "systemsettings" : (remindersApp ? remindersIconPath : (airdropApp ? airdropIconPath : (own ? logoPath : (e2 ? e2.icon : extras[x].appId.toLowerCase()))))),
                         entry: settingsApp ? null : e2, running: true, pinned: false, special: settingsApp ? "settings" : "" });
         }
 
@@ -6644,9 +6647,10 @@ Scope {
                 var own3 = isShellApp(tl.appId) && appOf(tl) === tl.appId;
                 var remindersWin = appOf(tl) === "shell27-reminders";
                 var airdropWin = appOf(tl) === "shell27-airdrop";
+                var siriWin = appOf(tl) === "siri";
                 winItems.push({ kind: "win", key: "win:" + wid, tl: tl,
-                                name: remindersWin ? "Reminders" : (airdropWin ? "AirDrop" : (own3 ? (tl.title || "shell27") : (e3 ? e3.name : tl.appId))),
-                                icon: remindersWin ? remindersIconPath : (airdropWin ? airdropIconPath : (own3 ? logoPath : (e3 ? e3.icon : tl.appId.toLowerCase()))),
+                                name: siriWin ? "Siri" : (remindersWin ? "Reminders" : (airdropWin ? "AirDrop" : (own3 ? (tl.title || "shell27") : (e3 ? e3.name : tl.appId)))),
+                                icon: siriWin ? siriIconPath : (remindersWin ? remindersIconPath : (airdropWin ? airdropIconPath : (own3 ? logoPath : (e3 ? e3.icon : tl.appId.toLowerCase())))),
                                 entry: null, running: false, pinned: false });
             }
         }

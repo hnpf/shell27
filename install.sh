@@ -346,6 +346,7 @@ OPTIONAL=(
 )
 # libraries / fonts / packages without a command to test: arch-package:what-for   (a|b = first one the repositories have)
 LIBS=(
+    "python-venv:isolated Python environment for Siri's Gemini client"
     "qt6-declarative:Qt Quick (QML)"
     "qt6-wayland:Qt Wayland support"
     "qt6-svg:SVG app icons"
@@ -387,7 +388,7 @@ detect_pm() {
 pkg_for() {
     local p="$1"
     case "$PM" in
-        pacman) printf '%s' "$p" ;;
+        pacman) case "$p" in python-venv) echo python ;; *) printf '%s' "$p" ;; esac ;;
         dnf) case "$p" in
                 pipewire) echo pipewire-utils ;; pipewire-pulse) echo pipewire-pulseaudio ;;
                 qt6-shadertools) echo qt6-qtshadertools ;; qt6-declarative) echo qt6-qtdeclarative ;;
@@ -395,7 +396,7 @@ pkg_for() {
                 qt6-wayland) echo qt6-qtwayland ;; qt6-svg) echo qt6-qtsvg ;; networkmanager) echo NetworkManager ;;
                 bluez-utils) echo bluez ;; "inter-font|ttf-inter") echo rsms-inter-fonts ;;
                 noto-fonts) echo google-noto-sans-fonts ;; noto-fonts-emoji) echo "google-noto-color-emoji-fonts|google-noto-emoji-fonts" ;;
-                imagemagick) echo ImageMagick ;; python) echo python3 ;; openssl) echo openssl-libs ;;
+                imagemagick) echo ImageMagick ;; python) echo python3 ;; python-venv) echo python3 ;; openssl) echo openssl-libs ;;
                 awww|mpvpaper|cliphist) echo "$p" ;; *) printf '%s' "${p%%|*}" ;;
              esac ;;
         apt) case "$p" in
@@ -403,7 +404,7 @@ pkg_for() {
                 "qt6-multimedia-ffmpeg|qt6-multimedia") echo qml6-module-qtmultimedia ;;
                 networkmanager) echo network-manager ;; bluez-utils) echo bluez ;; libnotify) echo libnotify-bin ;;
                 "inter-font|ttf-inter") echo fonts-inter ;; noto-fonts) echo fonts-noto-core ;;
-                noto-fonts-emoji) echo fonts-noto-color-emoji ;; python) echo python3 ;; qt6-declarative|qt6-wayland|qt6-svg) echo "" ;;
+                noto-fonts-emoji) echo fonts-noto-color-emoji ;; python) echo python3 ;; python-venv) echo python3-venv ;; qt6-declarative|qt6-wayland|qt6-svg) echo "" ;;
                 openssl) echo "libssl3t64|libssl3" ;;
                 *) printf '%s' "${p%%|*}" ;;
              esac ;;
@@ -1673,6 +1674,24 @@ fix_modes() { # fix_modes <installed folder>
     return 0
 }
 
+setup_siri_python() {
+    local venv_dir="$STATE_DIR/venv" venv_python="$STATE_DIR/venv/bin/python"
+    [ -f "$DEST/requirements.txt" ] || return 0
+    if ! have python3; then warn "python3 is missing: Siri's Gemini client was not installed"; return 0; fi
+    mkdir -p "$STATE_DIR"
+    if [ ! -x "$venv_python" ]; then
+        if ! python3 -m venv "$venv_dir"; then
+            warn "could not create Siri's Python environment; install Python venv support and rerun the installer"
+            return 0
+        fi
+    fi
+    if LD_LIBRARY_PATH="$DEST/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" "$venv_python" -m pip install --disable-pip-version-check -r "$DEST/requirements.txt"; then
+        ok "Siri Gemini client installed in $venv_dir"
+    else
+        warn "could not install Siri's Gemini client; rerun the installer when network access is available"
+    fi
+}
+
 install_extras() {
     local root="$1" f n hroot
     install_apple_emoji_font "$root" || true
@@ -2262,6 +2281,7 @@ if [ -n "$LOCK_ROOT" ]; then
     ok "shell27-lock files copied"
 fi
 fix_modes "$DEST"
+setup_siri_python
 install_extras "$SRC_ROOT"
 if [ -n "$GUI_ROOT" ]; then install_gui_files || true; fi
 build_shaders "$DEST"

@@ -29,7 +29,10 @@ from pathlib import Path
 # ── AUTO-RESPAWN WITH VIRTUAL ENVIRONMENT ──
 SCRIPT_DIR = Path(__file__).resolve().parent
 SHELL27_DIR = SCRIPT_DIR.parent
-VENV_PYTHON = SHELL27_DIR / "venv" / "bin" / "python"
+DATA_HOME = Path(os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local/share"))
+VENV_PYTHON = DATA_HOME / "shell27" / "venv" / "bin" / "python"
+if not VENV_PYTHON.exists():
+    VENV_PYTHON = SHELL27_DIR / "venv" / "bin" / "python"
 LIB_DIR = SHELL27_DIR / "lib"
 
 # Set LD_LIBRARY_PATH so OpenSSL 3 works seamlessly
@@ -148,6 +151,36 @@ class SiriIPC:
     @classmethod
     def dismiss(cls):
         cls.call("dismiss")
+
+
+class SiriAppIPC:
+    @staticmethod
+    def call(action: str, *args):
+        cmd = ["qs", "-c", "shell27", "ipc", "call", "siri_app", action] + [str(a) for a in args]
+        try:
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2.0)
+        except Exception:
+            pass
+
+    @classmethod
+    def response(cls, chat_id: str, text: str):
+        cls.call("response", chat_id, text)
+
+    @classmethod
+    def user_message(cls, chat_id: str, text: str):
+        cls.call("user_message", chat_id, text)
+
+    @classmethod
+    def voice_state(cls, chat_id: str, active: bool):
+        cls.call("voice_state", chat_id, "true" if active else "false")
+
+    @classmethod
+    def sources(cls, chat_id: str, value: list[str]):
+        cls.call("sources", chat_id, json.dumps(value))
+
+
+def emit_siri_app_event(event: str, chat_id: str, value):
+    print("SIRI_APP_EVENT:" + json.dumps({"event": event, "chatId": chat_id, "value": value}), flush=True)
 
 
 # ── SYSTEM CONTROL TOOLS (GEMINI FUNCTION CALLING & LOCAL ROUTER) ──
@@ -538,7 +571,8 @@ def extract_answer_sources(text: str) -> tuple[str, list[str]]:
     return text[:marker.start()].strip(), urls
 
 
-def query_gemini(prompt: str, image_path: str | None = None) -> str:
+def query_gemini(prompt: str, image_path: str | None = None, app_chat_id: str | None = None,
+                 app_stdout: bool = False) -> str:
     """Send a text or image question to Gemini and return its text response."""
     global CONFIG
     CONFIG = load_config()
@@ -589,7 +623,12 @@ def query_gemini(prompt: str, image_path: str | None = None) -> str:
             response = chat.send_message(message)
             if response and response.text:
                 answer, sources = extract_answer_sources(response.text.strip())
-                SiriIPC.set_sources(sources)
+                if app_stdout:
+                    emit_siri_app_event("sources", app_chat_id or "", sources)
+                elif app_chat_id is None:
+                    SiriIPC.set_sources(sources)
+                else:
+                    SiriAppIPC.sources(app_chat_id, sources)
                 return answer
             last_error = f"{model_name} returned an empty response."
         except Exception as e:
@@ -1173,19 +1212,25 @@ def stop_managed_daemon():
 
 
 # ── DIRECT QUERY TEST ──
-def handle_query_mode(query_text: str, enable_tts: bool = True, image_path: str | None = None):
+def handle_query_mode(query_text: str, enable_tts: bool = True, image_path: str | None = None,
+                      app_chat_id: str | None = None, app_stdout: bool = False):
     """Test Gemini API and UI response card directly without voice input."""
     print(f"\n[Test Query] Prompt: \"{query_text}\"")
-    SiriIPC.activate(True)
-    if image_path:
-        SiriIPC.visual_message(query_text, image_path)
+    if app_chat_id is None and not app_stdout:
+        SiriIPC.activate(True)
+        if image_path:
+            SiriIPC.visual_message(query_text, image_path)
+        else:
+            SiriIPC.open_type()
+        SiriIPC.set_state("thinking")
+        if not image_path:
+            SiriIPC.set_prompt(query_text)
+        SiriIPC.set_response("Processing request...")
+        SiriIPC.set_sources([])
+    elif app_stdout:
+        emit_siri_app_event("sources", app_chat_id or "", [])
     else:
-        SiriIPC.open_type()
-    SiriIPC.set_state("thinking")
-    if not image_path:
-        SiriIPC.set_prompt(query_text)
-    SiriIPC.set_response("Processing request...")
-    SiriIPC.set_sources([])
+        SiriAppIPC.sources(app_chat_id, [])
 
     # Check Local-First Intent Router (0 AI Tokens)
     local_ans = handle_local_intent(query_text) if not image_path else None
@@ -1195,25 +1240,77 @@ def handle_query_mode(query_text: str, enable_tts: bool = True, image_path: str 
     else:
         print("[Siri] Forwarding to Gemini AI...")
         try:
-            answer = query_gemini(query_text, image_path=image_path)
+            answer = query_gemini(query_text, image_path=image_path, app_chat_id=app_chat_id, app_stdout=app_stdout)
         except Exception as e:
             print(f"[Siri] Gemini request failed: {e}")
             answer = "Sorry, I couldn't complete that request."
 
     print(f"[Response] {answer}")
 
-    SiriIPC.set_state("speaking" if enable_tts else "idle")
-    SiriIPC.set_response(answer)
+    if app_stdout:
+        emit_siri_app_event("response", app_chat_id or "", answer)
+    elif app_chat_id is None:
+        SiriIPC.set_state("speaking" if enable_tts else "idle")
+        SiriIPC.set_response(answer)
+    else:
+        SiriAppIPC.response(app_chat_id, answer)
 
     if enable_tts:
         print("[TTS] Reading response aloud with Neural TTS...")
         speak(answer)
-        SiriIPC.set_state("idle")
+        if app_chat_id is None and not app_stdout:
+            SiriIPC.set_state("idle")
         print("[Siri] Query response finished.")
     else:
-        SiriIPC.set_state("idle")
+        if app_chat_id is None and not app_stdout:
+            SiriIPC.set_state("idle")
     gc.collect()
     print("[Done] Query finished successfully.")
+
+
+def handle_app_query_mode(query_text: str, chat_id: str, image_path: str | None = None,
+                          voice_reply: bool = False, standalone: bool = False):
+    handle_query_mode(query_text, enable_tts=voice_reply, image_path=image_path, app_chat_id=chat_id,
+                      app_stdout=standalone)
+
+
+def handle_app_voice_mode(chat_id: str, standalone: bool = False):
+    if standalone:
+        emit_siri_app_event("voice", chat_id, True)
+    else:
+        SiriAppIPC.voice_state(chat_id, True)
+    try:
+        import speech_recognition as sr
+
+        recognizer = sr.Recognizer()
+        audio = record_speech_with_levels(recognizer=recognizer, timeout=15.0, phrase_time_limit=30.0,
+                                          silence_timeout=2.5, live_streaming=False)
+        if not audio:
+            response = "I didn't hear anything. Try voice mode again."
+            if standalone:
+                emit_siri_app_event("response", chat_id, response)
+            else:
+                SiriAppIPC.response(chat_id, response)
+            return
+        language = CONFIG.get("language", "auto")
+        transcript = recognizer.recognize_google(audio, language="en-US" if language in ("auto", "en", "en-US") else language)
+        if standalone:
+            emit_siri_app_event("user", chat_id, transcript)
+        else:
+            SiriAppIPC.user_message(chat_id, transcript)
+        handle_app_query_mode(transcript, chat_id, voice_reply=True, standalone=standalone)
+    except Exception as e:
+        print(f"[Siri App] Voice input failed: {e}")
+        response = "Voice input is unavailable or could not be understood."
+        if standalone:
+            emit_siri_app_event("response", chat_id, response)
+        else:
+            SiriAppIPC.response(chat_id, response)
+    finally:
+        if standalone:
+            emit_siri_app_event("voice", chat_id, False)
+        else:
+            SiriAppIPC.voice_state(chat_id, False)
 
 
 # ── CLI ENTRY POINT ──
@@ -1227,6 +1324,10 @@ def main():
     parser.add_argument("--voice-only", action="store_true", help="Start Siri voice-only mode with a five-second empty-input timeout")
     parser.add_argument("--query", type=str, help="Send a text query to Gemini and test TTS/UI directly")
     parser.add_argument("--visual-query", nargs=2, metavar=("IMAGE", "PROMPT"), help="Send an image and prompt to Gemini")
+    parser.add_argument("--app-query", nargs=2, metavar=("PROMPT", "CHAT_ID"), help="Send a text prompt to the Siri app")
+    parser.add_argument("--app-visual-query", nargs=3, metavar=("IMAGE", "PROMPT", "CHAT_ID"), help="Send an image prompt to the Siri app")
+    parser.add_argument("--app-voice", metavar="CHAT_ID", help="Listen for a prompt in a Siri app chat")
+    parser.add_argument("--app-stdout", action="store_true", help="Return Siri app events on stdout instead of shell IPC")
     parser.add_argument("--visual-suggest", type=str, metavar="IMAGE", help="Suggest a contextual image lookup label")
     parser.add_argument("--no-tts", action="store_true", help="Disable TTS speech output for text query")
     parser.add_argument("--test-api", action="store_true", help="Test Gemini API connectivity")
@@ -1264,6 +1365,27 @@ def main():
 
     if args.get_voice_muted:
         print("true" if VOICE_MUTE_FILE.exists() else "false")
+        return
+
+    if args.app_query:
+        handle_app_query_mode(args.app_query[0], args.app_query[1], standalone=args.app_stdout)
+        return
+
+    if args.app_visual_query:
+        CONFIG = load_config()
+        if not CONFIG.get("visual_intelligence_enabled", True):
+            message = "Visual Intelligence is disabled in Apple Intelligence settings."
+            if args.app_stdout:
+                emit_siri_app_event("response", args.app_visual_query[2], message)
+            else:
+                SiriAppIPC.response(args.app_visual_query[2], message)
+            return
+        handle_app_query_mode(args.app_visual_query[1], args.app_visual_query[2], image_path=args.app_visual_query[0],
+                              standalone=args.app_stdout)
+        return
+
+    if args.app_voice:
+        handle_app_voice_mode(args.app_voice, standalone=args.app_stdout)
         return
 
     if args.test_api:

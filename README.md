@@ -139,6 +139,8 @@ You can configure your API key in either of two ways:
   }
   ```
 
+The installer provisions the Gemini Python client in an isolated environment. Rerun `./install.sh` on an older install to add it.
+
 ### 3. Siri Voice Assistant Usage & Keybindings
 | Action | Keybinding / Trigger | Description |
 |---|---|---|
