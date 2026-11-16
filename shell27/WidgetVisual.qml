@@ -17,6 +17,35 @@ Item {
     property real sw: 1920
     property real sh: 1080
         Component {
+            id: screenTimeVisual
+            ScreenTimeWidget {
+                scaleF: host.widgetScale
+                style: wstyle
+                size: wsize
+                fam: host.fontFamily
+                screenX: v.sx; screenY: v.sy
+                screenW: v.sw; screenH: v.sh
+                totalText: host.dock ? host.dock.screenTimeSummaryText() : "0m"
+                hourlyValues: host.dock ? host.dock.screenTimeChartSeries() : []
+                categories: host.dock ? host.dock.screenTimeWidgetCategories() : []
+                topApps: host.dock ? host.dock.screenTimeTopApps() : []
+                trackingEnabled: host.dock ? host.dock.screenTimeEnabled : false
+                glassReady: host.glassState === "ready"
+                shaderUrl: "file://" + host.glassShaderOut
+                wallUrl: host.fileUrl(host.wallpaperFor(v.sname))
+                wallVideo: host.liveWallVideo
+                wallPaused: host.liveWallPaused
+                glassOpacity: host.glassOpacity
+                glassBlur: host.glassBlur
+                glassLiquid: host.glassLiquid
+                glassRim: host.glassRim
+                borderTint: host.borderTint
+                glassGrain: host.glassGrain
+                darkGlass: host.darkGlass
+                onGlassFailed: host.glassState = "failed"
+            }
+        }
+        Component {
             id: weatherVisual
             WeatherWidget {
                 scaleF: host.widgetScale
@@ -304,6 +333,7 @@ Item {
             id: visual
             anchors.fill: parent
             sourceComponent: ({
+                screentime: screenTimeVisual,
                 calendar: calendarVisual,
                 clock: clockVisual,
                 player: playerVisual,

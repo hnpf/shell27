@@ -175,7 +175,7 @@ Scope {
     // ───────────── CONFIG ───────────── Lachowski
     property string monitor: ""          // "" = every monitor, or e.g. "DP-1"
     property bool screenTimeEnabled: false
-    property var screenTimeData: ({ date: "", totalSeconds: 0, categories: {}, apps: {} })
+    property var screenTimeData: ({ date: "", totalSeconds: 0, categories: {}, apps: {}, hourlySeconds: [] })
     property string screenTimeCurrentAppKey: ""
     property string screenTimeCurrentAppName: ""
     property bool screenTimeReady: false
@@ -283,7 +283,7 @@ Scope {
         return s + "s";
     }
     function screenTimeDefaultData() {
-        return { date: new Date().toISOString().slice(0, 10), totalSeconds: 0, categories: { "Games": 0, "Entertainment": 0, "Social Media": 0, "Productivity": 0, "Utilities": 0, "Other": 0 }, apps: {} };
+        return { date: new Date().toISOString().slice(0, 10), totalSeconds: 0, categories: { "Games": 0, "Entertainment": 0, "Social Media": 0, "Productivity": 0, "Utilities": 0, "Other": 0 }, apps: {}, hourlySeconds: Array(24).fill(0) };
     }
     function screenTimeCategoryTotal(categoryName) {
         var d = root.screenTimeData;
@@ -291,18 +291,33 @@ Scope {
         return Number(d.categories[categoryName]) || 0;
     }
     function screenTimeChartSeries() {
-        var arr = [];
-        for (var i = 0; i < 12; i++) arr.push(0);
         var d = root.screenTimeData;
-        if (!d || !d.apps) return arr;
-        var keys = Object.keys(d.apps);
-        for (var j = 0; j < keys.length; j++) {
-            var app = d.apps[keys[j]];
-            if (!app || !app.seconds) continue;
-            var bucket = Math.min(11, Math.max(0, Math.floor((Number(app.seconds) || 0) / 60) % 12));
-            arr[bucket] += Number(app.seconds) || 0;
+        if (!d || !Array.isArray(d.hourlySeconds)) return Array(24).fill(0);
+        var arr = d.hourlySeconds.slice(0, 24);
+        while (arr.length < 24) arr.push(0);
+        return arr.map(function(value) { return Number(value) || 0; });
+    }
+    function screenTimeWidgetCategories() {
+        var d = root.screenTimeData;
+        var totals = d && d.categories ? d.categories : {};
+        var configured = root.screenTimePreferences && root.screenTimePreferences.categories ? root.screenTimePreferences.categories : [];
+        var out = [];
+        for (var i = 0; i < configured.length; i++) {
+            var name = configured[i].name;
+            out.push({ name: name, seconds: Number(totals[name]) || 0 });
         }
-        return arr;
+        out.sort(function(a, b) { return b.seconds - a.seconds; });
+        return out.slice(0, 3);
+    }
+    function screenTimeTopApps() {
+        var apps = root.screenTimeData && root.screenTimeData.apps ? root.screenTimeData.apps : {};
+        var keys = Object.keys(apps), out = [];
+        for (var i = 0; i < keys.length; i++) {
+            var app = apps[keys[i]];
+            if (app) out.push({ name: app.name || keys[i], seconds: Number(app.seconds) || 0 });
+        }
+        out.sort(function(a, b) { return b.seconds - a.seconds; });
+        return out.slice(0, 3);
     }
     function screenTimeKeyOf(appId, appName) {
         var s = String(appId || appName || "unknown").trim().toLowerCase();
@@ -333,6 +348,9 @@ Scope {
         if (!d.date) d.date = new Date().toISOString().slice(0, 10);
         if (!d.categories || typeof d.categories !== "object") d.categories = root.screenTimeDefaultData().categories;
         if (!d.apps || typeof d.apps !== "object") d.apps = {};
+        if (!Array.isArray(d.hourlySeconds)) d.hourlySeconds = Array(24).fill(0);
+        while (d.hourlySeconds.length < 24) d.hourlySeconds.push(0);
+        d.hourlySeconds = d.hourlySeconds.slice(0, 24).map(function(value) { return Number(value) || 0; });
         if (d.date !== new Date().toISOString().slice(0, 10)) {
             d = root.screenTimeDefaultData();
         }
@@ -350,8 +368,11 @@ Scope {
         var key = root.screenTimeKeyOf(appId, appName);
         var name = appName || appId || "Unknown app";
         var cat = root.screenTimeCategoryOf(appId, appName);
+        var hourly = d.hourlySeconds || (d.hourlySeconds = Array(24).fill(0));
+        var hour = new Date().getHours();
         d.totalSeconds = (Number(d.totalSeconds) || 0) + seconds;
         d.categories[cat] = (Number(d.categories[cat]) || 0) + seconds;
+        hourly[hour] = (Number(hourly[hour]) || 0) + seconds;
         if (!d.apps[key]) d.apps[key] = { key: key, name: name, category: cat, seconds: 0 };
         d.apps[key].name = name;
         d.apps[key].category = cat;
@@ -4304,6 +4325,7 @@ Scope {
                     Repeater {
                         model: [
                             { type: "weather",  name: I18n.tr("Weather"),  hint: I18n.tr("Current conditions, hourly and daily forecast"), styles: [["liquid", I18n.tr("Liquid Glass")], ["normal", I18n.tr("Normal")]] },
+                            { type: "screentime", name: I18n.tr("Screen Time"), hint: I18n.tr("Today's usage, hourly activity and most-used apps"), styles: [["liquid", I18n.tr("Liquid Glass")], ["normal", I18n.tr("Normal")]] },
                             { type: "calendar", name: I18n.tr("Calendar"), hint: I18n.tr("Today's date and the month"), styles: [["liquid", I18n.tr("Liquid Glass")], ["normal", I18n.tr("Normal")]] },
                             { type: "clock",    name: I18n.tr("Clock"),    hint: I18n.tr("Analog clock face"), styles: [["liquid", I18n.tr("Liquid Glass")], ["light", I18n.tr("Light")], ["dark", I18n.tr("Dark")]] },
                             { type: "player",   name: I18n.tr("Player"),   hint: I18n.tr("Now Playing with controls and lyrics"), styles: [["liquid", I18n.tr("Liquid Glass")], ["light", I18n.tr("Light")], ["dark", I18n.tr("Dark")]] },
@@ -5076,65 +5098,17 @@ Scope {
                     t: pal
                     ScreenTimeWidget {
                         width: parent.width - 24
-                        height: 138
+                        height: 168
+                        size: "medium"
+                        style: "liquid"
+                        preview: true
+                        fam: root.fontFamily
+                        darkGlass: root.dockDark
                         totalText: root.screenTimeSummaryText()
-                        values: root.screenTimeChartSeries()
-                    }
-                    Row {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 18
-                        anchors.top: parent.top
-                        anchors.topMargin: 78
-                        spacing: 8
-                        Item {
-                            width: (parent.width - 24) / 4; height: 42
-                            Text {
-                                anchors.centerIn: parent
-                                text: I18n.tr("Today") + "\n" + root.screenTimeSummaryText()
-                                horizontalAlignment: Text.AlignHCenter
-                                color: pal.text
-                                font.family: root.fontForWeight(Font.Normal, pal.fam)
-                                font.pixelSize: 11
-                                lineHeight: 1.25
-                            }
-                        }
-                        Item {
-                            width: (parent.width - 24) / 4; height: 42
-                            Text {
-                                anchors.centerIn: parent
-                                text: I18n.tr("Entertainment") + "\n" + root.screenTimeFormatSeconds(root.screenTimeCategoryTotal("Entertainment"))
-                                horizontalAlignment: Text.AlignHCenter
-                                color: pal.text2
-                                font.family: root.fontForWeight(Font.Normal, pal.fam)
-                                font.pixelSize: 11
-                                lineHeight: 1.25
-                            }
-                        }
-                        Item {
-                            width: (parent.width - 24) / 4; height: 42
-                            Text {
-                                anchors.centerIn: parent
-                                text: I18n.tr("Games") + "\n" + root.screenTimeFormatSeconds(root.screenTimeCategoryTotal("Games"))
-                                horizontalAlignment: Text.AlignHCenter
-                                color: pal.text2
-                                font.family: root.fontForWeight(Font.Normal, pal.fam)
-                                font.pixelSize: 11
-                                lineHeight: 1.25
-                            }
-                        }
-                        Item {
-                            width: (parent.width - 24) / 4; height: 42
-                            Text {
-                                anchors.centerIn: parent
-                                text: I18n.tr("Social") + "\n" + root.screenTimeFormatSeconds(root.screenTimeCategoryTotal("Social Media"))
-                                horizontalAlignment: Text.AlignHCenter
-                                color: pal.text2
-                                font.family: root.fontForWeight(Font.Normal, pal.fam)
-                                font.pixelSize: 11
-                                lineHeight: 1.25
-                            }
-                        }
+                        hourlyValues: root.screenTimeChartSeries()
+                        categories: root.screenTimeWidgetCategories()
+                        topApps: root.screenTimeTopApps()
+                        trackingEnabled: root.screenTimeEnabled
                     }
                 }
 
