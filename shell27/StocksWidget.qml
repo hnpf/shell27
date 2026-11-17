@@ -328,7 +328,6 @@ Item {
                 height: width
                 wd: stockButtonWd
                 kind: "swap"
-                hitSlop: 6 * w.u
                 col: w.dark ? "white" : "#1C1C1E"
                 gw: 16 * w.u
                 gh: 16 * w.u

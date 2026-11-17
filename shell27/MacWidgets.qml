@@ -392,11 +392,11 @@ Scope {
     }
     function pr(i, k) { var r = playerRects[i]; return r ? r[k] : 0; }
     readonly property var stockButtonRects: {
-        var r = rev, scale = widgetScale, unit = scale * 168 / 158, out = [];
+        var r = rev, unit = widgetScale * 168 / 158, out = [];
         for (var i = 0; i < wmodel.count; i++) {
             var m = wmodel.get(i);
             if (m.wtype !== "stocks" || m.wsize !== "small") continue;
-            out.push([m.wx + 168 * scale - 48 * unit, m.wy + 15 * unit, 30 * unit, 30 * unit]);
+            out.push([m.wx + dims("small")[0] - 48 * unit, m.wy + 15 * unit, 30 * unit, 30 * unit]);
         }
         return out;
     }
