@@ -33,6 +33,7 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/hnpf/shell27/main/install.
 
 - `hyprland/`: personal Hyprland Lua config and its Genie helper.
 - `settings/`: sanitized starter settings; API keys and machine-specific wallpaper/image paths are blank.
+- `gtk-3.0/` and `gtk-4.0/`: GTK appearance settings installed to `~/.config` by `install.sh`.
 - `hypr-shell27/`: Hyprland helper scripts and session files.
 - `shell27/`: desktop shell Quickshell config.
 - `shell27-lock/`: independent lock-screen Quickshell config.

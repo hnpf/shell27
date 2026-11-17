@@ -1576,6 +1576,23 @@ install_apple_emoji_font() {
     return 1
 }
 
+install_gtk_configs() { # install_gtk_configs <source-root>
+    local root="$1" gtk_dir src dest
+    for gtk_dir in gtk-3.0 gtk-4.0; do
+        src="$root/$gtk_dir"
+        [ -d "$src" ] || continue
+        dest="$CONFIG_HOME/$gtk_dir"
+        backup_current "$dest" "$gtk_dir"
+        mkdir -p "$dest"
+        if have rsync; then
+            rsync -a "$src"/ "$dest"/
+        else
+            cp -a "$src"/. "$dest"/
+        fi
+        ok "$gtk_dir settings -> $dest"
+    done
+}
+
 # Copy the helper tree into ~/.config/hypr-shell27. Files that ship with shell27 are updated; the user's own
 # custom/ folder is only filled in where files are missing, and extra files the user added are never deleted.
 install_hypr_tree() { # install_hypr_tree <hypr-shell27 source folder>
@@ -1695,6 +1712,7 @@ setup_siri_python() {
 install_extras() {
     local root="$1" f n hroot
     install_apple_emoji_font "$root" || true
+    install_gtk_configs "$root"
     # helper tree: scripts (Game Mode, video wallpapers, AirDrop, lock), session config, launchers, icons
     hroot=$(find_hypr_root "$root" || true)
     if [ -n "$hroot" ] && install_hypr_tree "$hroot"; then
