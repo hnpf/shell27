@@ -7835,7 +7835,7 @@ Scope {
 }
 
                         // ════════════════════════════════════════════════════════════════
-                        // BENTO ROW 1: GALAXY BUDS 4 WATERY ORBITAL & LIQUID GLASS HERO STAGE
+                        // BENTO ROW 1: AIRPODS BATTERY & NOISE CONTROL
                         // ════════════════════════════════════════════════════════════════
                         HubBento {
                             id: budsHeroSlot
@@ -8108,8 +8108,8 @@ Scope {
                                     property real splashT: 1
                                     property real wavePhase: 0
 
-                                    function triggerSplash() { splashAnim.restart(); }
-                                    function triggerOrbit() { orbitAnim.restart(); splashAnim.restart(); }
+                                    function triggerSplash() { }
+                                    function triggerOrbit() { }
 
                                     Connections {
                                         target: hubPop
@@ -8131,7 +8131,7 @@ Scope {
                                         easing.type: Easing.OutCubic
             }
                                     NumberAnimation on wavePhase {
-                                        running: hubPop.visible
+                                        running: false
                                         from: 0; to: Math.PI * 200
                                         duration: 240000
                                         loops: Animation.Infinite
@@ -8144,6 +8144,7 @@ Scope {
                                     Canvas {
                                         id: waterCanvas
                                         z: 1
+                                        visible: false
                                         anchors.fill: parent
                                         antialiasing: true
                                         property color mCol: budsHeroSlot.modeColor
@@ -8502,15 +8503,23 @@ Scope {
                         }
                     }
 
-                                            // 5. High-Clarity 3D Studio-Lit Galaxy Buds 4 Vector Artwork
-                                            BudsPodArt {
+                                            // 5. Apple AirPods Gen 3 glyph
+                                            Image {
                                                 z: 2
                                                 anchors.centerIn: parent
-                                                width: podNode.isCenter ? 35 : 28
-                                                height: width
-                                                kind: podNode.modelData.kind
-                                                color: ccPal.fg
-                                                accentColor: root.earbudsState.connected ? "#30D158" : budsHeroSlot.modeColor
+                                                anchors.verticalCenterOffset: podNode.isCenter ? -1 : 0
+                                                anchors.horizontalCenterOffset: podNode.isCenter ? 2 : 0
+                                                width: podNode.isCenter ? 44 : 22
+                                                height: podNode.isCenter ? 37 : 35
+                                                source: podNode.modelData.kind === "budL"
+                                                        ? Qt.resolvedUrl("assets/airpod.gen3.left.svg")
+                                                        : (podNode.modelData.kind === "budR"
+                                                           ? Qt.resolvedUrl("assets/airpod.gen3.right.svg")
+                                                           : Qt.resolvedUrl("assets/airpods.gen3.chargingcase.wireless.fill.svg"))
+                                                sourceSize: Qt.size(width * 4, height * 4)
+                                                fillMode: Image.PreserveAspectFit
+                                                smooth: true
+                                                mipmap: true
                     }
 
                                             // 6. Minimalist Frosted Status Micro-Pill Below Contact Shadow
@@ -8552,6 +8561,7 @@ Scope {
                                     Canvas {
                                         id: frontOrbitCanvas
                                         z: 4
+                                        visible: false
                                         anchors.fill: parent
                                         enabled: false
                                         antialiasing: true

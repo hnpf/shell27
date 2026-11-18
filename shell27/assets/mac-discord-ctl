@@ -32,6 +32,34 @@ def run_cmd(args, timeout=2.5):
         return ""
 
 
+def is_discord_identity(*parts):
+    identity = " ".join(str(part or "") for part in parts).lower()
+    return any(name in identity for name in CLIENT_NAMES)
+
+
+def is_discord_process_running(proc_root="/proc", own_pid=None):
+    own_pid = os.getpid() if own_pid is None else int(own_pid)
+    try:
+        pids = os.listdir(proc_root)
+    except OSError:
+        return False
+    for pid in pids:
+        if not pid.isdigit() or int(pid) == own_pid:
+            continue
+        try:
+            with open(os.path.join(proc_root, pid, "cmdline"), "rb") as f:
+                cmdline = f.read().replace(b"\0", b" ").decode("utf-8", "replace")
+            with open(os.path.join(proc_root, pid, "comm"), "r", encoding="utf-8") as f:
+                comm = f.read()
+        except OSError:
+            continue
+        if os.path.basename(__file__) in cmdline:
+            continue
+        if is_discord_identity(cmdline, comm):
+            return True
+    return False
+
+
 def get_discord_window():
     raw = run_cmd(["hyprctl", "-j", "clients"], timeout=1.2)
     if not raw:
@@ -39,9 +67,9 @@ def get_discord_window():
     try:
         clients = json.loads(raw)
         for c in clients:
-            cls = (c.get("class") or "").lower()
-            title = (c.get("title") or "").lower()
-            if any(k in cls or k in title for k in CLIENT_NAMES):
+            if is_discord_identity(
+                c.get("class"), c.get("initialClass"), c.get("title"), c.get("initialTitle")
+            ):
                 return c
     except Exception:
         pass
@@ -63,13 +91,16 @@ def get_pw_state():
                 media_class = props.get("media.class", "")
                 if not media_class.startswith("Stream/"):
                     continue
-                app_name = (props.get("application.name") or "").lower()
-                bin_name = (props.get("application.process.binary") or "").lower()
-                node_name = (props.get("node.name") or "").lower()
-                is_discord = (
-                    any(k in app_name or k in bin_name for k in CLIENT_NAMES)
-                    or "webrtc" in node_name
-                    or (bin_name == "electron" and "chromium" in app_name)
+                is_discord = is_discord_identity(
+                    props.get("application.name"),
+                    props.get("application.id"),
+                    props.get("application.process.binary"),
+                    props.get("application.process.argv"),
+                    props.get("application.process.command"),
+                    props.get("application.desktop"),
+                    props.get("node.name"),
+                    props.get("node.description"),
+                    props.get("media.name"),
                 )
                 if not is_discord:
                     continue
@@ -134,9 +165,7 @@ def save_state(st):
 
 def get_status():
     win = get_discord_window()
-    proc_running = bool(win) or bool(
-        run_cmd(["pgrep", "-fi", "|".join(CLIENT_NAMES)], timeout=0.6)
-    )
+    proc_running = bool(win) or is_discord_process_running()
     in_streams, out_streams = get_pw_state() if proc_running else ([], [])
     mic_muted, mic_vol = get_default_mic()
     st = load_saved_state()
