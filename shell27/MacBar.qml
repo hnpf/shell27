@@ -394,6 +394,8 @@ Scope {
     property int nightTemp: 4000
     // Control Center: ids of the enabled controls, in order (edit with Control Center → Edit Controls)
     property var ccControls: ["wifi", "nowplaying", "bluetooth", "airplane", "focus", "record", "nightshift", "keepawake", "display", "sound"]
+    property var ccCompactControls: []
+    property var ccWideControls: []
     property bool ccMigRec: false              // one-time: add the Screen Recording tile to an existing Control Center layout
     property bool ccMigStage: false            // one-time: add Stage Manager tile to Control Center
     property bool barMigApps: false            // one-time: add built-in app shortcuts to existing menu-bar layouts
@@ -422,7 +424,7 @@ Scope {
         "barStyle", "barGlass", "glassRim", "glassGrain", "glassLiquid", "glassBlur", "barBgOpacity", "glassRealtime", "liveWallGlass", "glassDebug", "wallpaperPath", "use24h", "language", "showDate",
         "showSeconds", "showBatteryPercent", "showCpuRam", "showCpu", "showRam", "showGpu", "showDisk", "showTemp", "showNet", "showTray", "showSearch",
         "spotlightEnabled", "reduceMotion", "ccEnabled", "notificationsEnabled", "clockAppEnabled", "ccStyle", "barLogoMode", "barCustomLogoPath", "barWidgets", "weekStartsMonday", "terminal", "launcher",
-        "filesCmd", "clipboardCmd", "appUsage", "clipHistory", "clipAutoPaste", "emojiRecent", "screenshotDir", "screenshotSave", "screenshotClipboard", "screenshotNotify", "nightTemp", "ccControls", "ccMigRec", "wallpaperDir", "wallpaperFavs", "wallpaperCmd", "wallpaperVideo", "wpRestorePath", "uiSounds", "gamingMode", "gamingAuto", "ccMigGame", "lockArtBackground",
+        "filesCmd", "clipboardCmd", "appUsage", "clipHistory", "clipAutoPaste", "emojiRecent", "screenshotDir", "screenshotSave", "screenshotClipboard", "screenshotNotify", "nightTemp", "ccControls", "ccCompactControls", "ccWideControls", "ccMigRec", "wallpaperDir", "wallpaperFavs", "wallpaperCmd", "wallpaperVideo", "wpRestorePath", "uiSounds", "gamingMode", "gamingAuto", "ccMigGame", "lockArtBackground",
         "lockClockStyle", "switcherStyle", "lockClockFont", "lockClockWeight", "lockClockMaterial", "lockClockIntensity", "lockClockTint", "lockClockDate", "autoContrast", "wallpaperAppearance", "wpPairLight", "wpPairDark",
         "notifDnd", "dnd", "nightOn", "keepAwake", "stageManager", "ccMigStage", "barMigApps", "barMigSysMon", "barMigLockIndicators",
         "kbRepeatRate", "kbRepeatDelay", "mouseSens", "mouseNatural", "tpNatural", "tpTap", "tpDwt", "tpScroll"]
@@ -480,6 +482,28 @@ Scope {
         for (var i = 0; i < ccCatalog.length; i++) if (ccCatalog[i].id === id) return ccCatalog[i];
         return null;
     }
+    function ccResizable(id) {
+        var d = ccDef(id);
+        return !!d && d.h === 1 && d.w <= 2;
+    }
+    function ccTileWidth(id, defaultWidth) {
+        if (!ccResizable(id)) return defaultWidth;
+        if (ccWideControls.indexOf(id) >= 0) return 2;
+        if (ccCompactControls.indexOf(id) >= 0) return 1;
+        return defaultWidth;
+    }
+    function ccSetTileWidth(id, width) {
+        var d = ccDef(id);
+        if (!d || !ccResizable(id)) return;
+        var compact = ccCompactControls.filter(function (x) { return x !== id; });
+        var wide = ccWideControls.filter(function (x) { return x !== id; });
+        if (width !== d.w) {
+            if (width === 1) compact.push(id);
+            else if (width === 2) wide.push(id);
+        }
+        ccCompactControls = compact;
+        ccWideControls = wide;
+    }
     function ccLayout(ids) {
         var cols = 4, occ = [], out = [], seen = {}, rows = 0;
         function isFree(r, c, w, h) {
@@ -493,12 +517,13 @@ Scope {
             var d = ccDef(ids[i]);
             if (!d || seen[d.id]) continue;
             seen[d.id] = true;
+            var tileWidth = ccTileWidth(d.id, d.w);
             var placed = false;
             for (var r = 0; !placed; r++) {
-                for (var c = 0; c + d.w <= cols; c++) {
-                    if (isFree(r, c, d.w, d.h)) {
-                        mark(r, c, d.w, d.h);
-                        out.push({ id: d.id, col: c, row: r, w: d.w, h: d.h });
+                for (var c = 0; c + tileWidth <= cols; c++) {
+                    if (isFree(r, c, tileWidth, d.h)) {
+                        mark(r, c, tileWidth, d.h);
+                        out.push({ id: d.id, col: c, row: r, w: tileWidth, h: d.h });
                         rows = Math.max(rows, r + d.h);
                         placed = true;
                         break;
@@ -5226,6 +5251,8 @@ Scope {
         barLogoMode = "arch"; barCustomLogoPath = "";
         barWidgets = ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "lockIndicators", "bluetooth", "siri", "airdrop", "reminders", "privacy", "controlCenter", "clock"];
         ccControls = ccDefault.slice();
+        ccCompactControls = [];
+        ccWideControls = [];
         uiScaleAuto = true; uiScaleManual = 1.0;
     }
 
@@ -11712,16 +11739,19 @@ Scope {
                             CCBtn {
                                 plain: true
                                 t: ccPal; gx: ccg
-                                x: 12; anchors.verticalCenter: parent.verticalCenter
+                                x: tl.width > 110 ? 12 : (parent.width - width) / 2
+                                anchors.verticalCenter: parent.verticalCenter
                                 kind: "wifi"; level: root.wifiOn ? (root.wifiLevel || 3) : 3
                                 on: root.wifiOn
     }
                             MouseArea {
+                                visible: tl.width > 110
                                 // only the arrow end opens the Wi-Fi page inside the Control Center; the rest of the tile switches Wi-Fi on / off
                                 x: parent.width - 48; width: 48; height: parent.height
                                 onClicked: { root.wifiError = ""; root.scanWifi(); root.refreshConnections(); ui.ccPage = "wifi"; }
     }
                             Column {
+                                visible: tl.width > 110
                                 x: 62; anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 62 - 24
                                 spacing: 1
@@ -11782,10 +11812,21 @@ Scope {
                             on: root.airplane
                             onClicked: root.toggleAirplane()
                             t: ccPal; gx: ccg
+                            readonly property bool wide: width > 110
                             CCBtn {
                                 plain: true
-                                t: ccPal; gx: ccg; anchors.centerIn: parent
+                                t: ccPal; gx: ccg
+                                x: tl.wide ? 12 : (parent.width - width) / 2
+                                anchors.verticalCenter: parent.verticalCenter
                                 kind: "airplane"; on: root.airplane
+    }
+                            Column {
+                                visible: tl.wide
+                                x: 62; anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 72
+                                spacing: 1
+                                Text { width: parent.width; elide: Text.ElideRight; text: I18n.tr("Airplane Mode"); color: tl.fg; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 13; font.weight: Font.DemiBold }
+                                Text { width: parent.width; text: root.airplane ? I18n.tr("On") : I18n.tr("Off"); color: tl.fg2; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 12; font.weight: Font.DemiBold }
     }
 }
                     }
@@ -11797,13 +11838,16 @@ Scope {
                             on: root.dnd
                             onClicked: root.toggleDnd()
                             t: ccPal; gx: ccg
+                            readonly property bool wide: width > 110
                             CCBtn {
                                 plain: true
                                 t: ccPal; gx: ccg
-                                x: 12; anchors.verticalCenter: parent.verticalCenter
+                                x: tl.wide ? 12 : (parent.width - width) / 2
+                                anchors.verticalCenter: parent.verticalCenter
                                 kind: "moon"; on: root.dnd
     }
                             Column {
+                                visible: tl.width > 110
                                 x: 62; anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 62 - 10
                                 spacing: 1
@@ -11821,13 +11865,16 @@ Scope {
                             onTint: "#30D158"
                             onClicked: root.gamingMode = !root.gaming
                             t: ccPal; gx: ccg
+                            readonly property bool wide: width > 110
                             CCBtn {
                                 plain: true
                                 t: ccPal; gx: ccg
-                                x: 12; anchors.verticalCenter: parent.verticalCenter
+                                x: tl.wide ? 12 : (parent.width - width) / 2
+                                anchors.verticalCenter: parent.verticalCenter
                                 kind: "gamepad"; on: root.gaming; onTint: "#30D158"
     }
                             Column {
+                                visible: tl.width > 110
                                 x: 62; anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 62 - 10
                                 spacing: 1
@@ -11846,13 +11893,16 @@ Scope {
                             onTint: "#FF453A"
                             onClicked: root.toggleRecording()
                             t: ccPal; gx: ccg
+                            readonly property bool wide: width > 110
                             CCBtn {
                                 plain: true
                                 t: ccPal; gx: ccg
-                                x: 12; anchors.verticalCenter: parent.verticalCenter
+                                x: tl.wide ? 12 : (parent.width - width) / 2
+                                anchors.verticalCenter: parent.verticalCenter
                                 kind: root.recording ? "stoprec" : "record"; on: root.recording; onTint: "#FF453A"
     }
                             Column {
+                                visible: tl.width > 110
                                 x: 62; anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 62 - 10
                                 spacing: 1
@@ -11869,10 +11919,21 @@ Scope {
                             on: root.nightOn
                             onClicked: root.nightOn = !root.nightOn
                             t: ccPal; gx: ccg
+                            readonly property bool wide: width > 110
                             CCBtn {
                                 plain: true
-                                t: ccPal; gx: ccg; anchors.centerIn: parent
+                                t: ccPal; gx: ccg
+                                x: tl.wide ? 12 : (parent.width - width) / 2
+                                anchors.verticalCenter: parent.verticalCenter
                                 kind: "nightshift"; on: root.nightOn
+    }
+                            Column {
+                                visible: tl.wide
+                                x: 62; anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 72
+                                spacing: 1
+                                Text { width: parent.width; elide: Text.ElideRight; text: I18n.tr("Night Shift"); color: tl.fg; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 13; font.weight: Font.DemiBold }
+                                Text { width: parent.width; text: root.nightOn ? I18n.tr("On") : I18n.tr("Off"); color: tl.fg2; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 12; font.weight: Font.DemiBold }
     }
 }
                     }
@@ -11884,10 +11945,21 @@ Scope {
                             on: root.keepAwake
                             onClicked: root.keepAwake = !root.keepAwake
                             t: ccPal; gx: ccg
+                            readonly property bool wide: width > 110
                             CCBtn {
                                 plain: true
-                                t: ccPal; gx: ccg; anchors.centerIn: parent
+                                t: ccPal; gx: ccg
+                                x: tl.wide ? 12 : (parent.width - width) / 2
+                                anchors.verticalCenter: parent.verticalCenter
                                 kind: "coffee"; on: root.keepAwake
+    }
+                            Column {
+                                visible: tl.wide
+                                x: 62; anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 72
+                                spacing: 1
+                                Text { width: parent.width; elide: Text.ElideRight; text: I18n.tr("Keep Awake"); color: tl.fg; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 13; font.weight: Font.DemiBold }
+                                Text { width: parent.width; text: root.keepAwake ? I18n.tr("On") : I18n.tr("Off"); color: tl.fg2; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 12; font.weight: Font.DemiBold }
     }
 }
                     }
@@ -11899,10 +11971,21 @@ Scope {
                             on: root.darkMode
                             onClicked: root.setAppearance(root.darkMode ? "light" : "dark")
                             t: ccPal; gx: ccg
+                            readonly property bool wide: width > 110
                             CCBtn {
                                 plain: true
-                                t: ccPal; gx: ccg; anchors.centerIn: parent
+                                t: ccPal; gx: ccg
+                                x: tl.wide ? 12 : (parent.width - width) / 2
+                                anchors.verticalCenter: parent.verticalCenter
                                 kind: "contrast"; on: root.darkMode
+    }
+                            Column {
+                                visible: tl.wide
+                                x: 62; anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 72
+                                spacing: 1
+                                Text { width: parent.width; elide: Text.ElideRight; text: I18n.tr("Dark Mode"); color: tl.fg; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 13; font.weight: Font.DemiBold }
+                                Text { width: parent.width; text: root.darkMode ? I18n.tr("Dark") : I18n.tr("Light"); color: tl.fg2; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 12; font.weight: Font.DemiBold }
     }
 }
                     }
@@ -11914,10 +11997,21 @@ Scope {
                             on: root.stageManager
                             onClicked: root.stageManager = !root.stageManager
                             t: ccPal; gx: ccg
+                            readonly property bool wide: width > 110
                             CCBtn {
                                 plain: true
-                                t: ccPal; gx: ccg; anchors.centerIn: parent
+                                t: ccPal; gx: ccg
+                                x: tlStage.wide ? 12 : (parent.width - width) / 2
+                                anchors.verticalCenter: parent.verticalCenter
                                 kind: "stagemanager"; on: root.stageManager
+    }
+                            Column {
+                                visible: tlStage.wide
+                                x: 62; anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 72
+                                spacing: 1
+                                Text { width: parent.width; elide: Text.ElideRight; text: I18n.tr("Stage Manager"); color: tlStage.fg; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 13; font.weight: Font.DemiBold }
+                                Text { width: parent.width; text: root.stageManager ? I18n.tr("On") : I18n.tr("Off"); color: tlStage.fg2; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 12; font.weight: Font.DemiBold }
     }
 }
                     }
@@ -12261,6 +12355,7 @@ Scope {
                                     scale: dragging ? 1.04 : 1
                                     Behavior on x { enabled: !ct.dragging; NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                                     Behavior on y { enabled: !ct.dragging; NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                                    Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                                     Behavior on scale { NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
 
                                     // one-cell controls (the circle buttons) are drawn as a smaller circle centred in their grid cell
@@ -12301,6 +12396,57 @@ Scope {
                                             root.ccDrop(ct.modelData.id, q.x, q.y, ccGrid.cw, ccGrid.chh, ccGrid.height);
                 }
                                         onCanceled: { ct.dragging = false; ct.dx = 0; ct.dy = 0; }
+            }
+
+                                    MouseArea {
+                                        id: resizeArea
+                                        visible: ui.ccEdit && root.ccResizable(ct.modelData.id)
+                                        enabled: visible
+                                        z: 70
+                                        x: parent.width - width
+                                        width: 26
+                                        height: parent.height
+                                        preventStealing: true
+                                        cursorShape: Qt.SizeHorCursor
+                                        property real startX: 0
+                                        property int startWidth: 0
+                                        onPressed: mouse => {
+                                            var p = mapToItem(ccGrid, mouse.x, mouse.y);
+                                            startX = p.x;
+                                            startWidth = root.ccTileWidth(ct.modelData.id, ct.modelData.w);
+                                        }
+                                        onPositionChanged: mouse => {
+                                            if (!pressed) return;
+                                            var p = mapToItem(ccGrid, mouse.x, mouse.y);
+                                            var delta = p.x - startX;
+                                            if (startWidth === 1 && delta > 18) {
+                                                root.ccSetTileWidth(ct.modelData.id, 2);
+                                                startWidth = 2;
+                                                startX = p.x;
+                                            } else if (startWidth === 2 && delta < -18) {
+                                                root.ccSetTileWidth(ct.modelData.id, 1);
+                                                startWidth = 1;
+                                                startX = p.x;
+                                            }
+                                        }
+                                        Canvas {
+                                            anchors.right: parent.right
+                                            anchors.rightMargin: 7
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            width: 8
+                                            height: 24
+                                            onPaint: {
+                                                var ctx = getContext("2d");
+                                                ctx.clearRect(0, 0, width, height);
+                                                ctx.beginPath();
+                                                ctx.moveTo(2, 1);
+                                                ctx.quadraticCurveTo(8, height / 2, 2, height - 1);
+                                                ctx.strokeStyle = "rgba(255,255,255,0.9)";
+                                                ctx.lineWidth = 2;
+                                                ctx.lineCap = "round";
+                                                ctx.stroke();
+                                            }
+                                        }
             }
 
                                     // remove badge
@@ -12396,7 +12542,11 @@ Scope {
                                     visible: ui.ccEdit
                                     t: ccPal; gx: ccg
                                     text: I18n.tr("Reset")
-                                    onClicked: root.ccControls = root.ccDefault.slice()
+                                    onClicked: {
+                                        root.ccControls = root.ccDefault.slice();
+                                        root.ccCompactControls = [];
+                                        root.ccWideControls = [];
+                                    }
         }
                                 CCPill {
                                     t: ccPal; gx: ccg
