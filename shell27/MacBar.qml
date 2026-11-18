@@ -398,6 +398,7 @@ Scope {
     property bool ccMigStage: false            // one-time: add Stage Manager tile to Control Center
     property bool barMigApps: false            // one-time: add built-in app shortcuts to existing menu-bar layouts
     property bool barMigSysMon: false           // one-time: migrate the old System Monitor visibility setting
+    property bool barMigLockIndicators: false
     property bool stageManager: true           // macOS 3D Stage Manager enabled
     property bool recording: false
     property int recSecs: 0
@@ -406,6 +407,9 @@ Scope {
     property var kbLayouts: []                // configured layouts of the main keyboard: [{ code, name }]
     property int kbIndex: 0                   // index of the active one
     property string kbMain: ""                // name of the main keyboard (Hyprland)
+    property bool capsLockOn: false
+    property bool numLockOn: false
+    property bool scrollLockOn: false
     property string recordFile: ""
     property string fileQuery: ""
     property string fileSearchFor: ""
@@ -420,10 +424,10 @@ Scope {
         "spotlightEnabled", "reduceMotion", "ccEnabled", "notificationsEnabled", "clockAppEnabled", "ccStyle", "barLogoMode", "barCustomLogoPath", "barWidgets", "weekStartsMonday", "terminal", "launcher",
         "filesCmd", "clipboardCmd", "appUsage", "clipHistory", "clipAutoPaste", "emojiRecent", "screenshotDir", "screenshotSave", "screenshotClipboard", "screenshotNotify", "nightTemp", "ccControls", "ccMigRec", "wallpaperDir", "wallpaperFavs", "wallpaperCmd", "wallpaperVideo", "wpRestorePath", "uiSounds", "gamingMode", "gamingAuto", "ccMigGame", "lockArtBackground",
         "lockClockStyle", "switcherStyle", "lockClockFont", "lockClockWeight", "lockClockMaterial", "lockClockIntensity", "lockClockTint", "lockClockDate", "autoContrast", "wallpaperAppearance", "wpPairLight", "wpPairDark",
-        "notifDnd", "dnd", "nightOn", "keepAwake", "stageManager", "ccMigStage", "barMigApps", "barMigSysMon",
+        "notifDnd", "dnd", "nightOn", "keepAwake", "stageManager", "ccMigStage", "barMigApps", "barMigSysMon", "barMigLockIndicators",
         "kbRepeatRate", "kbRepeatDelay", "mouseSens", "mouseNatural", "tpNatural", "tpTap", "tpDwt", "tpScroll"]
     // Optional bar widgets; tray and Spotlight use their existing showTray/showSearch settings.
-    property var barWidgets: ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "bluetooth", "siri", "airdrop", "reminders", "privacy", "controlCenter", "clock"]
+    property var barWidgets: ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "lockIndicators", "bluetooth", "siri", "airdrop", "reminders", "privacy", "controlCenter", "clock"]
     function barWidgetEnabled(id) { return barWidgets.indexOf(id) >= 0; }
     function resolvedBarLogoUrl() {
         var p = String(barCustomLogoPath || "").trim();
@@ -439,7 +443,12 @@ Scope {
     function setBarWidget(id, enabled) {
         var next = [];
         for (var i = 0; i < barWidgets.length; i++) if (barWidgets[i] !== id) next.push(barWidgets[i]);
-        if (enabled) next.push(id);
+        if (enabled) {
+            if (id === "lockIndicators") {
+                var btIndex = next.indexOf("bluetooth");
+                next.splice(btIndex >= 0 ? btIndex : next.length, 0, id);
+            } else next.push(id);
+        }
         barWidgets = next;
     }
     readonly property var accentChoices: [
@@ -3209,6 +3218,28 @@ Scope {
         "greek": "EL", "gr": "EL"
     })
     function refreshKeyboardLayout() { if (!kbdProc.running) kbdProc.running = true; }
+    function refreshLockIndicators() { if (!lockStateProc.running) lockStateProc.running = true; }
+    Timer {
+        interval: 900; repeat: true
+        running: root.barEnabled && root.barWidgetEnabled("lockIndicators")
+        onTriggered: root.refreshLockIndicators()
+    }
+    Process {
+        id: lockStateProc
+        command: ["sh", "-c",
+            "device=$(hyprctl -j devices 2>/dev/null | jq -r '([.keyboards[] | select(.main)] | first) // .keyboards[0] // {} | [.capsLock // false, .numLock // false] | @tsv' 2>/dev/null); "
+            + "caps=$(printf '%s\\n' \"$device\" | cut -f1); num=$(printf '%s\\n' \"$device\" | cut -f2); "
+            + "scroll=0; for led in /sys/class/leds/*::scrolllock/brightness; do [ -r \"$led\" ] || continue; IFS= read -r value < \"$led\"; if [ \"$value\" = 1 ]; then scroll=1; break; fi; done; "
+            + "printf '%s\\t%s\\t%s\\n' \"${caps:-false}\" \"${num:-false}\" \"$scroll\""]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var states = text.trim().split(/\s+/);
+                root.capsLockOn = states[0] === "true";
+                root.numLockOn = states[1] === "true";
+                root.scrollLockOn = states[2] === "1";
+            }
+        }
+    }
     Timer {
         interval: 1600; repeat: true
         running: root.barEnabled && root.barWidgetEnabled("keyboard") && root.kbLayouts.length > 1
@@ -5174,7 +5205,7 @@ Scope {
         showCpuRam = true; showTray = true; showSearch = true; showAudioHub = true;
         spotlightEnabled = true; ccEnabled = true; notificationsEnabled = true; clockAppEnabled = true; ccStyle = "tiles";
         barLogoMode = "arch"; barCustomLogoPath = "";
-        barWidgets = ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "bluetooth", "siri", "airdrop", "reminders", "privacy", "controlCenter", "clock"];
+        barWidgets = ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "lockIndicators", "bluetooth", "siri", "airdrop", "reminders", "privacy", "controlCenter", "clock"];
         ccControls = ccDefault.slice();
         uiScaleAuto = true; uiScaleManual = 1.0;
     }
@@ -5229,6 +5260,15 @@ Scope {
             if (!root.barMigSysMon) {
                 root.barMigSysMon = true;
                 if (!root.showCpuRam) root.setBarWidget("cpuRam", false);
+            }
+            if (!root.barMigLockIndicators) {
+                root.barMigLockIndicators = true;
+                var lockWidgets = root.barWidgets.slice();
+                if (lockWidgets.indexOf("lockIndicators") < 0) {
+                    var btIndex = lockWidgets.indexOf("bluetooth");
+                    lockWidgets.splice(btIndex >= 0 ? btIndex : lockWidgets.length, 0, "lockIndicators");
+                    root.barWidgets = lockWidgets;
+                }
             }
             root.settingsReady = true;
             inputApplyT.restart();
@@ -7051,6 +7091,67 @@ Scope {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: if (root.hub && root.hub.reminders) root.hub.reminders.open()
+                            }
+                        }
+
+                        // Lock-key states sit immediately before Bluetooth.
+                        Item {
+                            id: lockIndicatorsBtn
+                            readonly property int activeCount: (root.capsLockOn ? 1 : 0) + (root.numLockOn ? 1 : 0) + (root.scrollLockOn ? 1 : 0)
+                            visible: root.barWidgetEnabled("lockIndicators") || width > 0
+                            width: root.barWidgetEnabled("lockIndicators") && activeCount > 0 ? lockIndicatorRow.implicitWidth + 8 : 0
+                            height: 28
+                            Behavior on width { NumberAnimation { duration: 190; easing.type: Easing.OutCubic } }
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: Math.max(0, parent.width - 2); height: parent.height - 6; radius: 12
+                                color: lockIndicatorsMouse.containsMouse ? bpal.hover : "transparent"
+                            }
+                            Row {
+                                id: lockIndicatorRow
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 0
+                                Repeater {
+                                    model: [
+                                        { label: "CAPS", active: root.capsLockOn },
+                                        { label: "NUM", active: root.numLockOn },
+                                        { label: "SCRL", active: root.scrollLockOn }
+                                    ]
+                                    delegate: Item {
+                                        required property var modelData
+                                        width: modelData.active ? 31 : 0; height: 20
+                                        opacity: modelData.active ? 1 : 0
+                                        scale: modelData.active ? 1 : 0.82
+                                        Behavior on width { NumberAnimation { duration: 190; easing.type: Easing.OutCubic } }
+                                        Behavior on opacity { NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
+                                        Behavior on scale { NumberAnimation { duration: 190; easing.type: Easing.OutBack } }
+                                        Behavior on x { NumberAnimation { duration: 190; easing.type: Easing.OutCubic } }
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: Math.max(0, Math.min(28, parent.width - 3))
+                                            height: 16
+                                            radius: 4
+                                            color: "transparent"
+                                            border.width: 1
+                                            border.color: bpal.fg
+                                        }
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData.label
+                                            color: bpal.fg
+                                            font.family: root.fontForWeight(Font.DemiBold, bpal.fam)
+                                            font.pixelSize: 8
+                                            font.weight: Font.DemiBold
+                                        }
+                                    }
+                                }
+                            }
+                            MouseArea {
+                                id: lockIndicatorsMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
                             }
                         }
 

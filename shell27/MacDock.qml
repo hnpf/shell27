@@ -3009,6 +3009,11 @@ Scope {
                         SSwitch { t: pal; checked: root.bar ? root.bar.barWidgetEnabled("bluetooth") : true; onToggled: v => { if (root.bar) root.bar.setBarWidget("bluetooth", v); } }
                     }
                     SRow {
+                        t: pal; title: I18n.tr("Lock indicators")
+                        subtitle: I18n.tr("Show Caps, Num and Scroll Lock state in the menu bar")
+                        SSwitch { t: pal; checked: root.bar ? root.bar.barWidgetEnabled("lockIndicators") : true; onToggled: v => { if (root.bar) root.bar.setBarWidget("lockIndicators", v); } }
+                    }
+                    SRow {
                         t: pal; title: I18n.tr("Keyboard layout")
                         SSwitch { t: pal; checked: root.bar ? root.bar.barWidgetEnabled("keyboard") : true; onToggled: v => { if (root.bar) root.bar.setBarWidget("keyboard", v); } }
                     }
