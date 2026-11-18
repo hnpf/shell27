@@ -478,6 +478,28 @@ Scope {
         return "file://" + encodeURI(path).replace(/#/g, "%23").replace(/\?/g, "%3F");
     }
 
+    function localPathsFromDrop(drop) {
+        var paths = [];
+        if (!drop.hasUrls) return paths;
+        for (var i = 0; i < drop.urls.length; i++) {
+            var url = String(drop.urls[i]);
+            if (url.indexOf("file:///") !== 0) continue;
+            try { paths.push(decodeURIComponent(url.substring(7))); }
+            catch (e) { paths.push(url.substring(7)); }
+        }
+        return paths;
+    }
+
+    function copyDroppedFiles(paths) {
+        if (paths.length === 0 || dropProc.running) return;
+        dropProc.command = ["sh", "-c",
+            "d=\"$1\"; shift; mkdir -p \"$d\" || exit 1; "
+            + "for src do case \"$src\" in \"$d\"/*) continue;; esac; "
+            + "[ -e \"$src\" ] || [ -L \"$src\" ] || continue; cp -an -- \"$src\" \"$d/\" || exit $?; done",
+            "sh", root.dir].concat(paths);
+        dropProc.running = true;
+    }
+
 
     function scan() {
         lsProc.running = false;
@@ -583,6 +605,7 @@ Scope {
     }
     Timer { id: rescan; interval: 400; onTriggered: root.scan() }
     Process { id: actionProc; onExited: code => root.finishAction(code) }
+    Process { id: dropProc; onExited: code => { if (code === 0) rescan.restart(); } }
     Timer { interval: 3000; repeat: true; running: root.enabled; triggeredOnStart: true; onTriggered: root.scan() }
 
     Variants {
@@ -643,6 +666,8 @@ Scope {
             property bool dragActive: false      // icons are being dragged
             property real dragDX: 0
             property real dragDY: 0
+            property real dragStartX: 0
+            property real dragStartY: 0
             property string dropPath: ""         // icon the dragged ones would land on
             property bool marqueeActive: false
             property real mqX0: 0
@@ -743,12 +768,23 @@ Scope {
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     property real px: 0
                     property real py: 0
+                    property bool nativeDragActive: false
+                    property string nativeDragUris: ""
                     property bool addMode: false          // Ctrl / Shift held at press
                     property var pressedItem: null        // icon the press landed on
                     property string collapseTo: ""        // click on one of several selected icons (no drag) → select just it
                     property var baseSel: ({})            // selection a marquee starts from
                     property bool moved: false
                     property bool ignoring: false         // the press landed on a widget: the desktop does nothing (no menu, no selection)
+
+                    Drag.active: ptr.nativeDragActive
+                    Drag.dragType: Drag.Automatic
+                    Drag.mimeData: ({ "text/uri-list": ptr.nativeDragUris })
+                    Drag.supportedActions: Qt.CopyAction | Qt.MoveAction
+                    Drag.onDragFinished: dropAction => {
+                        nativeDragActive = false;
+                        w.dragActive = false; w.dragDX = 0; w.dragDY = 0; w.dropPath = "";
+                    }
 
                     onPressed: mouse => {
                         ignoring = root.pointOverWidget(mouse.x, mouse.y, w.modelData.name);
@@ -758,7 +794,7 @@ Scope {
                             return;
                         }
                         keyScope.forceActiveFocus();
-                        px = mouse.x; py = mouse.y; moved = false; collapseTo = "";
+                        px = mouse.x; py = mouse.y; moved = false; collapseTo = ""; nativeDragActive = false; nativeDragUris = "";
                         addMode = (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0;
                         pressedItem = w.iconAt(mouse.x, mouse.y);
                         if (mouse.button === Qt.RightButton) {
@@ -784,10 +820,16 @@ Scope {
                         if (pressedItem) {
                             if (!root.isSelected(pressedItem.path)) return;   // Ctrl-click that deselected it: nothing to drag
                             w.dragActive = true;
+                            w.dragStartX = px; w.dragStartY = py;
                             w.dragDX = mouse.x - px;
                             w.dragDY = mouse.y - py;
                             var t = w.iconAt(mouse.x, mouse.y);
                             w.dropPath = (t && !root.isSelected(t.path) && (t.isDir || root.selectionCount === 1)) ? t.path : "";
+                            var paths = root.selectedItems().filter(function (it) { return !it.isTrash; }).map(function (it) { return root.fileUrl(it.path); });
+                            if (paths.length > 0) {
+                                nativeDragUris = paths.join("\r\n") + "\r\n";
+                                nativeDragActive = true;
+                            }
                         } else {
                             w.marqueeActive = true;
                             w.mqX0 = px; w.mqY0 = py; w.mqX1 = mouse.x; w.mqY1 = mouse.y;
@@ -799,16 +841,37 @@ Scope {
                     }
                     onReleased: mouse => {
                         if (ignoring) return;
-                        if (w.dragActive) w.finishDrag(mouse.x, mouse.y);
+                        if (w.dragActive && !nativeDragActive) w.finishDrag(mouse.x, mouse.y);
                         else if (!moved && collapseTo !== "") root.selectOnly(collapseTo);
                         w.marqueeActive = false;
                         pressedItem = null;
                     }
-                    onCanceled: { w.dragActive = false; w.dragDX = 0; w.dragDY = 0; w.dropPath = ""; w.marqueeActive = false; pressedItem = null; }
+                    onCanceled: {
+                        if (!nativeDragActive) { w.dragActive = false; w.dragDX = 0; w.dragDY = 0; w.dropPath = ""; }
+                        w.marqueeActive = false; pressedItem = null;
+                    }
                     onDoubleClicked: mouse => {
                         if (ignoring || mouse.button !== Qt.LeftButton || addMode) return;
                         var it = w.iconAt(mouse.x, mouse.y);
                         if (it) root.openItem(it);
+                    }
+                }
+
+                DropArea {
+                    anchors.fill: parent
+                    onEntered: drop => { if (drop.hasUrls) drop.accept(Qt.CopyAction); }
+                    onDropped: drop => {
+                        var paths = root.localPathsFromDrop(drop);
+                        if (paths.length === 0) return;
+                        drop.accept(Qt.CopyAction);
+                        var internal = paths.filter(function (path) {
+                            return root.items.some(function (it) { return it.path === path; });
+                        });
+                        if (internal.length === paths.length && w.dragActive) {
+                            w.dragDX = drop.x - w.dragStartX;
+                            w.dragDY = drop.y - w.dragStartY;
+                            w.finishDrag(drop.x, drop.y);
+                        } else root.copyDroppedFiles(paths);
                     }
                 }
 

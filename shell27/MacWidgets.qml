@@ -58,6 +58,7 @@ Scope {
     readonly property var styleNames: ({ liquid: "Liquid Glass", normal: "Normal", light: "Light", dark: "Dark" })
     readonly property var typeNames: ({ weather: "Weather", calendar: "Calendar", clock: "Clock", player: "Player", image: "Image", gif: "GIF", battery: "Battery", sysmon: "System Monitor", stocks: "Stocks & Crypto", reminders: "Reminders", screentime: "Screen Time" })
     readonly property var sizeNames: ({ small: "Small", medium: "Medium", large: "Large" })
+    function sizeOptions(type) { return type === "battery" ? ["small", "medium"] : ["small", "medium", "large"]; }
     function dims(size) {
         var b = size === "large" ? [375, 385] : (size === "medium" ? [395, 185] : [185, 185]);
         return [Math.round(b[0] * widgetScale), Math.round(b[1] * widgetScale)];
@@ -209,13 +210,14 @@ Scope {
         for (var i = 0; i < wmodel.count; i++) {
             if (wmodel.get(i).wid !== id) continue;
             var p = nearestFreeSlot(id, wmodel.get(i).wx, wmodel.get(i).wy, size);
-            if (!p) return;
+            if (!p) return false;
             wmodel.setProperty(i, "wsize", size);
             wmodel.setProperty(i, "wx", p[0]);
             wmodel.setProperty(i, "wy", p[1]);
-            break;
+            recount(); scheduleSave();
+            return true;
         }
-        recount(); scheduleSave();
+        return false;
     }
     function moveWidget(id, x, y) {
         for (var i = 0; i < wmodel.count; i++)
@@ -847,6 +849,8 @@ Scope {
                         readonly property real radiusPx: 28 * root.widgetScale * (wsize === "small" ? 168 / 158 : (wsize === "medium" ? 358 / 338 : 1))
                         width: baseDims[0]
                         height: baseDims[1]
+                        Behavior on width { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+                        Behavior on height { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
 
                         WidgetVisual {
                             id: visual
@@ -889,6 +893,85 @@ Scope {
                             onReleased: {
                                 root.moveWidget(ww.wid, ww.wx + ww.dragDX, ww.wy + ww.dragDY);
                                 ww.dragDX = 0; ww.dragDY = 0;
+                            }
+                        }
+                        Item {
+                            id: resizeGrip
+                            visible: root.editing
+                            z: 12
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.rightMargin: -10
+                            anchors.bottomMargin: -10
+                            width: 44
+                            height: 44
+
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: resizeArea.pressed ? 36 : 32
+                                height: width
+                                radius: width / 2
+                                color: "white"
+                                opacity: resizeArea.pressed ? 1 : (resizeArea.containsMouse ? 0.96 : 0.82)
+                                border.width: 1
+                                border.color: Qt.rgba(1, 1, 1, 0.85)
+                                Behavior on width { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                                Behavior on opacity { NumberAnimation { duration: 140 } }
+
+                                Item {
+                                    anchors.centerIn: parent
+                                    width: 22
+                                    height: 14
+                                    rotation: 45
+                                    Rectangle { x: 7; y: 6; width: 8; height: 2; radius: 1; color: Qt.rgba(0.12, 0.14, 0.17, 0.8) }
+                                    Rectangle { x: 1; y: 3.5; width: 7; height: 2; radius: 1; rotation: -45; color: Qt.rgba(0.12, 0.14, 0.17, 0.8) }
+                                    Rectangle { x: 1; y: 8.5; width: 7; height: 2; radius: 1; rotation: 45; color: Qt.rgba(0.12, 0.14, 0.17, 0.8) }
+                                    Rectangle { x: 14; y: 3.5; width: 7; height: 2; radius: 1; rotation: 45; color: Qt.rgba(0.12, 0.14, 0.17, 0.8) }
+                                    Rectangle { x: 14; y: 8.5; width: 7; height: 2; radius: 1; rotation: -45; color: Qt.rgba(0.12, 0.14, 0.17, 0.8) }
+                                }
+                            }
+
+                            MouseArea {
+                                id: resizeArea
+                                anchors.fill: parent
+                                cursorShape: Qt.SizeFDiagCursor
+                                property real pressX: 0
+                                property real pressY: 0
+                                property int startIndex: 0
+                                property int lastRequestedIndex: 0
+                                onPressed: mouse => {
+                                    var p = mapToItem(ui, mouse.x, mouse.y);
+                                    pressX = p.x;
+                                    pressY = p.y;
+                                    startIndex = root.sizeOptions(ww.wtype).indexOf(ww.wsize);
+                                    lastRequestedIndex = startIndex;
+                                }
+                                onPositionChanged: mouse => {
+                                    if (!pressed) return;
+                                    var p = mapToItem(ui, mouse.x, mouse.y);
+                                    var options = root.sizeOptions(ww.wtype);
+                                    var dx = p.x - pressX;
+                                    var dy = p.y - pressY;
+                                    var threshold = 24 * root.widgetScale;
+                                    var targetIndex = startIndex;
+                                    if (options.length === 2) {
+                                        if (dx >= threshold) targetIndex = 1;
+                                        else if (dx <= -threshold) targetIndex = 0;
+                                    } else if (startIndex === 0) {
+                                        if (dy >= threshold) targetIndex = 2;
+                                        else if (dx >= threshold) targetIndex = 1;
+                                    } else if (startIndex === 1) {
+                                        if (dy >= threshold) targetIndex = 2;
+                                        else if (dx <= -threshold) targetIndex = 0;
+                                    } else if (startIndex === 2) {
+                                        if (dx <= -threshold) targetIndex = 0;
+                                        else if (dy <= -threshold) targetIndex = 1;
+                                    }
+                                    if (targetIndex !== lastRequestedIndex) {
+                                        if (targetIndex !== options.indexOf(ww.wsize)) root.setSize(ww.wid, options[targetIndex]);
+                                        lastRequestedIndex = targetIndex;
+                                    }
+                                }
                             }
                         }
                         Rectangle {   // image or gif widget: choose another picture

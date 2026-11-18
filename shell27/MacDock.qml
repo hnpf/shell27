@@ -4345,8 +4345,8 @@ Scope {
                         t: pal
                         title: I18n.tr("Arrange widgets")
                         subtitle: wgPane.editing
-                                  ? I18n.tr("Editing is on: drag a widget to move it, use the \u2212 badge to remove it, then click Stop Editing.")
-                                  : I18n.tr("Drag a widget to move it (it snaps to the grid). Use the \u2212 badge on a widget to remove it.")
+                                  ? I18n.tr("Editing is on: drag widgets to move them, pull the bottom-right handle to resize, use the minus badge to remove them, then click Stop Editing.")
+                                  : I18n.tr("Click Edit on Desktop to move or resize widgets and remove them with the minus badge.")
                         SButton {
                             t: pal
                             text: wgPane.editing ? I18n.tr("Stop Editing") : I18n.tr("Edit on Desktop")
