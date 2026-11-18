@@ -5470,7 +5470,7 @@ Scope {
 
     // ═════════════ SETTINGS ═════════════
     // The settings window now lives in MacDock.qml (one window for the whole shell).
-    function openSettings(pane) { if (hub) hub.openSettings(pane || "menubar"); }
+    function openSettings(pane) { if (hub) hub.openSettings(pane); }
 
     // ═════════════ THE BAR ═════════════
     // ═════════════ NOTIFICATIONS ═════════════

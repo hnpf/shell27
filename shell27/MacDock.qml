@@ -1275,7 +1275,10 @@ Scope {
             fwdStack = f;
             cur = p;
         }
-        onCurChanged: flick.contentY = 0
+        onCurChanged: {
+            flick.contentY = 0;
+            if (root.settingsReady) root.lastPrefsPane = panes[cur].id;
+        }
 
         Shortcut { sequences: ["Escape", "Ctrl+W"]; onActivated: prefsWindow.visible = false }
 
@@ -6316,9 +6319,10 @@ Scope {
 
     // ── settings persistence (~/.config/macdock/settings.json) ──
     readonly property string settingsSig: [dockEnabled, settingsEnabled, desktopIcons, desktopTrash, desktopIconSize, desktopDoubleClickAction, desktopDoubleClickCommand, desktopWidgetsVisible, iconSize, magnification, magnificationEnabled, spacing, margin,
-        cornerRadius, darkMode, appearanceMode, screenCornerMode, glassOpacity, glassBlur, glassLiquid, glassControlsSplit, dockStyle, wallpaperPath, String(accent), textHighlightMode, fontFamily, hideMode, hideDelay, monitor,
+        cornerRadius, darkMode, appearanceMode, screenCornerMode, glassOpacity, glassBlur, glassLiquid, glassControlsSplit, dockStyle, wallpaperPath, String(accent), textHighlightMode, fontFamily, hideMode, hideDelay, monitor, lastPrefsPane,
         showTrash, showLabels, showIndicators, bounceOnLaunch, showThumbs, windowCapture, glassLive, iconTint, iconTintColor, iconTintStrength, screenTimeEnabled].join("|")
     property bool settingsReady: false
+    property string lastPrefsPane: "menubar"
     onSettingsSigChanged: if (settingsReady) saveTimer.restart()
     onShowTrashChanged: { rebuild(); if (showTrash) trashCheck(); }
     onShowThumbsChanged: rebuild()
@@ -6336,7 +6340,7 @@ Scope {
             showTrash: showTrash, showLabels: showLabels, showIndicators: showIndicators,
             bounceOnLaunch: bounceOnLaunch, showThumbs: showThumbs, windowCapture: windowCapture, glassLive: glassLive,
             iconTint: iconTint, iconTintColor: iconTintColor, iconTintStrength: iconTintStrength,
-            screenTimeEnabled: screenTimeEnabled
+            screenTimeEnabled: screenTimeEnabled, lastPrefsPane: lastPrefsPane
         };
         settingsStore.setText(JSON.stringify(o, null, 2));
     }
@@ -6345,7 +6349,7 @@ Scope {
         if (!o || typeof o !== "object") return;
         var keys = ["dockEnabled", "settingsEnabled", "desktopIcons", "desktopTrash", "desktopIconSize", "desktopDoubleClickAction", "desktopDoubleClickCommand", "desktopWidgetsVisible", "iconSize", "magnification", "magnificationEnabled", "spacing", "margin", "cornerRadius",
                     "darkMode", "appearanceMode", "screenCornerMode", "glassOpacity", "dockStyle", "wallpaperPath", "glassDebug", "glassRim", "glassGrain", "glassLiquid", "glassBlur", "glassControlsSplit", "accent", "textHighlightMode", "fontFamily", "hideMode", "hideDelay", "monitor",
-                    "showTrash", "showLabels", "showIndicators", "bounceOnLaunch", "showThumbs", "windowCapture", "glassLive", "iconTint", "iconTintColor", "iconTintStrength", "screenTimeEnabled"];
+                    "showTrash", "showLabels", "showIndicators", "bounceOnLaunch", "showThumbs", "windowCapture", "glassLive", "iconTint", "iconTintColor", "iconTintStrength", "screenTimeEnabled", "lastPrefsPane"];
         for (var i = 0; i < keys.length; i++) {
             if (o[keys[i]] === undefined) continue;
             try { root[keys[i]] = o[keys[i]]; } catch (err) { }
@@ -6358,6 +6362,9 @@ Scope {
         printErrors: false
         onLoaded: {
             try { root.applySettings(JSON.parse(text())); } catch (err) { }
+            for (var i = 0; i < prefsWindow.panes.length; i++) {
+                if (prefsWindow.panes[i].id === root.lastPrefsPane) { prefsWindow.cur = i; break; }
+            }
             root.settingsReady = true;
             if (root.dockStyle === "liquid") root.startGlass();
         }

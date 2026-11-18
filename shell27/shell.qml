@@ -473,8 +473,8 @@ ShellRoot {
     //   qs -c shell27 ipc call settings open
     IpcHandler {
         target: "settings"
-        function open(): void { macDock.openPrefs("general"); }
-        function toggle(): void { macDock.togglePrefs("general"); }
+        function open(): void { macDock.openPrefs(); }
+        function toggle(): void { macDock.togglePrefs(); }
         // qs -c shell27 ipc call settings pane wallpaper   (general, dock, menubar, appearance, wallpaper, behavior, apps, about)
         function pane(id: string): void { macDock.openPrefs(id); }
     }
