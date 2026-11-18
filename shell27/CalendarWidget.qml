@@ -274,8 +274,8 @@ Item {
     // land up to a pixel apart, which is what looked off-centre. (Open Runde's digits are exactly as tall as the gap
     // between its ascent and descent, so a text box centred on the circle also centres the digits.)
     readonly property var gridSpec: isSmall ? { x: 12, y: 32, w: 134, wdH: 16, rowH: 16.7, wdPx: 10.5, dayPx: 11.5, circ: 17 }
-                                  : (isMedium ? { x: 172, y: 11, w: 152, wdH: 18, rowH: 19.5, wdPx: 11, dayPx: 12.5, circ: 18 }
-                                              : { x: 15, y: 58, w: 308, wdH: 24, rowH: 44, wdPx: 13, dayPx: 19, circ: 33 })
+                                  : (isMedium ? { x: 178, y: 11, w: 152, wdH: 18, rowH: 19.5, wdPx: 11, dayPx: 12.5, circ: 18 }
+                                              : { x: 25, y: 58, w: 308, wdH: 24, rowH: 44, wdPx: 13, dayPx: 19, circ: 33 })
     Item {
         id: grid
         x: Math.round(w.gridSpec.x * w.s)
@@ -346,6 +346,14 @@ Item {
         font.family: Fonts.forWeight(Font.Bold, w.fam)
         font.pixelSize: 13 * w.s
         font.weight: Font.Bold
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            shadowColor: "#99000000"
+            shadowOpacity: 0.42
+            shadowBlur: 0.4
+            shadowVerticalOffset: 1
+        }
     }
 
     // ── medium: weekday, big day number and month on the left ──
@@ -366,6 +374,14 @@ Item {
         font.family: Fonts.forWeight(Font.Bold, w.fam)
         font.pixelSize: 13 * w.s
         font.weight: Font.Bold
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            shadowColor: "#99000000"
+            shadowOpacity: 0.42
+            shadowBlur: 0.4
+            shadowVerticalOffset: 1
+        }
     }
     Text {
         visible: w.isMedium
@@ -399,9 +415,17 @@ Item {
         Text {
             text: w.monthNames[w.cal.month]
             color: w.red
-            font.family: Fonts.forWeight(Font.DemiBold, w.fam)
+            font.family: Fonts.forWeight(Font.Bold, w.fam)
             font.pixelSize: 26 * w.s
-            font.weight: Font.DemiBold
+            font.weight: Font.Bold
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: "#99000000"
+                shadowOpacity: 0.42
+                shadowBlur: 0.4
+                shadowVerticalOffset: 1
+            }
         }
         Text {
             text: w.cal.year

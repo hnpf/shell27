@@ -61,7 +61,7 @@ Scope {
     readonly property var sizeNames: ({ small: "Small", medium: "Medium", large: "Large" })
     function sizeOptions(type) { return type === "battery" ? ["small", "medium"] : ["small", "medium", "large"]; }
     function dims(size) {
-        var b = size === "large" ? [375, 385] : (size === "medium" ? [395, 185] : [185, 185]);
+        var b = size === "large" ? [395, 385] : (size === "medium" ? [395, 185] : [185, 185]);
         return [Math.round(b[0] * widgetScale), Math.round(b[1] * widgetScale)];
     }
     // Size of the Player's contents (art, text, buttons) relative to the original design. The card itself fills the
