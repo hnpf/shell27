@@ -92,12 +92,11 @@ ShellRoot {
         readonly property bool windowCapture: macDock.windowCapture      // Dock Preferences -> "Live window capture" (saved in macdock/settings.json)
         property bool churn: false
         readonly property bool captureHold: churn || !windowCapture || macBar.gaming
-        // Liquid Glass: only stage 1, and only while windows open / close. Live capture pauses (the glass keeps its last frame, the capture
-        // source stays attached, so nothing goes blank), then resumes. Not tied to the previews switch, never cut.
-        // The glass no longer pauses while windows open / close (that made it lazy when a bunch of tiled terminals were opened / closed:
-        // every open or close froze the whole backdrop for 350 ms, and a series of them kept it frozen). Only a close the shell itself is about
-        // to send (preClose) and gaming pause it. SHELL27_CHURNPAUSE=1 (environment) brings the old pause back.
-        readonly property bool glassHold: (churn && Quickshell.env("SHELL27_CHURNPAUSE") !== "0") || storm || preClose || macBar.gaming
+        property bool closePause: false
+        readonly property bool capturePause: closePause || (churn && Quickshell.env("SHELL27_CHURNPAUSE") === "1")
+        // Keep capture sources attached, but stop requesting frames while Hyprland retires and re-lays out a closing window.
+        // SHELL27_CHURNPAUSE=1 also pauses on opens; close-only is the default to avoid freezing glass on every app launch.
+        readonly property bool glassHold: capturePause || storm || preClose || macBar.gaming
         property bool captureCut: false
         // ── capture storm ──
         // Windows opening / closing / re-tiling make Hyprland fail the frames that are in flight, and every failed capture is a context that is
@@ -111,13 +110,11 @@ ShellRoot {
             }
         }
         Timer { id: stormEnd; interval: 1200; onTriggered: sharedHub.storm = false }
-        // Dock previews no longer pause as a whole while windows open / close (that froze every preview for ~1.5 s):
-        // only the CLOSING window's own preview stops its live capture, the moment Hyprland announces the close
-        // (before the toplevel is destroyed, so no frame is ever aborted in flight). Everything else keeps running.
-        // The menu bar's glass (Control Center, menus, popovers) is the part the person is LOOKING at while windows tile, so it only sits
-        // out for a close the shell itself sends, a capture storm, and gaming. Its streams exist only while a popover is open.
-        readonly property bool barHold: storm || preClose || macBar.gaming || (churn && Quickshell.env("SHELL27_CHURNPAUSE") === "1")
-        readonly property bool previewHold: !windowCapture || storm || preClose || macBar.gaming
+        // On close, pause the Dock previews and menu-bar glass briefly while Hyprland retires and re-lays out the window.
+        // Sources stay attached during this pause, so in-flight frames can finish; the per-window closing marker also hides its own preview.
+        // App opens only pause captures when SHELL27_CHURNPAUSE=1; this keeps glass responsive during normal launches.
+        readonly property bool barHold: capturePause || storm || preClose || macBar.gaming
+        readonly property bool previewHold: !windowCapture || capturePause || storm || preClose || macBar.gaming
         property var closingWins: ({})
         onCaptureHoldChanged: { if (captureHold) cutDelay.restart(); else { cutDelay.stop(); captureCut = false; } }
         Timer { id: cutDelay; interval: 500; onTriggered: sharedHub.captureCut = true }
@@ -125,6 +122,7 @@ ShellRoot {
         // was 1.2 s: the glass froze for over a second after every window that opened or closed. Closing windows are now handled
         // where the crash really was (SafeCapture keeps a capture alive until its in-flight frame is done), so the pause can be short.
         Timer { id: churnRelease; interval: 350; onTriggered: sharedHub.churn = false }
+        Timer { id: closePauseRelease; interval: 350; onTriggered: sharedHub.closePause = false }
 
         // ── closing on purpose: go quiet first, then close ──
         // When the person clicks Close / Quit, every live capture stops for ~150 ms BEFORE the close request is sent, so no frame is
@@ -185,6 +183,8 @@ ShellRoot {
             function onRawEvent(event) {
                 if (event.name === "openwindow" || event.name === "closewindow") { sharedHub.churn = true; churnRelease.restart(); }
                 if (event.name === "closewindow") {
+                    sharedHub.closePause = true;
+                    closePauseRelease.restart();
                     var cw = {}, a = String(event.data).replace(/^0x/, "");
                     for (var k in sharedHub.closingWins) cw[k] = true;
                     cw[a] = true;

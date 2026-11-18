@@ -89,6 +89,7 @@ Scope {
     readonly property var aiSettings: hub ? hub.aiSettings : null
     // true while a screen recording / screen share runs: the glass's live window captures sit out (see shell.qml: hub.captureQuiet)
     readonly property bool captureQuiet: hub ? hub.captureQuiet : recording
+    readonly property bool captureHeld: hub ? hub.barHold : false
     // windows opening / closing: the glass's live captures pause (it keeps its last frame; the source stays attached) - see shell.qml: hub.glassHold
     // ───────────── CONFIG (all persisted to settings.json) ─────────────
     property bool barEnabled: true           // the menu bar strip itself

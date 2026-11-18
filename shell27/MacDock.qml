@@ -7604,7 +7604,7 @@ Scope {
                                     // Real-time glass ON: a window that reaches the Dock STREAMS (live: every frame the compositor renders), windows
                                     // elsewhere refresh at 30 Hz-ish single shots (5 Hz when far away) so they are fresh the moment they slide under the Dock.
                                     // Real-time glass OFF: the old behaviour (15 fps polling, paused while windows open / close).
-                                    readonly property bool quiet: !!root.hub && root.hub.preClose          // a close was just requested / captures are failing in a burst: nothing in flight, please
+                                    readonly property bool quiet: !!root.hub && (root.hub.preClose || root.hub.capturePause)
                                     readonly property bool canRun: !quiet && !ui.menuOpen && (root.glassRT
                                         ? !(root.hub && root.hub.captureQuiet) && !(root.bar && root.bar.gaming) && !gw.gone && !gw.closing
                                         : (!root.glassHold && !ui.tucked))
