@@ -13,6 +13,7 @@ Item {
     property string wsrc: ""             // image widget: path of the picture
     property real sx: 0                  // position on the screen (the glass uses it to find the wallpaper behind the widget)
     property real sy: 0
+    property bool dragging: false
     property string sname: ""            // screen name
     property real sw: 1920
     property real sh: 1080
@@ -230,6 +231,7 @@ Item {
                 size: wsize
                 fam: host.fontFamily
                 screenX: v.sx; screenY: v.sy
+                dragging: v.dragging
                 glassReady: host.glassState === "ready"
                 shaderUrl: "file://" + host.glassShaderOut
                 wallUrl: host.fileUrl(host.wallpaperFor(v.sname))
@@ -255,6 +257,7 @@ Item {
                 size: wsize
                 fam: host.fontFamily
                 screenX: v.sx; screenY: v.sy
+                dragging: v.dragging
                 glassReady: host.glassState === "ready"
                 shaderUrl: "file://" + host.glassShaderOut
                 wallUrl: host.fileUrl(host.wallpaperFor(v.sname))

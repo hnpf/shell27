@@ -171,8 +171,8 @@ Scope {
         }
         return out;
     }
-    function collidesWithWidget(x, y, screenName) {
-        var rects = widgetRects(screenName);
+    function collidesWithWidget(x, y, screenName, rects) {
+        if (rects === undefined) rects = widgetRects(screenName);
         for (var i = 0; i < rects.length; i++)
             if (rectanglesOverlap(x, y, cellW, cellH, rects[i], 8)) return true;
         return false;
@@ -241,14 +241,20 @@ Scope {
                 cells.push({ x: left + col * cellW, y: gridTop + row * cellH });
         return cells;
     }
-    function isCellFree(cell, screenName, screenW, screenH, occupied) {
-        if (collidesWithWidget(cell.x, cell.y, screenName) || collidesWithDock(cell.x, cell.y, screenName, screenW, screenH)) return false;
-        for (var i = 0; i < occupied.length; i++)
-            if (rectanglesOverlap(cell.x, cell.y, cellW, cellH, occupied[i], 0)) return false;
-        return true;
+    function availableGridCells(screenName, screenW, screenH) {
+        var cells = gridCells(screenW, screenH), widgets = widgetRects(screenName), available = [];
+        for (var i = 0; i < cells.length; i++) {
+            var cell = cells[i];
+            if (!collidesWithWidget(cell.x, cell.y, screenName, widgets)
+                    && !collidesWithDock(cell.x, cell.y, screenName, screenW, screenH)) available.push(cell);
+        }
+        return available;
+    }
+    function isCellFree(cell, occupied) {
+        return occupied[cell.x + "," + cell.y] !== true;
     }
     function computeLayout(screenName, screenW, screenH) {
-        var cells = gridCells(screenW, screenH), result = ({}), occupied = [];
+        var cells = availableGridCells(screenName, screenW, screenH), result = ({}), occupied = ({});
         var legacyAllowed = Quickshell.screens.length > 0 && screenName === Quickshell.screens[0].name;
         for (var i = 0; i < displayItems.length; i++) {
             var name = displayItems[i].name, wanted = places[positionKey(screenName, name)];
@@ -256,26 +262,26 @@ Scope {
             var best = null, bestDistance = Infinity;
             for (var j = 0; j < cells.length; j++) {
                 var c = cells[j];
-                if (!isCellFree(c, screenName, screenW, screenH, occupied)) continue;
+                if (!isCellFree(c, occupied)) continue;
                 if (!wanted) { best = c; break; }
                 var wantedX = Number(wanted.x) < 0 ? screenW + Number(wanted.x) : Number(wanted.x);
                 var dx = c.x - wantedX, dy = c.y - Number(wanted.y), dist = dx * dx + dy * dy;
                 if (dist < bestDistance) { bestDistance = dist; best = c; }
             }
             result[name] = best;
-            if (best) occupied.push({ x: best.x, y: best.y, width: cellW, height: cellH });
+            if (best) occupied[best.x + "," + best.y] = true;
         }
         return result;
     }
     function nearestFreePlace(name, screenName, x, y, screenW, screenH, layout) {
-        var cells = gridCells(screenW, screenH), occupied = [], best = null, bestDistance = Infinity;
+        var cells = availableGridCells(screenName, screenW, screenH), occupied = ({}), best = null, bestDistance = Infinity;
         for (var key in layout) {
             var p = layout[key];
-            if (key !== name && p) occupied.push({ x: p.x, y: p.y, width: cellW, height: cellH });
+            if (key !== name && p) occupied[p.x + "," + p.y] = true;
         }
         for (var i = 0; i < cells.length; i++) {
             var c = cells[i];
-            if (!isCellFree(c, screenName, screenW, screenH, occupied)) continue;
+            if (!isCellFree(c, occupied)) continue;
             var dx = c.x - x, dy = c.y - y, dist = dx * dx + dy * dy;
             if (dist < bestDistance) { bestDistance = dist; best = c; }
         }
@@ -614,10 +620,10 @@ Scope {
             id: w
             required property var modelData
             screen: modelData
-            property int widgetRevision: root.hub && root.hub.widgets ? root.hub.widgets.rev : 0
+            property int widgetLayoutRevision: root.hub && root.hub.widgets ? root.hub.widgets.layoutRev : 0
             property real widgetScale: root.hub && root.hub.widgets ? root.hub.widgets.widgetScale : 1
             property var layoutMap: {
-                var _revision = widgetRevision, _scale = widgetScale, _items = root.displayItems.length, _places = root.places;
+                var _revision = widgetLayoutRevision, _scale = widgetScale, _items = root.displayItems.length, _places = root.places;
                 return root.computeLayout(modelData.name, width, height);
             }
             anchors { top: true; bottom: true; left: true; right: true }

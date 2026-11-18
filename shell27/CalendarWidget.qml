@@ -132,8 +132,13 @@ Item {
             // They only stream while an animated wallpaper plays inside the glass, or for a moment while the widget is moved / resized.
             property bool moving: false
             readonly property bool streaming: w.wallVideo !== "" || moving
-            readonly property string capSig: [w.wallUrl, w.screenX, w.screenY, w.screenW, w.screenH, w.width, w.height, w.glassBlur, w.shaderUrl].join("|")
+            readonly property string capSig: [w.wallUrl, w.screenW, w.screenH, w.width, w.height, w.glassBlur, w.shaderUrl].join("|")
             onCapSigChanged: { moving = true; settle.restart(); }
+            Connections {
+                target: w
+                function onScreenXChanged() { gl.recap(); }
+                function onScreenYChanged() { gl.recap(); }
+            }
             property int capStep: 0
             function recap() { capStep = 0; capTimer.restart(); }
             Timer { id: settle; interval: 450; onTriggered: { gl.moving = false; gl.recap(); } }

@@ -16,6 +16,7 @@ Item {
     property real screenX: x
     property real screenY: y
     property bool editing: false
+    property bool dragging: false
 
     // Liquid Glass properties
     property bool glassReady: false
@@ -116,7 +117,7 @@ Item {
             property bool updating: true
             Timer {
                 id: settleTimer
-                interval: 350
+                interval: 48
                 onTriggered: gl.updating = false
             }
             function triggerUpdate() {
@@ -125,8 +126,9 @@ Item {
             }
             Connections {
                 target: w
-                function onScreenXChanged() { gl.triggerUpdate(); }
-                function onScreenYChanged() { gl.triggerUpdate(); }
+                function onScreenXChanged() { if (!w.dragging) gl.triggerUpdate(); }
+                function onScreenYChanged() { if (!w.dragging) gl.triggerUpdate(); }
+                function onDraggingChanged() { if (!w.dragging) gl.triggerUpdate(); }
                 function onWallUrlChanged() { gl.triggerUpdate(); }
                 function onGlassBlurChanged() { gl.triggerUpdate(); }
                 function onGlassLiquidChanged() { gl.triggerUpdate(); }
@@ -158,7 +160,7 @@ Item {
                 id: bsrc
                 sourceItem: backdrop
                 hideSource: true
-                live: w.editing || gl.updating
+                live: gl.updating
                 visible: false
                 textureSize: Qt.size(Math.max(1, Math.round(backdrop.width * gl.ds)), Math.max(1, Math.round(backdrop.height * gl.ds)))
             }

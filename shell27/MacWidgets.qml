@@ -54,6 +54,7 @@ Scope {
     readonly property int widgetCount: wmodel.count
     property bool anyLiquid: false
     property int rev: 0                    // bumped on every change to the list, so Settings bindings can re-evaluate count()
+    property int layoutRev: 0
 
     readonly property var styleNames: ({ liquid: "Liquid Glass", normal: "Normal", light: "Light", dark: "Dark" })
     readonly property var typeNames: ({ weather: "Weather", calendar: "Calendar", clock: "Clock", player: "Player", image: "Image", gif: "GIF", battery: "Battery", sysmon: "System Monitor", stocks: "Stocks & Crypto", reminders: "Reminders", screentime: "Screen Time" })
@@ -228,7 +229,8 @@ Scope {
                 wmodel.setProperty(i, "wy", p[1]);
                 break;
             }
-        recount(); scheduleSave();
+        layoutRev++;
+        scheduleSave();
     }
 
     // ───────────── image widgets ─────────────
@@ -843,8 +845,19 @@ Scope {
 
                         property real dragDX: 0
                         property real dragDY: 0
+                        property real pressScreenX: wx
+                        property real pressScreenY: wy
+                        property bool settling: false
                         x: wx + dragDX
                         y: wy + dragDY
+                        Behavior on x {
+                            enabled: ww.settling
+                            NumberAnimation { duration: 280; easing.type: Easing.OutCubic }
+                        }
+                        Behavior on y {
+                            enabled: ww.settling
+                            NumberAnimation { duration: 280; easing.type: Easing.OutCubic }
+                        }
                         readonly property var baseDims: root.dims(wsize)
                         readonly property real radiusPx: 28 * root.widgetScale * (wsize === "small" ? 168 / 158 : (wsize === "medium" ? 358 / 338 : 1))
                         width: baseDims[0]
@@ -857,13 +870,16 @@ Scope {
                             anchors.fill: parent
                             host: root
                             wtype: ww.wtype; wstyle: ww.wstyle; wsize: ww.wsize; wmode: ww.wmode; wsrc: ww.wsrc
-                            sx: ww.x; sy: ww.y
+                            sx: dragArea.pressed || ww.settling ? ww.pressScreenX : ww.x
+                            sy: dragArea.pressed || ww.settling ? ww.pressScreenY : ww.y
+                            dragging: dragArea.pressed || ww.settling
                             sname: win.modelData.name; sw: win.modelData.width; sh: win.modelData.height
                         }
 
                         scale: dragArea.pressed ? 1.03 : 1.0
                         Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-                        z: dragArea.pressed ? 10 : 1
+                        z: dragArea.pressed || ww.settling ? 10 : 1
+                        Timer { id: dropSettle; interval: 280; onTriggered: ww.settling = false }
 
                         // edit mode: outline + drag + remove
                         Rectangle {
@@ -881,7 +897,11 @@ Scope {
                             cursorShape: root.editing ? (pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor) : Qt.ArrowCursor
                             property real px: 0
                             property real py: 0
-                            onPressed: mouse => { var p = mapToItem(ui, mouse.x, mouse.y); px = p.x; py = p.y; }
+                            onPressed: mouse => {
+                                var p = mapToItem(ui, mouse.x, mouse.y);
+                                px = p.x; py = p.y;
+                                ww.pressScreenX = ww.x; ww.pressScreenY = ww.y;
+                            }
                             onPositionChanged: mouse => {
                                 if (!pressed) return;
                                 var p = mapToItem(ui, mouse.x, mouse.y);
@@ -891,8 +911,10 @@ Scope {
                                 ww.dragDY = ny - ww.wy;
                             }
                             onReleased: {
+                                ww.settling = true;
                                 root.moveWidget(ww.wid, ww.wx + ww.dragDX, ww.wy + ww.dragDY);
                                 ww.dragDX = 0; ww.dragDY = 0;
+                                dropSettle.restart();
                             }
                         }
                         Item {

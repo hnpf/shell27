@@ -144,7 +144,7 @@ Item {
         }
     }
 
-    readonly property real tint: Math.min(0.92, dark ? 0.25 + glassOpacity * 0.8 : 0.45 + glassOpacity * 0.9)
+	readonly property real tint: Math.min(0.92, dark ? 0.06 + glassOpacity * 0.5 : 0.45 + glassOpacity * 0.9)
 
     // Liquid Glass backdrop
     Loader {
@@ -156,8 +156,13 @@ Item {
             readonly property real padPx: 10
             property bool moving: false
             readonly property bool streaming: w.wallVideo !== "" || moving
-            readonly property string captureSignature: [w.wallUrl, w.wallVideo, w.screenX, w.screenY, w.screenW, w.screenH, w.width, w.height, w.glassBlur, w.shaderUrl].join("|")
+            readonly property string captureSignature: [w.wallUrl, w.wallVideo, w.screenW, w.screenH, w.width, w.height, w.glassBlur, w.shaderUrl].join("|")
             onCaptureSignatureChanged: { moving = true; settle.restart(); }
+            Connections {
+                target: w
+                function onScreenXChanged() { gl.recapture(); }
+                function onScreenYChanged() { gl.recapture(); }
+            }
             property int captureStep: 0
             function recapture() { captureStep = 0; captureTimer.restart(); }
             Timer { id: settle; interval: 450; onTriggered: { gl.moving = false; gl.recapture(); } }
