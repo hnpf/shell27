@@ -6619,6 +6619,21 @@ Scope {
                                 required property int index
                                 property alias cap: sv
                                 x: wx; y: wy; width: ww; height: wh; z: wz
+                                readonly property real cornerRadius: Math.min(18, width / 2, height / 2)
+                                layer.enabled: true
+                                layer.effect: MultiEffect {
+                                    maskEnabled: true
+                                    maskSource: windowMask
+                                    autoPaddingEnabled: false
+                                }
+                                Rectangle {
+                                    id: windowMask
+                                    anchors.fill: parent
+                                    radius: gw.cornerRadius
+                                    color: "white"
+                                    visible: false
+                                    layer.enabled: true
+                                }
                                 // a window that left (closed, other workspace) leaves the backdrop at once (its kept frame must not linger)
                                 visible: !gone
                                 // staggered start: when many windows appear in the same instant (a workspace switch, a batch of apps) their captures
