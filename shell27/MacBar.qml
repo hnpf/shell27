@@ -3607,6 +3607,25 @@ Scope {
         if (launcher !== "") sh(launcher);
         else spotRequest++;                       // every bar window listens and the focused screen opens Spotlight
     }
+    property int showDesktopRestoreWorkspace: -1
+    property int showDesktopTargetWorkspace: -1
+    property bool showDesktopAwaitingWorkspace: false
+    function toggleShowDesktop() {
+        var workspace = Hyprland.focusedWorkspace;
+        if (showDesktopRestoreWorkspace > 0 && workspace && workspace.id === showDesktopTargetWorkspace) {
+            var restore = showDesktopRestoreWorkspace;
+            showDesktopRestoreWorkspace = -1;
+            showDesktopTargetWorkspace = -1;
+            hlWorkspace(String(restore));
+            return;
+        }
+        if (!workspace || workspace.id <= 0) return;
+        if (workspace.toplevels && workspace.toplevels.values.length === 0) return;
+        showDesktopRestoreWorkspace = workspace.id;
+        showDesktopTargetWorkspace = -1;
+        showDesktopAwaitingWorkspace = true;
+        hlWorkspace("empty");
+    }
     function spotOpen(mode) { if (!spotlightEnabled) return; spotWant = mode; spotRequest++; }
     // qs -c shell27 ipc call controlcenter toggle | open | close   (works with the menu bar switched off too)
     signal ccRequest(bool open)
@@ -5885,6 +5904,13 @@ Scope {
         target: Hyprland
         function onRawEvent(event) {
             var n = event.name;
+            if (n === "workspacev2" && root.showDesktopAwaitingWorkspace) {
+                var targetId = parseInt(String(event.data).split(",")[0], 10);
+                if (targetId > 0) {
+                    root.showDesktopTargetWorkspace = targetId;
+                    root.showDesktopAwaitingWorkspace = false;
+                }
+            }
             if (n === "createworkspacev2" || n === "destroyworkspacev2" || n === "workspacev2" || n === "moveworkspacev2" || n === "renameworkspace")
                 Hyprland.refreshWorkspaces();
         }

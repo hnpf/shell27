@@ -771,7 +771,8 @@ Scope {
 
     // ───────────── the desktop layer ─────────────
     Variants {
-        model: (root.ready && Quickshell.screens.length > 0 && (root.widgetCount > 0 || root.editing)) ? [Quickshell.screens[0]] : []
+        model: (root.ready && (!root.dock || root.dock.desktopWidgetsVisible !== false)
+            && Quickshell.screens.length > 0 && (root.widgetCount > 0 || root.editing)) ? [Quickshell.screens[0]] : []
 
         PanelWindow {
             id: win
@@ -783,7 +784,7 @@ Scope {
 
             WlrLayershell.namespace: "macwidgets"
             WlrLayershell.layer: WlrLayer.Bottom
-            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            WlrLayershell.keyboardFocus: root.editing ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
             // click-through unless editing; Player widgets and Stocks swap buttons take clicks
             mask: Region {
@@ -795,6 +796,21 @@ Scope {
             Item {
                 id: ui
                 anchors.fill: parent
+                focus: root.editing
+                Keys.onEscapePressed: event => {
+                    if (!root.editing) return;
+                    root.editing = false;
+                    event.accepted = true;
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: root.editing
+                    z: -1
+                    onDoubleClicked: mouse => {
+                        if (mouse.button === Qt.LeftButton) root.editing = false;
+                    }
+                }
 
                 Item { id: hit0; x: root.pr(0, 0); y: root.pr(0, 1); width: root.pr(0, 2); height: root.pr(0, 3) }
                 Item { id: hit1; x: root.pr(1, 0); y: root.pr(1, 1); width: root.pr(1, 2); height: root.pr(1, 3) }
@@ -897,6 +913,9 @@ Scope {
                             cursorShape: root.editing ? (pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor) : Qt.ArrowCursor
                             property real px: 0
                             property real py: 0
+                            onDoubleClicked: mouse => {
+                                if (root.editing && mouse.button === Qt.LeftButton) root.editing = false;
+                            }
                             onPressed: mouse => {
                                 var p = mapToItem(ui, mouse.x, mouse.y);
                                 px = p.x; py = p.y;

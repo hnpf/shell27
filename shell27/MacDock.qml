@@ -53,6 +53,9 @@ Scope {
     property bool desktopIcons: true
     property bool desktopTrash: false
     property int desktopIconSize: 48
+    property string desktopDoubleClickAction: "lock"
+    property string desktopDoubleClickCommand: ""
+    property bool desktopWidgetsVisible: true
     property var bar: hub ? hub.bar : null
     Connections {
         target: root.bar
@@ -4258,19 +4261,9 @@ Scope {
             Column {
                 spacing: 18
                 Loader { width: parent.width; sourceComponent: paneDock }
-                SLabel { t: pal; header: true; text: I18n.tr("Desktop & Stage Manager") }
+                SLabel { t: pal; header: true; text: I18n.tr("Desktop") }
                 SCard {
                     t: pal
-                    SRow {
-                        t: pal
-                        title: I18n.tr("Stage Manager")
-                        subtitle: I18n.tr("Show a 3D perspective stack of recent background windows on the left edge of your screen.")
-                        SSwitch {
-                            t: pal
-                            checked: root.bar ? root.bar.stageManager : true
-                            onToggled: v => { if (root.bar) root.bar.stageManager = v; }
-                        }
-                    }
                     SRow {
                         t: pal
                         title: I18n.tr("Desktop Icons")
@@ -4293,6 +4286,60 @@ Scope {
                             leftLabel: I18n.tr("Small"); rightLabel: I18n.tr("Large")
                             resetValue: 48
                             onMoved: v => root.desktopIconSize = Math.round(v / 2) * 2
+                        }
+                    }
+                }
+                SLabel { t: pal; header: true; text: I18n.tr("Double-click") }
+                SCard {
+                    t: pal
+                    SRow {
+                        t: pal
+                        title: I18n.tr("Empty desktop")
+                        subtitle: I18n.tr("Double-clicking an icon still opens it.")
+                        SPopUp {
+                            t: pal
+                            model: [I18n.tr("Lock Screen"), I18n.tr("Edit Widgets"), I18n.tr("Toggle Widgets"),
+                                    I18n.tr("Show Desktop"), I18n.tr("Open Launcher"), I18n.tr("Create Folder"),
+                                    I18n.tr("Choose Each Time"), I18n.tr("Custom Command"), I18n.tr("Off")]
+                            current: Math.max(0, ["lock", "edit", "toggle-widgets", "show-desktop", "launcher", "new-folder", "choose", "custom", "off"].indexOf(root.desktopDoubleClickAction))
+                            onPicked: i => root.desktopDoubleClickAction = ["lock", "edit", "toggle-widgets", "show-desktop", "launcher", "new-folder", "choose", "custom", "off"][i]
+                        }
+                    }
+                    SRow {
+                        visible: root.desktopDoubleClickAction === "custom"
+                        t: pal
+                        title: I18n.tr("Command")
+                        subtitle: I18n.tr("Runs as your user when you double-click the empty desktop.")
+                        TextField {
+                            width: 250; height: 36
+                            text: root.desktopDoubleClickCommand
+                            placeholderText: I18n.tr("For example: kitty")
+                            placeholderTextColor: pal.text2
+                            color: pal.text
+                            font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 13
+                            leftPadding: 10; rightPadding: 10
+                            selectByMouse: true
+                            onTextEdited: root.desktopDoubleClickCommand = text
+                            background: Rectangle {
+                                radius: 7
+                                color: pal.dark ? "#303033" : "#FFFFFF"
+                                border.width: 1
+                                border.color: parent.activeFocus ? pal.accent : pal.cardBorder
+                            }
+                        }
+                    }
+                }
+                SLabel { t: pal; header: true; text: I18n.tr("Stage Manager") }
+                SCard {
+                    t: pal
+                    SRow {
+                        t: pal
+                        title: I18n.tr("Show Stage Manager")
+                        subtitle: I18n.tr("Show a 3D perspective stack of recent background windows on the left edge of your screen.")
+                        SSwitch {
+                            t: pal
+                            checked: root.bar ? root.bar.stageManager : true
+                            onToggled: v => { if (root.bar) root.bar.stageManager = v; }
                         }
                     }
                 }
@@ -6268,7 +6315,7 @@ Scope {
     }
 
     // ── settings persistence (~/.config/macdock/settings.json) ──
-    readonly property string settingsSig: [dockEnabled, settingsEnabled, desktopIcons, desktopTrash, desktopIconSize, iconSize, magnification, magnificationEnabled, spacing, margin,
+    readonly property string settingsSig: [dockEnabled, settingsEnabled, desktopIcons, desktopTrash, desktopIconSize, desktopDoubleClickAction, desktopDoubleClickCommand, desktopWidgetsVisible, iconSize, magnification, magnificationEnabled, spacing, margin,
         cornerRadius, darkMode, appearanceMode, screenCornerMode, glassOpacity, glassBlur, glassLiquid, glassControlsSplit, dockStyle, wallpaperPath, String(accent), textHighlightMode, fontFamily, hideMode, hideDelay, monitor,
         showTrash, showLabels, showIndicators, bounceOnLaunch, showThumbs, windowCapture, glassLive, iconTint, iconTintColor, iconTintStrength, screenTimeEnabled].join("|")
     property bool settingsReady: false
@@ -6279,7 +6326,7 @@ Scope {
 
     function saveSettings() {
         var o = {
-            dockEnabled: dockEnabled, settingsEnabled: settingsEnabled, desktopIcons: desktopIcons, desktopTrash: desktopTrash, desktopIconSize: desktopIconSize, iconSize: iconSize, magnification: magnification, magnificationEnabled: magnificationEnabled,
+            dockEnabled: dockEnabled, settingsEnabled: settingsEnabled, desktopIcons: desktopIcons, desktopTrash: desktopTrash, desktopIconSize: desktopIconSize, desktopDoubleClickAction: desktopDoubleClickAction, desktopDoubleClickCommand: desktopDoubleClickCommand, desktopWidgetsVisible: desktopWidgetsVisible, iconSize: iconSize, magnification: magnification, magnificationEnabled: magnificationEnabled,
             spacing: spacing, margin: margin, cornerRadius: cornerRadius,
             darkMode: darkMode, appearanceMode: appearanceMode, screenCornerMode: screenCornerMode, glassOpacity: glassOpacity, dockStyle: dockStyle, wallpaperPath: wallpaperPath, glassDebug: glassDebug,
             glassRim: glassRim, glassGrain: glassGrain, glassLiquid: glassLiquid, glassBlur: glassBlur, glassControlsSplit: glassControlsSplit,
@@ -6296,7 +6343,7 @@ Scope {
 
     function applySettings(o) {
         if (!o || typeof o !== "object") return;
-        var keys = ["dockEnabled", "settingsEnabled", "desktopIcons", "desktopTrash", "desktopIconSize", "iconSize", "magnification", "magnificationEnabled", "spacing", "margin", "cornerRadius",
+        var keys = ["dockEnabled", "settingsEnabled", "desktopIcons", "desktopTrash", "desktopIconSize", "desktopDoubleClickAction", "desktopDoubleClickCommand", "desktopWidgetsVisible", "iconSize", "magnification", "magnificationEnabled", "spacing", "margin", "cornerRadius",
                     "darkMode", "appearanceMode", "screenCornerMode", "glassOpacity", "dockStyle", "wallpaperPath", "glassDebug", "glassRim", "glassGrain", "glassLiquid", "glassBlur", "glassControlsSplit", "accent", "textHighlightMode", "fontFamily", "hideMode", "hideDelay", "monitor",
                     "showTrash", "showLabels", "showIndicators", "bounceOnLaunch", "showThumbs", "windowCapture", "glassLive", "iconTint", "iconTintColor", "iconTintStrength", "screenTimeEnabled"];
         for (var i = 0; i < keys.length; i++) {

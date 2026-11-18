@@ -585,6 +585,18 @@ Scope {
         while (items.some(function (it) { return it.name === name; })) name = "untitled folder " + suffix++;
         performAction({ type: "create", path: root.dir + "/" + name });
     }
+    function runDoubleClickAction(action) {
+        if (action === "lock" && bar && bar.lockScreen) bar.lockScreen();
+        else if (action === "edit" && hub && hub.widgets) hub.widgets.editing = true;
+        else if (action === "toggle-widgets" && dock) {
+            if (hub && hub.widgets) hub.widgets.editing = false;
+            dock.desktopWidgetsVisible = !dock.desktopWidgetsVisible;
+        } else if (action === "show-desktop" && bar && bar.toggleShowDesktop) bar.toggleShowDesktop();
+        else if (action === "launcher" && bar && bar.search) bar.search();
+        else if (action === "new-folder") newFolder();
+        else if (action === "custom" && dock && dock.desktopDoubleClickCommand.trim() !== "")
+            Quickshell.execDetached(["sh", "-c", dock.desktopDoubleClickCommand]);
+    }
     // dropping one icon onto another makes a folder holding both, the way macOS does
     function combine(aPath, bPath) {
         Quickshell.execDetached(["sh", "-c",
@@ -860,6 +872,8 @@ Scope {
                         if (ignoring || mouse.button !== Qt.LeftButton || addMode) return;
                         var it = w.iconAt(mouse.x, mouse.y);
                         if (it) root.openItem(it);
+                        else if (root.dock && root.dock.desktopDoubleClickAction === "choose") dctx.show({ actionChooser: true }, mouse.x, mouse.y);
+                        else if (root.dock) root.runDoubleClickAction(root.dock.desktopDoubleClickAction);
                     }
                 }
 
@@ -996,6 +1010,15 @@ Scope {
                     property var menuModel: []
                     function buildModel(it) {
                         var a = dctx.app, hasDir = a.selectedItems().some(function (x) { return x.isDir; });
+                        if (it && it.actionChooser) {
+                            var actions = [
+                            { t: "Lock Screen", k: "desktop:lock" }, { t: "Edit Widgets", k: "desktop:edit" },
+                            { t: "Toggle Widgets", k: "desktop:toggle-widgets" }, { t: "Show Desktop", k: "desktop:show-desktop" },
+                            { t: "Open Launcher", k: "desktop:launcher" }, { t: "Create Folder", k: "desktop:new-folder" }
+                            ];
+                            if (a.dock && a.dock.desktopDoubleClickCommand.trim() !== "") actions.push({ t: "Run Custom Command", k: "desktop:custom" });
+                            return actions;
+                        }
                         if (it && it.widget) return [{ t: "Widget Settings\u2026", k: "widgets" }];
                         if (it && it.isTrash) return [{ t: "Open Trash\u2026", k: "openTrash" }, { t: "Get rid of this icon\u2026", k: "settings"}];
                         if (!it) return [{ t: "New Folder", k: "newfolder" }, { t: "Add Folder to Desktop\u2026", k: "link" },
@@ -1018,7 +1041,8 @@ Scope {
                     function run(k) {
                         var a = dctx.app, it = dctx.item, sel = a.selectedItems();
                         dctx.item = undefined;
-                        if (k === "openTrash" && it) a.openItem(it);
+                        if (k.indexOf("desktop:") === 0) a.runDoubleClickAction(k.substring(8));
+                        else if (k === "openTrash" && it) a.openItem(it);
                         else if (k === "open" && it) { for (var i = 0; i < sel.length; i++) a.openItem(sel[i]); }
                         else if (k === "ql" && it) { if (it.kind === "Image") picSheet.begin(it); else previewSheet.begin(it); }
                         else if (k === "rename" && it) renameSheet.begin(it);
