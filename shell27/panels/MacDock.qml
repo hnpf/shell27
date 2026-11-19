@@ -8309,6 +8309,23 @@ Scope {
                                         }
                                     }
                                 }
+                                
+                                /*
+                                DropArea {
+                                    anchors.fill: parent
+                                    enabled: cell.modelData.special === "trash"
+                                    onEntered: drag => {
+                                        if (drag.hasUrls) drag.accept(Qt.MoveAction);
+                                    }
+                                    onDropped: drop => {
+                                        if (!drop.hasUrls || !root.hub || !root.hub.desktop) return;
+                                        var desktop = root.hub.desktop;
+                                        var paths = desktop.localPathsFromDrop(drop);
+                                        if (paths.length === 0) return;
+                                        drop.accept(Qt.MoveAction);
+                                        desktop.trashMany(paths);
+                                    }
+                                }*/
                             }
                         }
                     }

@@ -41,6 +41,8 @@ Scope {
     property var undoStack: []
     property var redoStack: []
     property var currentAction: null
+    property var trashing: ({})
+    property var pendingTrashPaths: []
 
     // ── selection (path → true) ──
     property var selection: ({})
@@ -124,7 +126,17 @@ Scope {
                 undoStack = undoStack.concat([current.action]);
             }
             rescan.restart();
+        } else if (current.action.type === "trash") {
+            trashing = ({});
         }
+    }
+    onItemsChanged: {
+        var active = {}, changed = false;
+        for (var path in trashing) {
+            if (items.some(function (it) { return it.path === path; })) active[path] = true;
+            else changed = true;
+        }
+        if (changed) trashing = active;
     }
     // forget selected things that are gone after a rescan
     onDisplayItemsChanged: {
@@ -612,8 +624,29 @@ Scope {
     }
     function trash(path) { trashMany([path]); }
     function trashMany(paths) {
+        if (paths.length === 0 || actionProc.running || trashDelay.running) return;
+        var unique = [], seen = ({});
+        for (var p = 0; p < paths.length; p++) {
+            var candidate = String(paths[p]);
+            if (!candidate || candidate === "trash:///" || seen[candidate]) continue;
+            seen[candidate] = true;
+            unique.push(candidate);
+        }
+        if (unique.length === 0) return;
+        var animating = {};
+        for (var oldPath in trashing) animating[oldPath] = true;
+        for (var a = 0; a < unique.length; a++) animating[unique[a]] = true;
+        trashing = animating;
+        pendingTrashPaths = unique;
+        trashDelay.restart();
+    }
+    function commitTrash() {
+        var paths = pendingTrashPaths;
+        pendingTrashPaths = [];
         if (paths.length === 0) return;
-        var trashRoot = home + "/.local/share/Trash", id = Date.now(), entries = [];
+        var dataHome = Quickshell.env("XDG_DATA_HOME");
+        var trashRoot = (dataHome && dataHome !== "" ? dataHome : home + "/.local/share") + "/Trash";
+        var id = Date.now(), entries = [];
         for (var i = 0; i < paths.length; i++) {
             var path = paths[i], name = path.substring(path.lastIndexOf("/") + 1);
             var stored = trashRoot + "/files/" + name + ".shell27-" + id + "-" + i;
@@ -622,6 +655,7 @@ Scope {
         }
         performAction({ type: "trash", trashRoot: trashRoot, entries: entries });
     }
+    Timer { id: trashDelay; interval: 220; onTriggered: root.commitTrash() }
     Timer { id: rescan; interval: 400; onTriggered: root.scan() }
     Process { id: actionProc; onExited: code => root.finishAction(code) }
     Process { id: dropProc; onExited: code => { if (code === 0) rescan.restart(); } }
@@ -721,6 +755,7 @@ Scope {
                 if (moved.length === 0) return;
                 var target = iconAt(px, py);
                 if (target && root.isSelected(target.path)) target = null;
+                if (target && target.isTrash) { root.trashMany(moved.filter(function (it) { return !it.isTrash; }).map(function (it) { return it.path; })); return; }
                 if (target && target.isDir) { root.moveMany(moved.map(function (it) { return it.path; }), target.path); return; }
                 if (target && moved.length === 1) { root.combine(moved[0].path, target.path); return; }
 
@@ -843,7 +878,7 @@ Scope {
                             w.dragDX = mouse.x - px;
                             w.dragDY = mouse.y - py;
                             var t = w.iconAt(mouse.x, mouse.y);
-                            w.dropPath = (t && !root.isSelected(t.path) && (t.isDir || root.selectionCount === 1)) ? t.path : "";
+                            w.dropPath = (t && !root.isSelected(t.path) && (t.isTrash || t.isDir || root.selectionCount === 1)) ? t.path : "";
                             var paths = root.selectedItems().filter(function (it) { return !it.isTrash; }).map(function (it) { return root.fileUrl(it.path); });
                             if (paths.length > 0) {
                                 nativeDragUris = paths.join("\r\n") + "\r\n";
@@ -881,10 +916,20 @@ Scope {
 
                 DropArea {
                     anchors.fill: parent
-                    onEntered: drop => { if (drop.hasUrls) drop.accept(Qt.CopyAction); }
+                    onEntered: drop => {
+                        if (!drop.hasUrls) return;
+                        var target = w.iconAt(drop.x, drop.y);
+                        drop.accept(target && target.isTrash ? Qt.MoveAction : Qt.CopyAction);
+                    }
                     onDropped: drop => {
                         var paths = root.localPathsFromDrop(drop);
                         if (paths.length === 0) return;
+                        var target = w.iconAt(drop.x, drop.y);
+                        if (target && target.isTrash) {
+                            drop.accept(Qt.MoveAction);
+                            root.trashMany(paths);
+                            return;
+                        }
                         drop.accept(Qt.CopyAction);
                         var internal = paths.filter(function (path) {
                             return root.items.some(function (it) { return it.path === path; });
@@ -946,6 +991,7 @@ Scope {
                         selected: root.isSelected(modelData.path)
                         dropTarget: w.dropPath === modelData.path
                         dragging: moving
+                        deleting: root.trashing[modelData.path] === true
                         source: root.iconSourceFor(modelData)
                     }
                 }

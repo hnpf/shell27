@@ -14,6 +14,7 @@ Item {
     property bool selected: false
     property bool dropTarget: false      // another icon is being dragged over this one
     property bool dragging: false
+    property bool deleting: false
 
     readonly property int pad: 10
     readonly property int boxSize: iconSize + 2 * pad
@@ -22,7 +23,11 @@ Item {
     readonly property int iconH: isPicture ? Math.round(iconSize * 0.6) : iconSize
     readonly property int boxH: iconH + 2 * pad
 
-    opacity: dragging ? 0.82 : 1.0
+    opacity: deleting ? 0 : (dragging ? 0.82 : 1.0)
+    scale: deleting ? 0.42 : 1
+    transformOrigin: Item.Center
+    Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.InCubic } }
+    Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.InCubic } }
 
     // ── selection / drop highlight ──
     Item {
