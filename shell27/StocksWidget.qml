@@ -84,6 +84,55 @@ Item {
         return (curr || "$") + parts.join(".");
     }
 
+    function drawSpark(ctx, pts, W, H, pad, lw, col, fillCol, fillR) {
+        var min = Math.min.apply(null, pts), max = Math.max.apply(null, pts);
+        var range = (max - min) || 1, n = pts.length, xs = [], ys = [];
+        for (var i = 0; i < n; i++) {
+            xs.push(i / (n - 1) * W);
+            ys.push(H - ((pts[i] - min) / range) * (H - 2 * pad) - pad);
+        }
+        function clampY(y, a, b) { return Math.max(Math.min(a, b), Math.min(Math.max(a, b), y)); }
+        function trace() {
+            ctx.moveTo(xs[0], ys[0]);
+            for (var j = 0; j < n - 1; j++) {
+                var a = Math.max(0, j - 1), b = Math.min(n - 1, j + 2);
+                var c1x = xs[j] + (xs[j + 1] - xs[a]) / 6;
+                var c1y = clampY(ys[j] + (ys[j + 1] - ys[a]) / 6, ys[j], ys[j + 1]);
+                var c2x = xs[j + 1] - (xs[b] - xs[j]) / 6;
+                var c2y = clampY(ys[j + 1] - (ys[b] - ys[j]) / 6, ys[j], ys[j + 1]);
+                ctx.bezierCurveTo(c1x, c1y, c2x, c2y, xs[j + 1], ys[j + 1]);
+            }
+        }
+        if (fillCol) {
+            var r = Math.min(fillR, H / 2, W / 2);
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(W, 0);
+            ctx.lineTo(W, H - r);
+            ctx.arcTo(W, H, W - r, H, r);
+            ctx.lineTo(r, H);
+            ctx.arcTo(0, H, 0, H - r, r);
+            ctx.closePath();
+            ctx.clip();
+            ctx.beginPath();
+            trace();
+            ctx.lineTo(W, H);
+            ctx.lineTo(0, H);
+            ctx.closePath();
+            ctx.fillStyle = fillCol;
+            ctx.fill();
+            ctx.restore();
+        }
+        ctx.beginPath();
+        trace();
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = col;
+        ctx.stroke();
+    }
+
     // Process for fetching live stock and crypto data
     Process {
         id: stockProc
@@ -399,9 +448,13 @@ Item {
 
             onPaint: {
                 var ctx = getContext("2d");
-                ctx.reset();
-                var W = width, H = height;
-                if (!pts || pts.length < 2) return;
+                    ctx.reset();
+                    if (!pts || pts.length < 2) return;
+                    w.drawSpark(ctx, pts, width, height, 4, 2.2,
+                        isUp ? "#34C759" : "#FF3B30",
+                        isUp ? "rgba(52, 199, 89, 0.18)" : "rgba(255, 59, 48, 0.18)",
+                        14 * w.s);
+                
 
                 var min = Math.min.apply(null, pts);
                 var max = Math.max.apply(null, pts);
@@ -537,8 +590,10 @@ Item {
 
                             onPaint: {
                                 var ctx = getContext("2d");
-                                ctx.reset();
-                                if (!pts || pts.length < 2) return;
+                                    ctx.reset();
+                                    if (!pts || pts.length < 2) return;
+                                    w.drawSpark(ctx, pts, width, height, 2, 1.6, isUp ? "#34C759" : "#FF3B30", "", 0);
+                                
                                 var W = width, H = height;
                                 var min = Math.min.apply(null, pts);
                                 var max = Math.max.apply(null, pts);
@@ -695,10 +750,12 @@ Item {
 
                         onPaint: {
                             var ctx = getContext("2d");
-                            ctx.reset();
-                            var W = width, H = height;
-                            if (!pts || pts.length < 2) return;
-
+							    ctx.reset();
+							    if (!pts || pts.length < 2) return;
+							    w.drawSpark(ctx, pts, width, height, 5, 2.4,
+							        isUp ? "#34C759" : "#FF3B30",
+							        isUp ? "rgba(52, 199, 89, 0.15)" : "rgba(255, 59, 48, 0.15)",
+							        10 * w.s);
                             var min = Math.min.apply(null, pts);
                             var max = Math.max.apply(null, pts);
                             var range = (max - min) || 1;

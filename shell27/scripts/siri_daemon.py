@@ -93,6 +93,14 @@ def load_config() -> dict:
 
 CONFIG = load_config()
 
+def spoken_responses_enabled() -> bool:
+    try:
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            response_type = json.load(f).get("preferred_response_type", "spoken")
+    except Exception:
+        response_type = CONFIG.get("preferred_response_type", "spoken")
+    return response_type != "silent"
+
 # ── QUICKSHELL IPC WRAPPER ──
 class SiriIPC:
     @staticmethod
@@ -707,9 +715,11 @@ def map_to_neural_voice(voice: str, is_vi: bool) -> str:
             return "en-AU-NatashaNeural"
         return "en-US-JennyNeural"
 
-def speak(text: str):
+def speak(text: str, force: bool = False):
     """Read text aloud with pristine Neural TTS (edge-tts), strictly ensuring ONLY ONE speaker plays."""
     global IS_SPEAKING, LAST_SPEAK_FINISH, LAST_SPOKEN_TEXT, CURRENT_PLAYER_PROC
+    if not force and not spoken_responses_enabled():
+        return
     if VOICE_MUTE_FILE.exists():
         return
     clean_text = re.sub(r'[*_#`~]', '', text).strip()
@@ -1405,7 +1415,7 @@ def main():
                 "Hi, I'm Siri. How can I help you today?"
             ])
         print(f"[TTS Test] Speaking: {text_to_speak}")
-        speak(text_to_speak)
+        speak(text_to_speak, force=True)
         return
 
     if args.test_ipc:

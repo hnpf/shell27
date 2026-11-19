@@ -2366,6 +2366,32 @@ Scope {
                     }
                 }
 
+                // ── RESPONSES ──
+                SLabel {
+                    t: pal
+                    header: true
+                    text: I18n.tr("Responses")
+                }
+
+                SCard {
+                    t: pal
+
+                    SRow {
+                        t: pal
+                        title: I18n.tr("Preferred Response Type")
+                        subtitle: I18n.tr("Siri will speak responses when you speak to Siri.")
+                        SPopUp {
+                            t: pal
+                            model: [I18n.tr("Spoken Response"), I18n.tr("Silent Response")]
+                            current: siriBackend.preferredResponseType === "silent" ? 1 : 0
+                            onPicked: idx => {
+                                siriBackend.preferredResponseType = idx === 1 ? "silent" : "spoken";
+                                siriBackend.saveSettings();
+                            }
+                        }
+                    }
+                }
+
                 // ── SECTION 3: VISUAL EFFECTS ──
                 SLabel {
                     t: pal

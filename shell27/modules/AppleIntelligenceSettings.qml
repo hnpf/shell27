@@ -10,6 +10,7 @@ Item {
     property bool siriEnabled: true
     property bool wakeWordEnabled: true
     property bool liveVoiceStreaming: true
+    property string preferredResponseType: "spoken"
     property string language: "en-US"
     property string voice: "en-US-JennyNeural"
     property string ttsVoiceEn: "en-US-JennyNeural"
@@ -65,6 +66,7 @@ Item {
                 if (o.enabled !== undefined) root.siriEnabled = o.enabled;
                 if (o.wake_word_enabled !== undefined) root.wakeWordEnabled = o.wake_word_enabled;
                 if (o.live_voice_streaming !== undefined) root.liveVoiceStreaming = o.live_voice_streaming;
+                if (o.preferred_response_type !== undefined) root.preferredResponseType = o.preferred_response_type;
                 if (o.voice !== undefined) root.voice = o.voice;
                 if (o.tts_voice_en !== undefined) root.ttsVoiceEn = o.tts_voice_en;
                 if (o.speech_rate !== undefined) root.speechRate = o.speech_rate;
@@ -139,6 +141,7 @@ Item {
             enabled: root.siriEnabled,
             wake_word_enabled: root.wakeWordEnabled,
             live_voice_streaming: root.liveVoiceStreaming,
+            preferred_response_type: root.preferredResponseType,
             wake_words: ["hey siri", "siri"],
             language: "en-US",
             voice: root.ttsVoiceEn,
