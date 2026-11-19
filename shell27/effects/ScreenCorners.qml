@@ -38,7 +38,8 @@ Scope {
         PanelWindow {
             required property var modelData
             screen: modelData
-            visible: root.mode !== "disabled" && !(root.mode === "windowed" && root.hasFullscreen(modelData.name))
+            visible: root.mode !== "disabled" && !(root.hub && root.hub.startupSplashVisible)
+                && !(root.mode === "windowed" && root.hasFullscreen(modelData.name))
             anchors { top: true; bottom: true; left: true; right: true }
             exclusionMode: ExclusionMode.Ignore
             color: "transparent"

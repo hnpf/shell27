@@ -7068,7 +7068,8 @@ Scope {
             id: win
             required property var modelData
             screen: modelData
-            visible: root.monitor === "" || modelData.name === root.monitor
+            visible: !(root.hub && root.hub.startupSplashVisible)
+                && (root.monitor === "" || modelData.name === root.monitor)
 
             anchors { left: true; right: true; bottom: true }
             implicitHeight: root.windowHeight
@@ -7087,7 +7088,8 @@ Scope {
             PanelWindow {
                 id: tearWin
                 screen: win.modelData
-                visible: ui.tearing || tearLaunch.running || tearHome.running || ghostFade.running || oldOut.running
+                visible: !(root.hub && root.hub.startupSplashVisible)
+                    && (ui.tearing || tearLaunch.running || tearHome.running || ghostFade.running || oldOut.running)
                 anchors { left: true; right: true; top: true; bottom: true }
                 exclusionMode: ExclusionMode.Ignore
                 color: "transparent"

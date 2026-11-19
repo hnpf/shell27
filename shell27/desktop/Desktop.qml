@@ -667,6 +667,7 @@ Scope {
             id: w
             required property var modelData
             screen: modelData
+            visible: !(root.hub && root.hub.startupSplashVisible)
             property int widgetLayoutRevision: root.hub && root.hub.widgets ? root.hub.widgets.layoutRev : 0
             property real widgetScale: root.hub && root.hub.widgets ? root.hub.widgets.widgetScale : 1
             property var layoutMap: {

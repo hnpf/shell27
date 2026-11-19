@@ -17,6 +17,7 @@
 //   * one wallpaper lookup, and the wallpaper image is decoded once (Qt shares identical images inside a process).
 
 import QtQuick
+import QtQuick.Effects
 import "apps"
 import "components"
 import "desktop"
@@ -26,11 +27,82 @@ import "widgets"
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Wayland
 import "scripts/js/CaptureGate.js" as CaptureGate
 import "modules"
 
 ShellRoot {
     id: shellRoot
+    property bool startupSplashVisible: true
+    property int startupSplashElapsed: 0
+    property real startupSplashProgress: 0
+    property real startupSplashOpacity: 1
+    property var startupImageStates: ({})
+    readonly property bool startupBackdropReady: {
+        var screens = Quickshell.screens;
+        if (!screens || screens.length === 0) return false;
+        for (var i = 0; i < screens.length; i++)
+            if (startupImageStates[screens[i].name] !== true) return false;
+        return true;
+    }
+
+    function setSplashImageReady(screenName, ready) {
+        var next = {}, states = startupImageStates;
+        for (var key in states) next[key] = states[key];
+        next[screenName] = ready;
+        startupImageStates = next;
+    }
+
+    function splashWallpaper(screenName) {
+        var map = sharedHub.wallpaperMap || {};
+        var path = map["wallpaper.monitors." + screenName] || map["wallpaper.last"] || map["wallpaper.default"] || "";
+        if (path.indexOf("~/") === 0) path = Quickshell.env("HOME") + path.substring(1);
+        if (path !== "" && path.indexOf("file://") !== 0)
+            path = "file://" + encodeURI(path).replace(/#/g, "%23").replace(/\?/g, "%3F");
+        return path;
+    }
+
+    Timer {
+        id: splashClock
+        interval: 100
+        repeat: true
+        onTriggered: {
+            shellRoot.startupSplashElapsed += interval;
+            if ((shellRoot.startupBackdropReady && shellRoot.startupSplashElapsed >= 1200)
+                    || shellRoot.startupSplashElapsed >= 5000) {
+                stop();
+                splashProgressAnimation.stop();
+                splashProgressFinish.start();
+            }
+        }
+    }
+    NumberAnimation {
+        id: splashProgressAnimation
+        target: shellRoot
+        property: "startupSplashProgress"
+        from: 0
+        to: 0.9
+        duration: 2200
+        easing.type: Easing.OutCubic
+    }
+    NumberAnimation {
+        id: splashProgressFinish
+        target: shellRoot
+        property: "startupSplashProgress"
+        to: 1
+        duration: 240
+        easing.type: Easing.OutCubic
+        onFinished: splashFade.start()
+    }
+    NumberAnimation {
+        id: splashFade
+        target: shellRoot
+        property: "startupSplashOpacity"
+        to: 0
+        duration: 380
+        onFinished: shellRoot.startupSplashVisible = false
+    }
+
     // The UI font ("Open Runde") ships with shell27: registered here, first, so every Text below can use it
     // without installing anything. (The installer also copies it to ~/.local/share/fonts.)
     FontLoader { id: uiFontLoader; source: Qt.resolvedUrl("assets/fonts/OpenRunde-Regular.otf") }
@@ -44,6 +116,7 @@ ShellRoot {
         property var glassClients: []
         property var wallpaperMap: ({})
         property var aiSettings: null
+        readonly property bool startupSplashVisible: shellRoot.startupSplashVisible
         readonly property string boldFontFamily: uiBoldFontLoader.status === FontLoader.Ready ? uiBoldFontLoader.name : "Open Runde Semibold"
 
         // the single settings window lives in MacDock.qml; everything else reaches it through here
@@ -462,6 +535,9 @@ ShellRoot {
     }
 
     Component.onCompleted: {
+        sharedHub.refreshWallpaper();
+        splashClock.start();
+        splashProgressAnimation.start();
         sharedHub.bar = macBar;
         sharedHub.dock = macDock;
         sharedHub.widgets = macWidgets;
@@ -473,6 +549,174 @@ ShellRoot {
         sharedHub.typeToSiri = typeToSiri;
         sharedHub.aiSettings = aiSettings;
         siriEdgeGlow.typeToSiri = typeToSiri;
+    }
+
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            id: splashWindow
+            required property var modelData
+            screen: modelData
+            anchors { top: true; bottom: true; left: true; right: true }
+            exclusionMode: ExclusionMode.Ignore
+            color: "transparent"
+            visible: true
+            mask: Region { }
+            WlrLayershell.namespace: "shell27-startup"
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+            Item {
+                id: splashContent
+                anchors.fill: parent
+                opacity: shellRoot.startupSplashVisible && shellRoot.startupBackdropReady
+                    ? shellRoot.startupSplashOpacity : 0
+
+                Image {
+                    id: splashWallpaperImage
+                    anchors.fill: parent
+                    source: shellRoot.splashWallpaper(modelData.name)
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    cache: true
+                    smooth: true
+                    sourceSize.width: Math.max(1, Math.min(width * 1.15, 2560))
+                    scale: 1.08
+                    onStatusChanged: shellRoot.setSplashImageReady(modelData.name, status === Image.Ready)
+                    Component.onCompleted: shellRoot.setSplashImageReady(modelData.name, status === Image.Ready)
+                }
+
+                MultiEffect {
+                    id: splashBlur
+                    anchors.fill: parent
+                    source: splashWallpaperImage
+                    scale: splashWallpaperImage.scale
+                    blurEnabled: true
+                    blurMax: 48
+                    blur: 0.55
+                    autoPaddingEnabled: false
+                }
+
+                ShaderEffectSource {
+                    id: splashBackdropTexture
+                    anchors.fill: parent
+                        sourceItem: splashBlur
+                        textureSize: Qt.size(Math.max(1, Math.round(width / 2)), Math.max(1, Math.round(height / 2)))
+                        live: true
+                        mipmap: true
+                        visible: false
+                }
+
+                Column {
+                    id: splashColumn
+                    anchors.centerIn: parent
+                    width: parent.width - 64
+                    spacing: 28
+
+                    Item {
+                        id: splashTitleGlass
+                        width: parent.width
+                        height: Math.max(1, splashTitle.implicitHeight)
+
+                        Text {
+                            id: splashTitle
+                            anchors.fill: parent
+                            text: "Your Mac is loading..."
+                            color: "white"
+                            font.family: uiBoldFontLoader.status === FontLoader.Ready ? uiBoldFontLoader.name : "Open Runde Semibold"
+                            font.pixelSize: parent.width < 600 ? 40 : 64
+                            font.weight: Font.Bold
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            wrapMode: Text.Wrap
+                            renderType: Text.QtRendering
+                            visible: false
+                        }
+
+                        ShaderEffectSource {
+                            id: splashTitleMask
+                            sourceItem: splashTitle
+                            hideSource: true
+                            smooth: true
+                            visible: false
+                        }
+
+                        MultiEffect {
+                            id: splashTitleHeightFx
+                            width: splashTitleGlass.width
+                            height: splashTitleGlass.height
+                            source: splashTitleMask
+                            blurEnabled: true
+                            blurMax: 16
+                            blur: 0.35
+                            autoPaddingEnabled: false
+                            visible: false
+                        }
+
+                        ShaderEffectSource {
+                            id: splashTitleHeight
+                            sourceItem: splashTitleHeightFx
+                            smooth: true
+                            visible: false
+                        }
+
+                        ShaderEffect {
+                            id: splashTitleFx
+                            anchors.fill: parent
+                            fragmentShader: Qt.resolvedUrl("shaders/glasstext.frag.qsb")
+                            readonly property point framePos: {
+                                splashContent.width; splashContent.height;
+                                splashColumn.x; splashColumn.y;
+                                splashTitleGlass.x; splashTitleGlass.y;
+                                splashTitleGlass.width; splashTitleGlass.height;
+                                return splashTitleFx.mapToItem(splashContent, 0, 0);
+                            }
+                            property variant src: splashBackdropTexture
+                            property variant mask: splashTitleMask
+                            property variant hmap: splashTitleHeight
+                            property vector2d itemSize: Qt.vector2d(width, height)
+                            property vector2d srcSize: Qt.vector2d(splashContent.width, splashContent.height)
+                            property vector2d srcOffset: Qt.vector2d(framePos.x, framePos.y)
+                            property real mode: 1
+                            property real intensity: 0.14
+                            property real refract: 8
+                            property real bevel: 4.5
+                            property color tint: "white"
+                            property vector2d lightDir: Qt.vector2d(-0.35, -1)
+                            onStatusChanged: if (status === ShaderEffect.Error) console.log("[shell27] splash glass:", log)
+                        }
+
+                        Text {
+                            anchors.fill: parent
+                            text: splashTitle.text
+                            color: "white"
+                            font: splashTitle.font
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            wrapMode: Text.Wrap
+                            renderType: Text.NativeRendering
+                            visible: splashTitleFx.status === ShaderEffect.Error
+                        }
+                    }
+
+                    Rectangle {
+                        width: Math.min(340, parent.width)
+                        height: 7
+                        radius: 4
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        color: "#66ffffff"
+                        clip: true
+
+                        Rectangle {
+                            width: parent.width * shellRoot.startupSplashProgress
+                            height: parent.height
+                            radius: parent.radius
+                            color: "#1685ff"
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // reopen settings even when both the Dock and the Menu Bar are disabled:

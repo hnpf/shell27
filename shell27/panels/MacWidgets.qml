@@ -780,6 +780,7 @@ Scope {
             id: win
             required property var modelData
             screen: modelData
+            visible: !(root.hub && root.hub.startupSplashVisible)
             anchors { left: true; right: true; top: true; bottom: true }
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore

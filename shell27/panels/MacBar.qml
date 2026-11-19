@@ -6104,7 +6104,7 @@ Scope {
             // shown once the opacity went above 0 got mapped AFTER the bar and ended up on top of it: its blur then covered the
             // whole bar (icons and text included). Mapped from the start (declared before the bar) it stays under it. With the
             // fill off it shrinks to 1 px and stays fully transparent, so nothing is blurred.
-            visible: true
+            visible: !(root.hub && root.hub.startupSplashVisible)
             readonly property bool fillOn: root.barBgOpacity > 0.001
             anchors { left: true; right: true; top: true }
             implicitHeight: fillOn ? root.barH : 1
@@ -6132,6 +6132,7 @@ Scope {
             anchors { left: true; right: true; top: true }
             implicitHeight: root.barH + root.popRoom
             color: "transparent"
+            visible: !(root.hub && root.hub.startupSplashVisible)
 
             exclusionMode: ExclusionMode.Normal
             exclusiveZone: root.barEnabled ? root.barH : 0
