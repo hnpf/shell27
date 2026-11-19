@@ -6,7 +6,7 @@ Item {
     id: gg
     property var src: null              // ShaderEffectSource with mipmaps: the blurred scene
     property Item frame: null           // coordinate space the backdrop texture covers (the whole screen)
-    property url shaderUrl: Qt.resolvedUrl("liquidglass.frag.qsb")
+    property url shaderUrl: Qt.resolvedUrl("shaders/liquidglass.frag.qsb")
     property real cornerR: 22
     property real thickness: 24
     property real strength: 1.0

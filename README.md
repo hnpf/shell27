@@ -221,21 +221,15 @@ The two Quickshell configs are installed separately. The starter settings in `se
 | File | Purpose |
 |---|---|
 | `shell.qml` | Entry point. Shared hub: window geometry, wallpaper lookup, capture gating. |
-| `MacBar.qml` | Menu bar, Control Center, Spotlight, notifications, switcher, screenshots, wallpaper picker. |
-| `MacDock.qml` | Dock, window previews, and the Settings window. |
-| `ClockApp.qml` | The Clock app window (opened from the menu bar clock). |
-| `MacWidgets.qml` | Desktop widgets layer (data, placement, editing). |
-| `WidgetVisual.qml` | Draws one widget; shared by the desktop layer and the Liquid Glass backdrop, so menus refract the widgets too. |
-| `WeatherWidget.qml`, `CalendarWidget.qml`, `ClockWidget.qml`, `PlayerWidget.qml`, `ImageWidget.qml` | Core desktop widgets (`PlayerWidget.qml` includes synchronized karaoke lyrics and pulsing rhythm dots). |
-| `GifWidget.qml` | Animated GIF / WebP loop widget with App Nap occlusion pausing. |
-| `SystemMonitorWidget.qml`, `sysmon_reader.py` | Activity Monitor-style circular gauges for CPU, GPU, RAM, Disk, Thermals, and Network. |
-| `StocksWidget.qml`, `stocks_fetcher.py` | Apple Stocks widget for tracking equities and crypto with interactive sparklines. |
-| `BatteryWidget.qml`, `battery_reader.py` | Battery percentage, health status, and power profile widget. |
-| `RemindersWidget.qml`, `Reminders.qml` | Interactive task checklist that syncs with `reminders.md` and plays Apple sound effects. |
-| `lyrics_fetcher.py` | Asynchronous multi-source lyrics daemon with caching (LRCLIB + syncedlyrics). |
-| `AirDrop.qml`, `assets/shell27-airdrop.py` | Native local sharing with animated radar UI. |
-| `SPopUp.qml`, `Dissolve.qml`, `MorphText.qml`, `MorphGlyph.qml`, `WGlyph.qml`, `ClockGlyph.qml`, `Wheel.qml` | Shared UI pieces and effects. |
-| `liquidglass.frag` (+ `contourglow`, `tintcard`, `dust`, `burn`, `fade`, `waterflow`) | Shaders. Prebuilt `.frag.qsb` files ship next to them; `liquidglass.frag` is recompiled with `qsb` on first run. |
+| `panels/` | Menu bar, Dock, and desktop widgets layer. |
+| `apps/` | Clock, Reminders, Siri, About, setup, and installer windows. |
+| `desktop/` | Desktop icons, sheets, previews, and Stage Manager. |
+| `widgets/` | Desktop widget views and their shared visual composition. |
+| `components/` | Reusable controls, glyphs, glass surfaces, and text components. |
+| `effects/` | Capture, blur, transition, and window-minimize effects. |
+| `modules/` | Siri and Apple Intelligence feature components. |
+| `assets/` | Icons, helper assets, credits pictures, and UI scripts. |
+| `liquidglass.frag` (+ `contourglow`, `tintcard`, `dust`, `burn`, `fade`, `waterflow`) | Main-shell shaders. Prebuilt `.frag.qsb` files ship next to their sources; `liquidglass.frag` is recompiled with `qsb` on first run. |
 | `EmojiData.js` | Emoji fallback data for Spotlight (from [gemoji](https://github.com/github/gemoji), MIT). |
 | `shell27-update` | Update tool (installed to `~/.local/bin`, see [Updating](#updating)). The installer also writes `shell27-start`, the script the Hyprland autostart runs. |
 | `apple-logo-black.svg`, `apple-logo-white.svg` | Menu bar logo. |

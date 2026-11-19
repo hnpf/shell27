@@ -17,6 +17,12 @@
 //   * one wallpaper lookup, and the wallpaper image is decoded once (Qt shares identical images inside a process).
 
 import QtQuick
+import "apps"
+import "components"
+import "desktop"
+import "effects"
+import "panels"
+import "widgets"
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland

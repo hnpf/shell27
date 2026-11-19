@@ -12,7 +12,7 @@ ShaderEffect {
     property color glowColor: "white"
     anchors.fill: parent
     anchors.margins: -pad
-    fragmentShader: Qt.resolvedUrl("contourglow.frag.qsb")
+    fragmentShader: Qt.resolvedUrl("shaders/contourglow.frag.qsb")
     property vector2d itemSize: Qt.vector2d(width, height)
     property vector2d mouse: Qt.vector2d(at.x, at.y)
     property real amount: hovered ? boost : 0

@@ -1058,7 +1058,7 @@ run_doctor() {
     if have lspci; then lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -n2 | sed 's/^/    GPU: /' || true; fi
     if [ -f "$DEST/liquidglass.frag.qsb" ]; then d_ok "Liquid Glass shader is built"; else d_bad "liquidglass.frag.qsb is missing: install qt6-shadertools and run bash install.sh"; fi
     if [ -f "$LOCK_DEST/shell.qml" ]; then
-        if [ -f "$LOCK_DEST/liquidglass.frag.qsb" ]; then d_ok "shell27-lock shaders are built"; else d_bad "shell27-lock's liquidglass.frag.qsb is missing: install qt6-shadertools and run bash install.sh"; fi
+        if [ -f "$LOCK_DEST/shaders/liquidglass.frag.qsb" ]; then d_ok "shell27-lock shaders are built"; else d_bad "shell27-lock's shaders/liquidglass.frag.qsb is missing: install qt6-shadertools and run bash install.sh"; fi
     fi
     miss=$(missing_qml_modules)
     if [ -z "$miss" ]; then
@@ -1197,9 +1197,10 @@ max_ver() { # max_ver <version>...: the highest valid one
     printf '%s' "$best"
 }
 dir_version() { # dir_version <shell folder>
-    local v=""
+    local v="" about="$1/apps/AboutApp.qml"
     if [ -f "$1/VERSION" ]; then v=$(tr -d ' \t\r\n' < "$1/VERSION" | cut -c1-40); fi
-    max_ver "$v" "$(qml_ver "$1/AboutApp.qml")"
+    [ -f "$about" ] || about="$1/AboutApp.qml"
+    max_ver "$v" "$(qml_ver "$about")"
 }
 # The newest release tag. The redirect of github.com/<repo>/releases/latest is asked first: it has no API rate limit (the
 # unauthenticated API allows 60 requests an hour per IP, which is what made the update check fail), the API is the fallback.
@@ -1223,7 +1224,7 @@ remote_version() {
         v=$("${CURL[@]}" --max-time 20 "https://raw.githubusercontent.com/$REPO/$BRANCH/$p" 2>/dev/null | head -n1 | tr -d ' \t\r\n' || true)
         found+=("$v")
     done
-    for p in shell27/AboutApp.qml AboutApp.qml; do
+    for p in shell27/apps/AboutApp.qml shell27/AboutApp.qml apps/AboutApp.qml AboutApp.qml; do
         v=$("${CURL[@]}" --max-time 20 "https://raw.githubusercontent.com/$REPO/$BRANCH/$p" 2>/dev/null \
             | grep -oE 'shell27 [0-9]+(\.[0-9]+)+' | head -n1 | cut -d' ' -f2 || true)
         found+=("$v")

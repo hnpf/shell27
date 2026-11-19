@@ -4,7 +4,7 @@ import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import "../"
+import "../components"
 import "../I18n.js" as I18n
 
 Scope {

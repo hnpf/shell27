@@ -597,7 +597,7 @@ Item {
                 id: timeGlass
                 x: timeTxt.x - timeItem.mp; y: timeTxt.y - timeItem.mp
                 width: timeMaskFx.width; height: timeMaskFx.height
-                fragmentShader: Qt.resolvedUrl("glasstext.frag.qsb")
+                fragmentShader: Qt.resolvedUrl("shaders/glasstext.frag.qsb")
                 // where the glass really is on screen (follows the clock's animations)
                 readonly property point fp: { ls.clockPx; clock.y; clock.x; timeItem.x; timeTxt.x; timeTxt.width; return timeGlass.mapToItem(ls, 0, 0); }
                 property variant src: glassTex
@@ -886,7 +886,7 @@ Item {
                 visible: ls.coverUrl !== ""
                 opacity: ls.coverNew.status === Image.Ready ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
-                fragmentShader: Qt.resolvedUrl("burn.frag.qsb")
+                fragmentShader: Qt.resolvedUrl("shaders/burn.frag.qsb")
                 property variant oldTex: covOldSrc
                 property variant newTex: covNewSrc
                 property real progress: ls.coverProg
@@ -1293,7 +1293,7 @@ Item {
             clip: true
             layer.enabled: true
             layer.effect: ShaderEffect {
-                fragmentShader: Qt.resolvedUrl("fade.frag.qsb")
+                fragmentShader: Qt.resolvedUrl("shaders/fade.frag.qsb")
                 property real fadeTop: 0.24
                 property real fadeBottom: 0.30
             }

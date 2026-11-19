@@ -29,7 +29,11 @@ CURL="curl -fsSL --retry 2 --retry-delay 1 --max-time 15"
 cur=""
 v1=""; v2=""
 [ -f "$ROOT/VERSION" ] && v1=$(tr -d ' \t\r\n' < "$ROOT/VERSION" | cut -c1-40)
-[ -f "$ROOT/AboutApp.qml" ] && v2=$(about_ver < "$ROOT/AboutApp.qml")
+if [ -f "$ROOT/apps/AboutApp.qml" ]; then
+    v2=$(about_ver < "$ROOT/apps/AboutApp.qml")
+elif [ -f "$ROOT/AboutApp.qml" ]; then
+    v2=$(about_ver < "$ROOT/AboutApp.qml")
+fi
 cur=$(max_ver "$v1" "$v2")
 if ! is_ver "$cur" && [ -f "$STATE" ]; then
     cur=$(sed -n 's/^installed_version=//p' "$STATE" | head -n1 | tr -d ' \t\r')
@@ -52,7 +56,7 @@ else
     r1=""; r2=""; r3=""; r4=""
     r1=$($CURL "https://raw.githubusercontent.com/$REPO/$BRANCH/shell27/VERSION" 2>/dev/null | head -n1 | tr -d ' \t\r\n')
     r2=$($CURL "https://raw.githubusercontent.com/$REPO/$BRANCH/VERSION" 2>/dev/null | head -n1 | tr -d ' \t\r\n')
-    r3=$($CURL "https://raw.githubusercontent.com/$REPO/$BRANCH/shell27/AboutApp.qml" 2>/dev/null | about_ver)
+    r3=$($CURL "https://raw.githubusercontent.com/$REPO/$BRANCH/shell27/apps/AboutApp.qml" 2>/dev/null | about_ver)
     r4=$($CURL "https://raw.githubusercontent.com/$REPO/$BRANCH/AboutApp.qml" 2>/dev/null | about_ver)
     latest=$(max_ver "$r1" "$r2" "$r3" "$r4")
 fi
