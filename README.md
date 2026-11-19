@@ -31,9 +31,9 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/hnpf/shell27/main/install.
 
 ### Repository Layout
 
-- `hyprland/`: personal Hyprland Lua config and its Genie helper.
+- `.config/hypr/`: personal Hyprland Lua config and its Genie helper.
 - `settings/`: sanitized starter settings; API keys and machine-specific wallpaper/image paths are blank.
-- `gtk-3.0/` and `gtk-4.0/`: GTK appearance settings installed to `~/.config` by `install.sh`.
+- `.config/gtk-3.0/` and `.config/gtk-4.0/`: GTK appearance settings installed to the matching folders in `~/.config` by `install.sh`.
 - `hypr-shell27/`: Hyprland helper scripts and session files.
 - `shell27/`: desktop shell Quickshell config.
 - `shell27-lock/`: independent lock-screen Quickshell config.
@@ -203,7 +203,7 @@ The installer provisions the Gemini Python client in an isolated environment. Re
 
 ## Files
 
-hyprland/       personal Hyprland config and Genie helper
+.config/        GTK settings and personal Hyprland config (`hypr/`)
 settings/       sanitized starter shell settings
 hypr-shell27/   Hyprland helper scripts and session files
           This fork extends the upstream `hnpf/shell27` with powerful new capabilities, multimedia features, and GPU optimizations:
@@ -232,7 +232,7 @@ The two Quickshell configs are installed separately. The starter settings in `se
 | `scripts/` | Python helpers and Siri daemon. |
 | `scripts/js/` | Shared QML JavaScript modules for fonts, translations, capture gating, and glass geometry. |
 | `settings/` | Shipped Siri/Gemini JSON defaults; the installer seeds these at the shell's runtime settings paths. |
-| `hyprland/` | The shell-specific Hyprland Lua module. |
+| `hyprland/` | The shell-specific Hyprland Lua module (separate from the repository's `.config/hypr/` personal config). |
 | `shaders/` | Main-shell shader sources and compiled `.qsb` files, including shaders used by Siri modules and window effects. `liquidglass.frag` is recompiled with `qsb` on first run when needed. |
 | `EmojiData.js` | Emoji fallback data for Spotlight (from [gemoji](https://github.com/github/gemoji), MIT). |
 | `shell27-update` | Update tool (installed to `~/.local/bin`, see [Updating](#updating)). The installer also writes `shell27-start`, the script the Hyprland autostart runs. |

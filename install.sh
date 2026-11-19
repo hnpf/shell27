@@ -1594,7 +1594,7 @@ install_apple_emoji_font() {
 install_gtk_configs() { # install_gtk_configs <source-root>
     local root="$1" gtk_dir src dest
     for gtk_dir in gtk-3.0 gtk-4.0; do
-        src="$root/$gtk_dir"
+        src="$root/.config/$gtk_dir"
         [ -d "$src" ] || continue
         dest="$CONFIG_HOME/$gtk_dir"
         backup_current "$dest" "$gtk_dir"
@@ -1899,7 +1899,7 @@ lua_block() { # lua_block <with-rules 0|1>
 install_bundled_hyprland_config() {
     [ "$SKIP_AUTOSTART" = 1 ] && return 0
     [ "$UPDATE_MODE" = 1 ] && return 0
-    local src="$SRC_ROOT/hyprland/hyprland.lua" dst="$HYPR_DIR/hyprland.lua" backup genie_src="$SRC_ROOT/hyprland/genie.lua" genie_dst="$HYPR_DIR/genie.lua"
+    local src="$SRC_ROOT/.config/hypr/hyprland.lua" dst="$HYPR_DIR/hyprland.lua" backup genie_src="$SRC_ROOT/.config/hypr/genie.lua" genie_dst="$HYPR_DIR/genie.lua"
     [ -f "$src" ] || return 0
     [ "$ASSUME_YES" = 1 ] && return 0
     confirm "Use the bundled personal Hyprland config? It replaces $dst (with a backup)." n || return 0
