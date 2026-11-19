@@ -20,7 +20,7 @@
 #      app launchers to        ~/.local/share/applications          (Finder, Photos, Clock ... entries for shell27-*.desktop)
 #      icons to                ~/.local/share/icons/hicolor/scalable/apps
 #      the Apple emoji font rule to ~/.config/fontconfig/conf.d
-#      sounds to               ~/.local/share/sounds/shell27       (shipped ones, plus the rest synthesized by shell27-make-sounds.py)
+#      sounds to               ~/.local/share/sounds/shell27       (real recordings bundled in shell27/assets/audio)
 #      the update tool to      ~/.local/share/shell27/bin/shell27-update  (+ ~/.local/bin/shell27-update)
 #      the start script to     ~/.local/share/shell27/bin/shell27-start   (+ ~/.local/bin/shell27-start)
 #   4. installs ~/.config/hypr/shell27.lua with the autostart and keybinds; optionally replaces hyprland.lua with the
@@ -339,7 +339,7 @@ OPTIONAL=(
     "fastfetch:fastfetch:About This Linux"
     "rsync:rsync:faster, safer file sync in the installer"
     "jq:jq:wallpaper helpers (reading the dock / shell settings)"
-    "python3:python:UI sound generation and AirDrop"
+    "python3:python:AirDrop transfer helper"
     "kitty:kitty:the default terminal"
     "hypridle:hypridle:lock on idle (optional)"
     "wtype:wtype:menu bar keyboard shortcuts in browsers and apps"
@@ -1733,18 +1733,14 @@ install_extras() {
         ok "Genie helper -> $LINK_DIR/shell27-genie"
     fi
     ensure_shell27_lock_shim
-    # sounds
+    # real UI recordings
     n=0
     while IFS= read -r f; do
         mkdir -p "$SOUNDS_DIR"; cp -f "$f" "$SOUNDS_DIR/"; n=$((n+1))
-    done < <(find "$root" -type f -name '*.wav' -path '*sounds*' -not -path '*/.git/*' 2>/dev/null)
+    done < <(find "$root/shell27/assets/audio" -maxdepth 1 -type f -name '*.wav' 2>/dev/null)
     [ "$n" -gt 0 ] && ok "$n sound(s) -> $SOUNDS_DIR"
-    # synthesize the UI sounds that are still missing (existing files are never replaced)
-    if [ -f "$SCRIPTS_DIR/shell27-make-sounds.py" ] && have python3; then
-        python3 "$SCRIPTS_DIR/shell27-make-sounds.py" "$SOUNDS_DIR" >/dev/null 2>&1 && ok "UI sounds ready in $SOUNDS_DIR" || warn "could not generate the UI sounds"
-    elif [ "$n" -eq 0 ]; then
-        warn "no UI sounds installed (the repo ships none and python3 / shell27-make-sounds.py is missing)"
-    fi
+    rm -f "$SCRIPTS_DIR/shell27-make-sounds.py"
+    [ "$n" -gt 0 ] || warn "no UI sound recordings found in $root/shell27/assets/audio"
     # the update tool
     f=$(find "$root" -maxdepth 3 -type f -name shell27-update -not -path '*/.git/*' 2>/dev/null | head -n1 || true)
     if [ -n "$f" ]; then

@@ -249,7 +249,7 @@ Scope {
     }
     function ring(r) {
         ringing = r;
-        ringProc.command = ["sh", "-c", "trap 'kill 0' TERM INT; while :; do pw-play --volume=0.9 \"$1\" & wait $!; sleep 0.25; done",
+        ringProc.command = ["sh", "-c", "player=; stop_player() { if [ -n \"$player\" ]; then kill \"$player\" 2>/dev/null; wait \"$player\" 2>/dev/null; fi; exit 0; }; trap stop_player TERM INT; while :; do pw-play --volume=0.9 \"$1\" & player=$!; wait \"$player\"; player=; sleep 0.25; done",
                             "sh", soundDir + "/" + (r.kind === "timer" ? "timer" : "alarm") + ".wav"];
         ringProc.running = false; ringProc.running = true;
         ringLimit.restart();
@@ -330,9 +330,12 @@ Scope {
                         MouseArea {
                             id: bma; anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                if (parent.modelData === "Stop") root.stopRing();
-                                else if (parent.modelData === "Snooze") root.snooze();
-                                else root.repeatTimer();
+                                var action = parent.modelData;
+                                Qt.callLater(function() {
+                                    if (action === "Stop") root.stopRing();
+                                    else if (action === "Snooze") root.snooze();
+                                    else root.repeatTimer();
+                                });
                             }
                         }
                     }

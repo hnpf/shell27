@@ -2376,7 +2376,7 @@ Scope {
         if (kind === "brightness") osdQuietBrightUntil = Math.max(osdQuietBrightUntil, t);
         else osdQuietVolUntil = Math.max(osdQuietVolUntil, t);
     }
-    // ── UI sounds (synthesized macOS-style set in ~/.local/share/sounds/shell27, see shell27-make-sounds.py) ──
+    // ── UI sounds (real recordings installed to ~/.local/share/sounds/shell27) ──
     readonly property string soundDir: Quickshell.env("HOME") + "/.local/share/sounds/shell27"
     readonly property string notificationSoundPath: Quickshell.env("HOME") + "/.config/quickshell/shell27/modules/notification.mp3"
     property var soundLast: ({})
