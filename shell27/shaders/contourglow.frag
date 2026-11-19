@@ -1,7 +1,7 @@
 #version 440
 // Contour glow (Spotlight hover): a crisp light line that follows the rounded outline, plus a soft halo,
 // brightest where the cursor is.
-// Build:  /usr/lib/qt6/bin/qsb --qt6 -o contourglow.frag.qsb contourglow.frag
+// Build from shell27/: qsb --qt6 -o shaders/contourglow.frag.qsb shaders/contourglow.frag
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;

@@ -20,7 +20,7 @@ Item {
         visible: dz.progress > 0
         x: 0; y: -dz.pad
         width: dz.width + dz.pad; height: dz.cardH + dz.pad
-        fragmentShader: Qt.resolvedUrl("../dust.frag.qsb")
+        fragmentShader: Qt.resolvedUrl("../shaders/dust.frag.qsb")
         property variant source: snap
         property real progress: dz.progress
         property vector2d itemSize: Qt.vector2d(width, height)

@@ -831,7 +831,7 @@ find_qsb() {
 build_shaders() { # build_shaders <installed-dir>
     local d="$1" q f n=0
     q=$(find_qsb) || { return 0; }
-    for f in "$d"/*.frag; do
+    for f in "$d"/shaders/*.frag "$d"/shaders/*.vert; do
         [ -f "$f" ] || continue
         [ -f "$f.qsb" ] && continue
         if "$q" --qt6 -o "$f.qsb" "$f" >/dev/null 2>&1; then n=$((n+1)); else warn "could not compile $(basename "$f")"; rm -f "$f.qsb"; fi
@@ -1056,7 +1056,7 @@ run_doctor() {
     # graphics
     if ls /dev/dri/renderD* >/dev/null 2>&1; then d_ok "GPU render node found"; else d_bad "no /dev/dri/renderD*: Quickshell needs OpenGL (install mesa and your GPU driver)"; fi
     if have lspci; then lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -n2 | sed 's/^/    GPU: /' || true; fi
-    if [ -f "$DEST/liquidglass.frag.qsb" ]; then d_ok "Liquid Glass shader is built"; else d_bad "liquidglass.frag.qsb is missing: install qt6-shadertools and run bash install.sh"; fi
+    if [ -f "$DEST/shaders/liquidglass.frag.qsb" ]; then d_ok "Liquid Glass shader is built"; else d_bad "shaders/liquidglass.frag.qsb is missing: install qt6-shadertools and run bash install.sh"; fi
     if [ -f "$LOCK_DEST/shell.qml" ]; then
         if [ -f "$LOCK_DEST/shaders/liquidglass.frag.qsb" ]; then d_ok "shell27-lock shaders are built"; else d_bad "shell27-lock's shaders/liquidglass.frag.qsb is missing: install qt6-shadertools and run bash install.sh"; fi
     fi

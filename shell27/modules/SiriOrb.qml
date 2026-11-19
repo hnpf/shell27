@@ -49,7 +49,7 @@ Item {
         anchors.fill: parent
         visible: root.active && root.visible && root.opacity > 0.01
 
-        fragmentShader: Qt.resolvedUrl("siriorb.frag.qsb")
+        fragmentShader: Qt.resolvedUrl("../shaders/siriorb.frag.qsb")
 
         property vector2d itemSize: Qt.vector2d(width, height)
         property real u_time: root.animTime

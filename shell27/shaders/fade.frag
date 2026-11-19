@@ -1,6 +1,6 @@
 #version 440
 // Feathered top and bottom edges (shell27-lock lyrics): content fades out smoothly instead of being cut off.
-// Build:  /usr/lib/qt6/bin/qsb --qt6 -o fade.frag.qsb fade.frag
+// Build from shell27/: qsb --qt6 -o shaders/fade.frag.qsb shaders/fade.frag
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 layout(std140, binding = 0) uniform buf {

@@ -13,7 +13,7 @@
 //    - Border Shrink: Edge width collapses toward bezel into 0px
 //    - Reverse Radial Collapse: Wave drains along perimeter back to top-right origin
 //    - Smooth Opacity Fade (380ms)
-// Compile: /usr/lib/qt6/bin/qsb --qt6 -o siriedgeglow.frag.qsb siriedgeglow.frag
+// Build from shell27/: qsb --qt6 -o shaders/siriedgeglow.frag.qsb shaders/siriedgeglow.frag
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;

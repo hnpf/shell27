@@ -39,8 +39,8 @@ Scope {
     onGlassOkChanged: if (!glassOk && glassShaderUrl.toString() !== "") console.log("[macinstaller] glass shader failed to load:", glassShaderUrl)
     property url glassShaderUrl: ""
     // Same as the shell: use the shader it already built for this machine (~/.config/macdock/liquidglass.frag.qsb), else build
-    // liquidglass.frag with qsb into the cache, else fall back to the compiled copy next to this file.
-    readonly property string glassSrc: decodeURIComponent(Qt.resolvedUrl("liquidglass.frag").toString().replace("file://", ""))
+    // shaders/liquidglass.frag with qsb into the cache, else fall back to the compiled copy next to its source.
+    readonly property string glassSrc: decodeURIComponent(Qt.resolvedUrl("shaders/liquidglass.frag").toString().replace("file://", ""))
     Process {
         id: glassProc
         property string out: ""

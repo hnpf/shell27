@@ -1,7 +1,7 @@
 #version 440
 // Music widget album tint: the card's rounded shape, filled with the previous song's colour while the new one spreads
 // out from the cover as a soft-edged disc. Drawn directly (no mask layers), so the corners match the card exactly.
-// Build:  /usr/lib/qt6/bin/qsb --qt6 -o tintcard.frag.qsb tintcard.frag
+// Build from shell27/: qsb --qt6 -o shaders/tintcard.frag.qsb shaders/tintcard.frag
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 layout(std140, binding = 0) uniform buf {

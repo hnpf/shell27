@@ -2,7 +2,7 @@
 // Disintegrate (cleared notifications): the card breaks into fine specks that drift up-right and fade, in a wave
 // sweeping across it from left to right. The effect item is larger than the card (pad on the right and top) so the
 // dust has room to fly.
-// Build:  /usr/lib/qt6/bin/qsb --qt6 -o dust.frag.qsb dust.frag
+// Build from shell27/: qsb --qt6 -o shaders/dust.frag.qsb shaders/dust.frag
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;

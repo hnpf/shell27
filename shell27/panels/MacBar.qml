@@ -1,8 +1,8 @@
     // Inter is the default UI font; Open Runde remains a bundled alternative.
 // macbar — a macOS Tahoe style menu bar for Hyprland, built on Quickshell.
 //
-// Part of the combined macbar + macdock shell (see shell.qml). Keep this file, MacDock.qml, shell.qml,
-// liquidglass.frag and apple-logo-*.svg together in ~/.config/quickshell/macbar/ and run:  qs -c macbar
+// Part of the combined macbar + macdock shell (see shell.qml). Keep the panels/, shaders/, shell.qml,
+// and apple-logo-*.svg files together in ~/.config/quickshell/macbar/ and run:  qs -c macbar
 //
 // Settings live in ~/.config/macbar/settings.json (Apple menu → System Settings…, or Control Center → Edit Controls).
 // On first run, appearance (dark mode, accent, font, glass tuning, wallpaper) is inherited from macdock's settings.json.
@@ -1840,7 +1840,7 @@ Scope {
         property color glowColor: "white"
         anchors.fill: parent
         anchors.margins: -pad
-        fragmentShader: Qt.resolvedUrl("../contourglow.frag.qsb")
+        fragmentShader: Qt.resolvedUrl("../shaders/contourglow.frag.qsb")
         property vector2d itemSize: Qt.vector2d(width, height)
         property vector2d mouse: Qt.vector2d(at.x, at.y)
         property real cornerRadius: cornerR
@@ -5332,7 +5332,7 @@ Scope {
     // ═════════════ LIQUID GLASS BACKEND (same pipeline as macdock) ═════════════
     property string glassState: "idle"       // idle → building → ready | failed
     readonly property bool liquidActive: barStyle === "liquid" && glassState === "ready" && !gaming
-    readonly property string glassShaderSrc: decodeURIComponent(Qt.resolvedUrl("../liquidglass.frag").toString().replace("file://", ""))
+    readonly property string glassShaderSrc: decodeURIComponent(Qt.resolvedUrl("../shaders/liquidglass.frag").toString().replace("file://", ""))
     readonly property string glassShaderOut: configDir + "/liquidglass.frag.qsb"
     readonly property url glassShaderUrl: "file://" + glassShaderOut
 

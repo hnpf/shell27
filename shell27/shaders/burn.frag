@@ -2,7 +2,7 @@
 // "Burning paper" cover transition, without the fire: the old picture is eaten away along ragged, organic
 // edges (holes open and spread like burning paper) and the new picture shows through. No embers, no colour change.
 // Also clips both pictures to a rounded rectangle.
-// Build:  /usr/lib/qt6/bin/qsb --qt6 -o burn.frag.qsb burn.frag
+// Build from shell27/: qsb --qt6 -o shaders/burn.frag.qsb shaders/burn.frag
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;

@@ -723,7 +723,7 @@ Scope {
     // ───────────── Liquid Glass backend ─────────────
     // Same shader as the Dock / Menu Bar (liquidglass.frag), compiled with qsb into ~/.config/macwidgets/.
     property string glassState: "idle"                     // idle → building → ready | failed
-    readonly property string glassShaderSrc: decodeURIComponent(Qt.resolvedUrl("../liquidglass.frag").toString().replace("file://", ""))
+    readonly property string glassShaderSrc: decodeURIComponent(Qt.resolvedUrl("../shaders/liquidglass.frag").toString().replace("file://", ""))
     readonly property string glassShaderOut: configDir + "/liquidglass.frag.qsb"
     onAnyLiquidChanged: if (anyLiquid) startGlass()
     onReadyChanged: if (ready && anyLiquid) startGlass()

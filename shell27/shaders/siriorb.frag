@@ -5,7 +5,7 @@
 // Features: Ultra-soft feathered boundary (smoothstep 1.0 -> 0.48),
 // Gentle hypnotic slow plasma drift (reduced rotation speed when speaking),
 // completely seamless continuous blend.
-// Compile: /usr/lib/qt6/bin/qsb --qt6 -o siriorb.frag.qsb siriorb.frag
+// Build from shell27/: qsb --qt6 -o shaders/siriorb.frag.qsb shaders/siriorb.frag
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;

@@ -4,7 +4,7 @@
 //   ~/.config/quickshell/macbar/shell.qml       (this file)
 //   ~/.config/quickshell/macbar/MacBar.qml      (the menu bar)
 //   ~/.config/quickshell/macbar/MacDock.qml     (the Dock)
-//   ~/.config/quickshell/macbar/liquidglass.frag
+//   ~/.config/quickshell/macbar/shaders/liquidglass.frag
 // Run:  qs -c macbar        (remove your separate `qs -c macdock` autostart)
 //
 // Settings stay where they were: ~/.config/macbar/settings.json and ~/.config/macdock/settings.json (+ pinned.json).

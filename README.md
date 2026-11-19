@@ -229,7 +229,7 @@ The two Quickshell configs are installed separately. The starter settings in `se
 | `effects/` | Capture, blur, transition, and window-minimize effects. |
 | `modules/` | Siri and Apple Intelligence feature components. |
 | `assets/` | Icons, helper assets, credits pictures, and UI scripts. |
-| `liquidglass.frag` (+ `contourglow`, `tintcard`, `dust`, `burn`, `fade`, `waterflow`) | Main-shell shaders. Prebuilt `.frag.qsb` files ship next to their sources; `liquidglass.frag` is recompiled with `qsb` on first run. |
+| `shaders/` | Main-shell shader sources and compiled `.qsb` files, including shaders used by Siri modules and window effects. `liquidglass.frag` is recompiled with `qsb` on first run when needed. |
 | `EmojiData.js` | Emoji fallback data for Spotlight (from [gemoji](https://github.com/github/gemoji), MIT). |
 | `shell27-update` | Update tool (installed to `~/.local/bin`, see [Updating](#updating)). The installer also writes `shell27-start`, the script the Hyprland autostart runs. |
 | `apple-logo-black.svg`, `apple-logo-white.svg` | Menu bar logo. |
@@ -251,7 +251,7 @@ and more files...
 | **Hyprland ≥ 0.55, running a Lua config** (`~/.config/hypr/hyprland.lua`) | Window actions, the Alt+Tab focus, "paste after picking", Log Out and the floating Settings window use Lua dispatches (`hyprctl dispatch 'hl.dsp…'`, `hyprctl eval`). On older versions or a `.conf` session these actions fail; the bar, Dock, glass and previews still work. Quick test: `hyprctl dispatch 'hl.dsp.no_op()'` must not error. |
 | **Quickshell ≥ 0.3.0** (0.3.2 recommended) | Needs the Hyprland module (`HyprlandToplevel`, `lastIpcObject`, Lua-config support), `ScreencopyView`, `IpcHandler`, and the UPower / Pipewire / Mpris / SystemTray / Notifications services. |
 | Quickshell built with **Wayland**, **Hyprland**, **Screencopy → Hyprland Toplevel Export**, **Pipewire**, **UPower**, **Mpris**, **System Tray** | Distro packages normally enable all of these. Check the build info that `qs` prints in its logs. |
-| **Qt 6.5+** with `qt6-declarative`, `qt6-wayland`, **`qt6-shadertools`** (provides `qsb`) | `QtQuick.Effects` (MultiEffect) needs 6.5+. `qsb` compiles `liquidglass.frag` on first run. Without it (and without a prebuilt `liquidglass.frag.qsb`) the glass falls back to "Normal Blur". |
+| **Qt 6.5+** with `qt6-declarative`, `qt6-wayland`, **`qt6-shadertools`** (provides `qsb`) | `QtQuick.Effects` (MultiEffect) needs 6.5+. `qsb` compiles `shaders/liquidglass.frag` on first run. Without it (and without a prebuilt `shaders/liquidglass.frag.qsb`) the glass falls back to "Normal Blur". |
 | `qt6-svg` (recommended) | SVG app icons. |
 | `hyprctl`, `sh`, `xdg-open` | Core. |
 | An **icon theme** (Papirus, Adwaita, …) set for Qt apps | App icons in the Dock and Spotlight come from the system theme. If icons are blank, set one with `qt6ct` or `QS_ICON_THEME`. |
@@ -564,7 +564,7 @@ updating and it stays.
 
 | Symptom | Check |
 |---|---|
-| Glass looks flat / "Normal Blur" | `qsb` missing (install `qt6-shadertools`) — the log shows `[macbar-glass] state: failed`. Or ship a prebuilt `liquidglass.frag.qsb` next to `liquidglass.frag`; it is used as a fallback. |
+| Glass looks flat / "Normal Blur" | `qsb` missing (install `qt6-shadertools`) — the log shows `[macbar-glass] state: failed`. The prebuilt fallback is `shaders/liquidglass.frag.qsb`. |
 | Glass shows no wallpaper | Wallpaper not detected: see [Wallpaper](#wallpaper). |
 | Changing the wallpaper only changes the widgets and menus | `awww` is not installed or its daemon can't start. Install it, or set `wallpaperCmd` (see [Wallpaper](#wallpaper)); the log shows `[wallpaper] error:`. |
 | Blank app icons | No Qt icon theme: `shell27-start` picks your GTK theme or Papirus / WhiteSur / Tela / Adwaita if installed. Otherwise install one (`sudo pacman -S papirus-icon-theme`) or set `QS_ICON_THEME` in `~/.config/shell27/env`. |

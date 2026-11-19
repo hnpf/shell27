@@ -353,7 +353,7 @@ Scope {
                     ShaderEffect {
                         anchors.fill: parent
 
-                        fragmentShader: Qt.resolvedUrl("siriedgeglow.frag.qsb")
+                        fragmentShader: Qt.resolvedUrl("../shaders/siriedgeglow.frag.qsb")
 
                         property vector2d itemSize: Qt.vector2d(width, height)
                         property real u_time: root.animTime

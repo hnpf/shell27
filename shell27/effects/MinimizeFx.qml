@@ -140,8 +140,8 @@ Scope {
                 anchors.fill: parent
                 visible: ow.mine && fx.effect === "genie" && fx.captured
                 mesh: GridMesh { resolution: Qt.size(6, 64) }
-                vertexShader: Qt.resolvedUrl("../genie.vert.qsb")
-                fragmentShader: Qt.resolvedUrl("../genie.frag.qsb")
+                vertexShader: Qt.resolvedUrl("../shaders/genie.vert.qsb")
+                fragmentShader: Qt.resolvedUrl("../shaders/genie.frag.qsb")
                 property variant source: capTex
                 property real progress: fx.progress
                 property vector4d win: Qt.vector4d(ow.w.x - ow.ox, ow.w.y - ow.oy, ow.w.width, ow.w.height)

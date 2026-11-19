@@ -20,7 +20,7 @@ Scope {
     property bool glassFailed: false
     readonly property var dock: hub && hub.dock ? hub.dock : null
     readonly property bool liquidGlassReady: dock ? dock.settingsGlass && !glassFailed : false
-    readonly property url liquidGlassShader: dock ? dock.glassShaderUrl : Qt.resolvedUrl("../liquidglass.frag.qsb")
+    readonly property url liquidGlassShader: dock ? dock.glassShaderUrl : Qt.resolvedUrl("../shaders/liquidglass.frag.qsb")
 
     // State properties
     property bool isOpen: false

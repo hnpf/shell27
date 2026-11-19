@@ -2,7 +2,7 @@
 // Paints the window's captured image onto the genie mesh (see genie.vert). The uniform block must match the
 // vertex shader's exactly.
 //
-// Build:  /usr/lib/qt6/bin/qsb --qt6 -o genie.frag.qsb genie.frag
+// Build from shell27/: qsb --qt6 -o shaders/genie.frag.qsb shaders/genie.frag
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 

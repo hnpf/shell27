@@ -1,7 +1,7 @@
 // macdock v2 — a macOS-style dock for Hyprland, built on Quickshell. vSuol
 //
 // Part of the combined macbar + macdock shell (see shell.qml). Keep this file, MacBar.qml, shell.qml and
-// liquidglass.frag together in ~/.config/quickshell/macbar/ and run:  qs -c macbar
+// the shaders/ directory together in ~/.config/quickshell/macbar/ and run:  qs -c macbar
 // Pins are saved to ~/.config/macdock/pinned.json once you use "Keep in Dock".
 //
 // Settings are saved to ~/.config/macdock/settings.json (right-click the dock → Dock Preferences…).
@@ -10,7 +10,7 @@
 //
 // Dock style (Dock Preferences → Appearance):
 //   Normal Blur         – the original translucent tint; blur comes from the Hyprland layer rule below.
-//   Apple Liquid Glass  – real-time refraction shader (liquidglass.frag, next to this file). It is compiled
+//   Apple Liquid Glass  – real-time refraction shader (shaders/liquidglass.frag). It is compiled
 //                         with `qsb` (package qt6-shadertools) on first use and cached in ~/.config/macdock/.
 //                         The backdrop it refracts is the wallpaper + the live windows behind the Dock;
 //                         set "wallpaperPath" in settings.json if the wallpaper isn't auto-detected.
@@ -2674,7 +2674,7 @@ Scope {
                     }
                     ShaderEffect {
                         anchors.fill: parent
-                        fragmentShader: Qt.resolvedUrl("../waterflow.frag.qsb")
+                        fragmentShader: Qt.resolvedUrl("../shaders/waterflow.frag.qsb")
                         property vector2d itemSize: Qt.vector2d(width, height)
                         property real u_time: updateHero.animTime
                         property real borderRadius: 20
@@ -6883,7 +6883,7 @@ Scope {
     readonly property bool settingsGlass: glassState === "ready" && !(bar && bar.gaming)
     // < > pill glass: glass on + this window's position on its monitor is known (also gates the hidden wallpaper capture)
     readonly property bool winGlassBg: settingsGlass && prefsGlassGeo.ok
-    readonly property string glassShaderSrc: decodeURIComponent(Qt.resolvedUrl("../liquidglass.frag").toString().replace("file://", ""))
+    readonly property string glassShaderSrc: decodeURIComponent(Qt.resolvedUrl("../shaders/liquidglass.frag").toString().replace("file://", ""))
     readonly property string glassShaderOut: configDir + "/liquidglass.frag.qsb"
     readonly property url glassShaderUrl: "file://" + glassShaderOut
 
@@ -6919,7 +6919,7 @@ Scope {
     // the Control Center, menu bar and widgets are never affected.
     property string dockGlassState: "idle"        // idle → building → ready | failed
     readonly property bool dockGlassNew: dockGlassState === "ready"
-    readonly property string dockGlassSrc: decodeURIComponent(Qt.resolvedUrl("../dockglass.frag").toString().replace("file://", ""))
+    readonly property string dockGlassSrc: decodeURIComponent(Qt.resolvedUrl("../shaders/dockglass.frag").toString().replace("file://", ""))
     readonly property string dockGlassOut: configDir + "/dockglass.frag.qsb"
     readonly property url dockGlassUrl: dockGlassNew ? "file://" + dockGlassOut : glassShaderUrl
     Process {

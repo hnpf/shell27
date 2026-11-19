@@ -5,7 +5,7 @@
 // narrow first and fall first, the top of the window follows, and the whole funnel slides into the target.
 // progress 0 = the window where it is, 1 = gone into the Dock. Restoring plays the same thing backwards.
 //
-// Build:  /usr/lib/qt6/bin/qsb --qt6 -o genie.vert.qsb genie.vert
+// Build from shell27/: qsb --qt6 -o shaders/genie.vert.qsb shaders/genie.vert
 layout(location = 0) in vec4 qt_Vertex;
 layout(location = 1) in vec2 qt_MultiTexCoord0;
 layout(location = 0) out vec2 qt_TexCoord0;

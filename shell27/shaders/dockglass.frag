@@ -1,7 +1,7 @@
 #version 440
 // Liquid Glass for the Dock, tuned toward macOS Tahoe.
 //
-// Build:  qsb --qt6 -o dockglass.frag.qsb dockglass.frag
+// Build from shell27/: qsb --qt6 -o shaders/dockglass.frag.qsb shaders/dockglass.frag
 // (MacDock.qml runs this automatically and caches the result in ~/.config/macdock/. If the build fails the Dock keeps
 //  using the shared liquidglass.frag, so nothing else in the shell depends on this file.)
 //
