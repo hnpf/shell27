@@ -603,3 +603,4 @@ Reproduced on Hyprland 0.56.2 / Quickshell 0.3.2.
 
 Created by [Rickky](https://github.com/0-ss) (owner), with [vSuol](https://github.com/vsoultann) (collaborator).
 Emoji data from [GitHub gemoji](https://github.com/github/gemoji) (MIT).
+Some of the system sounds from the [ThisIsNoahEvans repo](https://github.com/ThisIsNoahEvans/BigSurSounds)
