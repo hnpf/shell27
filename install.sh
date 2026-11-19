@@ -1374,7 +1374,7 @@ backup_current() { # backup_current <dest> <name>
 }
 
 # repository files that are not part of a Quickshell config (shell27-lock is excluded so it never ends up inside shell27)
-EXCLUDES=(.git .github install.sh shell27-update shell27-start hypr-shell27 README.md README LICENSE LICENSE.md docs screenshots scripts sounds "$LOCK_NAME" "$GUI_NAME" assets/fonts/AppleColorEmoji-Linux.ttf)
+EXCLUDES=(.git .github install.sh shell27-update shell27-start hypr-shell27 README.md README LICENSE LICENSE.md docs screenshots sounds settings hyprland gemini_config.json siri_settings.json "$LOCK_NAME" "$GUI_NAME" assets/fonts/AppleColorEmoji-Linux.ttf)
 LOCK_EXCLUDES=(.git .github)
 
 # the destination is emptied of files the source does not have (rsync --delete): refuse folders that are obviously not a
@@ -1399,15 +1399,29 @@ sync_files() { # sync_files <source-folder> <dest> <exclude>...
         rsync -a --delete --delay-updates "${args[@]}" "$qml_root"/ "$dest"/
     else
         # no rsync: copy into a sibling folder first, then move the files in
-        local stage; stage=$(mktemp -d "$dest.stage.XXXXXX")
+        local stage e; stage=$(mktemp -d "$dest.stage.XXXXXX")
         local targs=()
         for e in "$@"; do targs+=("--exclude=./$e"); done
         targs+=("--exclude=__pycache__" "--exclude=*.pyc" "--exclude=*.bak*")
         tar -C "$qml_root" "${targs[@]}" -cf - . | tar -C "$stage" -xf -
+        for e in "$@"; do
+            [ -e "$dest/$e" ] || continue
+            mkdir -p "$stage/$(dirname "$e")"
+            cp -a "$dest/$e" "$stage/$e"
+        done
         find "$dest" -mindepth 1 -delete
         cp -a "$stage"/. "$dest"/
         rm -rf "$stage"
     fi
+}
+
+seed_shell_settings() {
+    local name
+    for name in gemini_config.json siri_settings.json; do
+        [ -f "$DEST/$name" ] && continue
+        [ -f "$QML_ROOT/settings/$name" ] || continue
+        cp -p "$QML_ROOT/settings/$name" "$DEST/$name"
+    done
 }
 
 # the start script used by the autostart line: waits for the compositor, never starts a second copy,
@@ -1796,9 +1810,9 @@ write_shell27_lua() {
         cp -p "$f" "$f.shell27-backup"
         ok "saved the existing $f to $f.shell27-backup"
     fi
-    # the module that ships with the shell (shell27/shell27.lua) is the one that matches this version of the shell: use it.
+    # the module that ships with the shell (shell27/hyprland/shell27.lua) is the one that matches this version: use it.
     # The copy below is only the fallback for a source tree that does not contain it.
-    local shipped="${QML_ROOT:-}/shell27.lua"
+    local shipped="${QML_ROOT:-}/hyprland/shell27.lua"
     if [ -n "${QML_ROOT:-}" ] && [ -f "$shipped" ] && grep -qF -- "$MACLUA_BEGIN" "$shipped" && grep -qF -- "$MACLUA_END" "$shipped"; then
         cp -f "$shipped" "$f"
         ok "shell27 autostart and keybinds -> $f"
@@ -2287,6 +2301,7 @@ fi
 step "Installing shell27 to $DEST"
 backup_current "$DEST" "$NAME"
 sync_files "$QML_ROOT" "$DEST" "${EXCLUDES[@]}"
+seed_shell_settings
 ok "all shell27 files have been copied"
 if [ -n "$LOCK_ROOT" ]; then
     step "Installing shell27-lock to $LOCK_DEST"

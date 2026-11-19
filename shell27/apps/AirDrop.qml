@@ -2,7 +2,7 @@
 //
 //   qs -c shell27 ipc call airdrop open
 //
-// Underneath it speaks LocalSend's protocol (assets/shell27-airdrop.py), so it finds and sends to anything
+// Underneath it speaks LocalSend's protocol (scripts/shell27-airdrop.py), so it finds and sends to anything
 // running LocalSend: phones, tablets, other desktops. Drop files on a device, or click one to pick them.
 import QtQuick
 import "../components"
@@ -22,8 +22,8 @@ Scope {
     Behavior on accent { ColorAnimation { duration: 260; easing.type: Easing.OutCubic } }
     readonly property string home: Quickshell.env("HOME")
     readonly property string helper: {
-        var p = Qt.resolvedUrl("../assets/shell27-airdrop.py").toString().replace(/^file:\/\//, "");
-        return p !== "" ? p : home + "/.config/quickshell/shell27/assets/shell27-airdrop.py";
+        var p = Qt.resolvedUrl("../scripts/shell27-airdrop.py").toString().replace(/^file:\/\//, "");
+        return p !== "" ? p : home + "/.config/quickshell/shell27/scripts/shell27-airdrop.py";
     }
 
     property var peers: []                  // { alias, ip, port, deviceType, fingerprint, state, detail }

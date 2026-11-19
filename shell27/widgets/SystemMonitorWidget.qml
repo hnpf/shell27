@@ -65,7 +65,7 @@ Item {
     property int tempVal: 52
     property string netSpeed: "120 KB/s"
 
-    readonly property string readerScript: decodeURIComponent(Qt.resolvedUrl("../sysmon_reader.py").toString().replace(/^file:\/\//, ""))
+    readonly property string readerScript: decodeURIComponent(Qt.resolvedUrl("../scripts/sysmon_reader.py").toString().replace(/^file:\/\//, ""))
 
     Process {
         id: sysProc

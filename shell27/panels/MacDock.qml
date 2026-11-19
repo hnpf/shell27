@@ -6058,7 +6058,7 @@ Scope {
                             x: (parent.width - width) / 2
                             y: 16
                             width: 84; height: 84
-                            source: Qt.resolvedUrl(root.darkMode ? "../apple-logo-white.svg" : "../apple-logo-black.svg")
+                            source: Qt.resolvedUrl(root.darkMode ? "../assets/apple-logo-white.svg" : "../assets/apple-logo-black.svg")
                             sourceSize.width: 256; sourceSize.height: 256
                             fillMode: Image.PreserveAspectFit
                             smooth: true; mipmap: true
@@ -6224,7 +6224,7 @@ Scope {
                         Image {
                             anchors.horizontalCenter: parent.horizontalCenter; y: 16
                             width: 36; height: 36
-                            source: Qt.resolvedUrl(pal.dark ? "../apple-logo-white.svg" : "../apple-logo-black.svg")
+                            source: Qt.resolvedUrl(pal.dark ? "../assets/apple-logo-white.svg" : "../assets/apple-logo-black.svg")
                             sourceSize: Qt.size(72, 72); fillMode: Image.PreserveAspectFit; smooth: true
                         }
                         Text {
@@ -6405,7 +6405,7 @@ Scope {
 
     // shell27's own windows share the app id "org.quickshell"; use the Apple mark unless a window has a specific app identity.
     readonly property string appsIconPath: decodeURIComponent(String(Qt.resolvedUrl("../assets/apps-dock.svg")).replace(/^file:\/\//, ""))
-    readonly property string logoPath: decodeURIComponent(String(Qt.resolvedUrl("../apple-logo-white.svg")).replace(/^file:\/\//, ""))
+    readonly property string logoPath: decodeURIComponent(String(Qt.resolvedUrl("../assets/apple-logo-white.svg")).replace(/^file:\/\//, ""))
     readonly property string remindersIconPath: decodeURIComponent(String(Qt.resolvedUrl("../assets/reminders-app.png")).replace(/^file:\/\//, ""))
     readonly property string airdropIconPath: decodeURIComponent(String(Qt.resolvedUrl("../assets/airdrop-app.png")).replace(/^file:\/\//, ""))
     readonly property string siriIconPath: decodeURIComponent(String(Qt.resolvedUrl("../assets/siri-app.png")).replace(/^file:\/\//, ""))

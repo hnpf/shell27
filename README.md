@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="shell27/shell27-banner.png" alt="shell27" width="100%" />
+  <img src="shell27/assets/shell27-banner.png" alt="shell27" width="100%" />
 </p>
 
 <p align="center">
@@ -95,11 +95,11 @@ This fork extends upstream shell27 with multimedia features, desktop widgets, an
 
 ### Extended Desktop Widgets Suite
 - **Animated GIF / WebP Widget (`GifWidget.qml`)**: Display looping animations directly on the desktop with macOS squircle aesthetics and an interactive file picker.
-- **System Monitor Widget (`SystemMonitorWidget.qml` & `sysmon_reader.py`)**: macOS Activity Monitor-style circular gauges for CPU, GPU, RAM, Disk, Thermals, and Network.
-- **Stocks & Cryptocurrency Widget (`StocksWidget.qml` & `stocks_fetcher.py`)**: Live market tracking (BTC, ETH, SOL, AAPL, NVDA, etc.) with interactive sparkline curves and gradient fills.
-- **Battery Widget (`BatteryWidget.qml` & `battery_reader.py`)**: Displays battery percentage, health, and power profile.
+- **System Monitor Widget (`SystemMonitorWidget.qml` & `scripts/sysmon_reader.py`)**: macOS Activity Monitor-style circular gauges for CPU, GPU, RAM, Disk, Thermals, and Network.
+- **Stocks & Cryptocurrency Widget (`StocksWidget.qml` & `scripts/stocks_fetcher.py`)**: Live market tracking (BTC, ETH, SOL, AAPL, NVDA, etc.) with interactive sparkline curves and gradient fills.
+- **Battery Widget (`BatteryWidget.qml` & `scripts/battery_reader.py`)**: Displays battery percentage, health, and power profile.
 - **Reminders Widget (`RemindersWidget.qml` & `Reminders.qml`)**: Interactive task checklist that syncs with `reminders.md` and plays Apple sound effects.
-- **AirDrop-style sharing (`AirDrop.qml` & `assets/shell27-airdrop.py`)**: Discovers LocalSend-compatible devices, asks before receiving, and saves accepted files to `~/Downloads`.
+- **AirDrop-style sharing (`AirDrop.qml` & `scripts/shell27-airdrop.py`)**: Discovers LocalSend-compatible devices, asks before receiving, and saves accepted files to `~/Downloads`.
 - **First-run welcome (`SetupAssistant.qml`)**: Offers appearance and accent choices and links to System Settings. It does not install packages or alter network settings. Reopen with `qs -c shell27 ipc call welcome open`.
 
 ### Heavy GPU & CPU Optimizations (macOS App Nap)
@@ -229,10 +229,13 @@ The two Quickshell configs are installed separately. The starter settings in `se
 | `effects/` | Capture, blur, transition, and window-minimize effects. |
 | `modules/` | Siri and Apple Intelligence feature components. |
 | `assets/` | Icons, helper assets, credits pictures, and UI scripts. |
+| `scripts/` | Python helpers and Siri daemon. |
+| `settings/` | Shipped Siri/Gemini JSON defaults; the installer seeds these at the shell's runtime settings paths. |
+| `hyprland/` | The shell-specific Hyprland Lua module. |
 | `shaders/` | Main-shell shader sources and compiled `.qsb` files, including shaders used by Siri modules and window effects. `liquidglass.frag` is recompiled with `qsb` on first run when needed. |
 | `EmojiData.js` | Emoji fallback data for Spotlight (from [gemoji](https://github.com/github/gemoji), MIT). |
 | `shell27-update` | Update tool (installed to `~/.local/bin`, see [Updating](#updating)). The installer also writes `shell27-start`, the script the Hyprland autostart runs. |
-| `apple-logo-black.svg`, `apple-logo-white.svg` | Menu bar logo. |
+| `assets/apple-logo-black.svg`, `assets/apple-logo-white.svg` | Menu bar logo. |
 | `assets/` | Icons and the credits pictures. |
 
 **shell27-lock**

@@ -51,7 +51,7 @@ Item {
     ]
     readonly property var firstDev: (devList && devList.length > 0) ? devList[0] : ({ percentage: 100, charging: false, name: "Battery", time: "" })
 
-    readonly property string readerScript: decodeURIComponent(Qt.resolvedUrl("../battery_reader.py").toString().replace(/^file:\/\//, ""))
+    readonly property string readerScript: decodeURIComponent(Qt.resolvedUrl("../scripts/battery_reader.py").toString().replace(/^file:\/\//, ""))
 
     Process {
         id: batProc

@@ -479,7 +479,7 @@ Scope {
             + "--data-urlencode \"album_name=$3\" -d \"duration=$4\" 2>/dev/null "
             + "|| curl -fsS --max-time 8 -A \"$UA\" -G https://lrclib.net/api/search --data-urlencode \"q=$2 $1\" 2>/dev/null || true); "
             + "if printf '%s' \"$r\" | jq -e 'if type == \"array\" then any(.[]; (.syncedLyrics // \"\") != \"\") else (.syncedLyrics // \"\") != \"\" end' >/dev/null 2>&1; then printf '%s' \"$r\"; exit 0; fi; "
-            + "g=$(python3 \"$HOME/.config/quickshell/shell27/genius-lyrics.py\" \"$2\" \"$1\" \"$HOME/.cache/shell27/lyrics\" 2>/dev/null || true); "
+            + "g=$(python3 \"$HOME/.config/quickshell/shell27/scripts/genius-lyrics.py\" \"$2\" \"$1\" \"$HOME/.cache/shell27/lyrics\" 2>/dev/null || true); "
             + "gp=$(printf '%s' \"$g\" | jq -r '.plain // empty' 2>/dev/null); "
             + "if [ -n \"$gp\" ]; then jq -nc --arg p \"$gp\" '{plainLyrics:$p}'; "
             + "elif [ -n \"$r\" ]; then printf '%s' \"$r\"; else printf '{}'; fi",

@@ -4,11 +4,13 @@
 Cause: font.family: Fonts.forWeight(font.weight, fam)  reads the same Text's own font.weight while it writes font.family.
 Fix:   each call reads the weight that Text declares explicitly (Font.Normal when it declares none).
 
-Usage:  cd ~/.config/quickshell/shell27 && python3 fixfont.py [--dry]
+Usage:  python3 scripts/fixfont.py [--dry]
 Safe to re-run (it only touches the old pattern). Keeps a copy of every changed file next to it as <name>.qml.bak
 """
 import os,shutil
 import re,sys,glob
+from pathlib import Path
+SHELL_ROOT=Path(__file__).resolve().parent.parent
 pat=re.compile(r'((?:Fonts\.|root\.)?[fF]ontForWeight|Fonts\.forWeight)\(\s*font\.weight\s*,')
 def strip_strings(t):
     # blank out string literals and comments so braces inside them don't count (keep length)
@@ -49,7 +51,7 @@ def value_at(t,pos):
         j+=1
     return t[pos:j].strip()
 tot=0;unk=[];dyn=[]
-for f in sorted(glob.glob('*.qml')):
+for f in sorted(glob.glob(str(SHELL_ROOT / '**' / '*.qml'), recursive=True)):
     s=open(f).read()
     if not pat.search(s): continue
     c=strip_strings(s)

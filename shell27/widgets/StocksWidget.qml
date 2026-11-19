@@ -74,7 +74,7 @@ Item {
         ? stockList[selectedIndex]
         : (stockList && stockList.length > 0 ? stockList[0] : { "symbol": "—", "name": "Market data unavailable", "price": null, "change24h": 0, "currency": "$", "sparkline": [] })
 
-    readonly property string stocksScript: decodeURIComponent(Qt.resolvedUrl("../stocks_fetcher.py").toString().replace(/^file:\/\//, ""))
+    readonly property string stocksScript: decodeURIComponent(Qt.resolvedUrl("../scripts/stocks_fetcher.py").toString().replace(/^file:\/\//, ""))
     readonly property string stocksLibDir: decodeURIComponent(Qt.resolvedUrl("../lib/").toString().replace(/^file:\/\//, ""))
 
     function formatPrice(val, curr) {

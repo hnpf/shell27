@@ -3998,7 +3998,7 @@ Scope {
     }
 
     // the shell27 logo: the icon of shell27's own windows in the Alt+Tab switcher
-    readonly property string logoPath: decodeURIComponent(String(Qt.resolvedUrl("../apple-logo-white.svg")).replace(/^file:\/\//, ""))
+    readonly property string logoPath: decodeURIComponent(String(Qt.resolvedUrl("../assets/apple-logo-white.svg")).replace(/^file:\/\//, ""))
     readonly property string remindersIconPath: decodeURIComponent(String(Qt.resolvedUrl("../assets/reminders-app.png")).replace(/^file:\/\//, ""))
     // ── applications for Spotlight ──
     function iconSrc(name) {
@@ -6929,7 +6929,7 @@ Scope {
                                     visible: mt.modelData.id === "apple" && root.barLogoMode === "apple"
                                     anchors.centerIn: parent
                                     width: 15; height: 15
-                                    source: !root.barTextDark ? Qt.resolvedUrl("../apple-logo-white.svg") : Qt.resolvedUrl("../apple-logo-black.svg")
+                                    source: !root.barTextDark ? Qt.resolvedUrl("../assets/apple-logo-white.svg") : Qt.resolvedUrl("../assets/apple-logo-black.svg")
                                     sourceSize: Qt.size(128, 160)
                                     fillMode: Image.PreserveAspectFit
                                     smooth: true
