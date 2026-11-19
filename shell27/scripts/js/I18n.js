@@ -1,6 +1,6 @@
 .pragma library
-.import "lang/ru.js" as Ru
-.import "lang/es.js" as Es
+.import "../../lang/ru.js" as Ru
+.import "../../lang/es.js" as Es
 
 // Interface translations. I18n.tr("English text") returns the text in the chosen language, or the English text
 // itself when there is no translation. The language is Qt.uiLanguage (System Settings → General → Language,

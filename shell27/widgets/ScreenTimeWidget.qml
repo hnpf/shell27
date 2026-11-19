@@ -1,7 +1,7 @@
 import QtQuick
 import "../components"
 import QtQuick.Effects
-import "../Fonts.js" as Fonts
+import "../scripts/js/Fonts.js" as Fonts
 
 Item {
     id: w

@@ -4,7 +4,7 @@ import QtMultimedia
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import "../I18n.js" as I18n
+import "../scripts/js/I18n.js" as I18n
 
 Scope {
     id: root

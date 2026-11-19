@@ -28,7 +28,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
-import "../CaptureGate.js" as Gate
+import "../scripts/js/CaptureGate.js" as Gate
 
 ScreencopyView {
     id: sc

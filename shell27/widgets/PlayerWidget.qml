@@ -14,8 +14,8 @@
 import QtQuick
 import "../components"
 import QtQuick.Effects
-import "../I18n.js" as I18n
-import "../Fonts.js" as Fonts
+import "../scripts/js/I18n.js" as I18n
+import "../scripts/js/Fonts.js" as Fonts
 
 Item {
     id: w

@@ -1,6 +1,6 @@
 import QtQuick
-import "../I18n.js" as I18n
-import "../Fonts.js" as Fonts
+import "../scripts/js/I18n.js" as I18n
+import "../scripts/js/Fonts.js" as Fonts
 
 // Segmented control (macOS Tahoe look): a capsule track, thin dividers between the options that are not selected, and a
 // capsule that marks the chosen option.

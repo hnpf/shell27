@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Shapes
-import "../GlassShape.js" as GS
+import "../scripts/js/GlassShape.js" as GS
 
 // The Dock's hover label and right-click menu: a macOS Tahoe style bubble made of heavily blurred Liquid Glass, with a pointer tail
 // under it. One component for both, so they always look the same.

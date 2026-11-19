@@ -9,8 +9,8 @@ import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import "../components"
-import "../I18n.js" as I18n
-import "../Fonts.js" as Fonts
+import "../scripts/js/I18n.js" as I18n
+import "../scripts/js/Fonts.js" as Fonts
 
 Scope {
     id: root

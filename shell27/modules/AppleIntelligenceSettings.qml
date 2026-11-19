@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "../I18n.js" as I18n
+import "../scripts/js/I18n.js" as I18n
 
 Item {
     id: root

@@ -82,9 +82,9 @@ import Quickshell.Services.UPower
 import Quickshell.Services.Pipewire
 import Quickshell.Services.Mpris
 import Quickshell.Services.Notifications
-import "../EmojiData.js" as EmojiData
-import "../I18n.js" as I18n
-import "../Fonts.js" as Fonts
+import "../scripts/js/EmojiData.js" as EmojiData
+import "../scripts/js/I18n.js" as I18n
+import "../scripts/js/Fonts.js" as Fonts
 
 Scope {
     id: root

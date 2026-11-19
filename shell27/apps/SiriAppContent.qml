@@ -5,7 +5,7 @@ import QtQuick.Dialogs
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
-import "../Fonts.js" as Fonts
+import "../scripts/js/Fonts.js" as Fonts
 import "../modules"
 
 Scope {

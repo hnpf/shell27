@@ -26,7 +26,7 @@ import "widgets"
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
-import "CaptureGate.js" as CaptureGate
+import "scripts/js/CaptureGate.js" as CaptureGate
 import "modules"
 
 ShellRoot {

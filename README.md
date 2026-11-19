@@ -230,6 +230,7 @@ The two Quickshell configs are installed separately. The starter settings in `se
 | `modules/` | Siri and Apple Intelligence feature components. |
 | `assets/` | Icons, helper assets, credits pictures, and UI scripts. |
 | `scripts/` | Python helpers and Siri daemon. |
+| `scripts/js/` | Shared QML JavaScript modules for fonts, translations, capture gating, and glass geometry. |
 | `settings/` | Shipped Siri/Gemini JSON defaults; the installer seeds these at the shell's runtime settings paths. |
 | `hyprland/` | The shell-specific Hyprland Lua module. |
 | `shaders/` | Main-shell shader sources and compiled `.qsb` files, including shaders used by Siri modules and window effects. `liquidglass.frag` is recompiled with `qsb` on first run when needed. |

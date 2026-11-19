@@ -33,9 +33,9 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
-import "../I18n.js" as I18n
+import "../scripts/js/I18n.js" as I18n
 import "../modules"
-import "../Fonts.js" as Fonts
+import "../scripts/js/Fonts.js" as Fonts
 
 Scope {
     id: root

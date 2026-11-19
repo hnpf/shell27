@@ -3,7 +3,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
-import "../Fonts.js" as Fonts
+import "../scripts/js/Fonts.js" as Fonts
 
 Item {
     id: pu

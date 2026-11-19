@@ -4,7 +4,7 @@
 import QtQuick
 import "../components"
 import QtQuick.Effects
-import "../I18n.js" as I18n
+import "../scripts/js/I18n.js" as I18n
 
 Item {
     id: w
