@@ -846,7 +846,8 @@ Scope {
                             var paths = root.selectedItems().filter(function (it) { return !it.isTrash; }).map(function (it) { return root.fileUrl(it.path); });
                             if (paths.length > 0) {
                                 nativeDragUris = paths.join("\r\n") + "\r\n";
-                                nativeDragActive = true;
+                                if (mouse.x < 0 || mouse.y < 0 || mouse.x >= width || mouse.y >= height)
+                                    nativeDragActive = true;
                             }
                         } else {
                             w.marqueeActive = true;
