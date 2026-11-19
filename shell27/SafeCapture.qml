@@ -73,6 +73,10 @@ ScreencopyView {
     property real lastRebuild: 0
     property real heldAt: 0              // when the current source was attached
     property bool ended: false           // Hyprland ended the capture (it HAD a picture and lost it): no frame is in flight any more
+    property bool sourceGeometrySeen: false
+    property bool sourceGeometryAvailable: false
+    property real sourceWidth: 0
+    property real sourceHeight: 0
     function recover(fast) {
         if (want === null || held === null || reviving || dead || hold) return;
         if (++tries > maxTries) { log("gave up after " + maxTries + " rebuilds"); dead = true; wakeT.restart(); return; }
@@ -101,11 +105,25 @@ ScreencopyView {
     }
     // a capture that gave up is not abandoned for good: one more attempt now and then (the window may be capturable by then)
     Timer { id: wakeT; interval: 20000; onTriggered: { if (sc.dead && sc.want !== null) { sc.dead = false; sc.tries = sc.maxTries - 1; if (sc.held !== null && sc.hasContent === false) sc.recover(); } } }
-    // the window changed size: whatever went wrong before gets another chance
+    // the captured window changed size: whatever went wrong before gets another chance
     function heal() {
         if (held === null) return;
         dead = false; tries = 0; missTicks = 0;
         if (hasContent === false && !reviving) missTicks = 2;     // no picture: the watchdog rebuilds on its next tick (250 ms)
+    }
+    function sourceGeometryChanged() {
+        if (implicitWidth <= 0 || implicitHeight <= 0) {
+            if (hadContent) lostPicture();
+            sourceGeometryAvailable = false;
+            return;
+        }
+        var changed = sourceGeometrySeen && (!sourceGeometryAvailable
+            || sourceWidth !== implicitWidth || sourceHeight !== implicitHeight);
+        sourceWidth = implicitWidth;
+        sourceHeight = implicitHeight;
+        sourceGeometrySeen = true;
+        sourceGeometryAvailable = true;
+        if (changed) heal();
     }
     function nudge() { kick(); }     // only acts on a capture without a picture
     Timer { id: reviveA; onTriggered: { if (sc.want !== null) sc.held = null; reviveB.interval = Math.min(2000, 150 * Math.pow(2, Math.max(0, sc.tries - 1))); reviveB.restart(); } }
@@ -117,7 +135,6 @@ ScreencopyView {
         else lostPicture();
     }
     // Quickshell clears the picture size together with `hasContent` when it ends a capture: either one going away counts
-    onImplicitWidthChanged: { if (implicitWidth <= 0 && hadContent) lostPicture(); }
     function lostPicture() {
         if (!hadContent) return;
         // it HAD a picture and lost it: Hyprland ended the capture. Rebuild right away (no frame is in flight any more)
@@ -139,6 +156,8 @@ ScreencopyView {
     // a size change (tiling re-layout, resize): the old retries no longer count
     onWidthChanged: heal()
     onHeightChanged: heal()
+    onImplicitWidthChanged: sourceGeometryChanged()
+    onImplicitHeightChanged: sourceGeometryChanged()
 
     // A capture context is created through attach(): globally at most one every few ms (CaptureGate.slotDelay), so a workspace switch,
     // a batch of new windows or the shell's own start never creates dozens of contexts in the same instant.
