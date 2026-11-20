@@ -1033,7 +1033,8 @@ Scope {
         border.width: 1
         border.color: Qt.rgba(0, 0, 0, 0.14)
 
-        WGlyph { visible: gl.wg !== ""; anchors.centerIn: parent; width: 16; height: 16; kind: gl.wg; color: "white" }
+        WGlyph { visible: gl.wg !== "" && gl.wg !== "wifi"; anchors.centerIn: parent; width: 16; height: 16; kind: gl.wg; color: "white" }
+        WifiGlyph { visible: gl.wg === "wifi"; anchors.centerIn: parent; width: 16; height: 12; color: "white" }
         Item {
             anchors.centerIn: parent
             width: 16; height: 16

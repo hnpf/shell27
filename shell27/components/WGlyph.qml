@@ -1,5 +1,6 @@
 // Monochrome glyphs, extracted unchanged from shell27/MacBar.qml (component Glyph)
 import QtQuick
+import "."
 
 Canvas {
     id: gl
@@ -75,14 +76,7 @@ Canvas {
             ctx.closePath();
             ctx.fill();
         } else if (k === "wifi") {
-            var radii = [3.8, 7.2, 10.6];
-            for (i2 = 0; i2 < 3; i2++) {
-                if (i2 >= level) ctx.globalAlpha = 0.3; else ctx.globalAlpha = 1;
-                ctx.beginPath(); ctx.arc(9, 14.6, radii[i2], -PI * 0.75, -PI * 0.25); ctx.stroke();
-            }
-            ctx.globalAlpha = 1;
-            circ(9, 14.6, 1.3); ctx.fill();
-            if (flag) line(2.5, 2.5, 15.5, 15.5);
+            return;
         } else if (k === "bluetooth") {
             poly([5, 5.5, 13, 12.5, 9, 16, 9, 2, 13, 5.5, 5, 12.5], false);
             if (flag) line(2.5, 2.5, 15.5, 15.5);
@@ -312,5 +306,11 @@ Canvas {
             }
             circ(9, 9, 5.6); ctx.stroke();
         }
+    }
+    WifiGlyph {
+        anchors.fill: parent
+        visible: gl.kind === "wifi"
+        color: gl.color
+        flag: gl.flag
     }
 }

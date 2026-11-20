@@ -399,9 +399,11 @@ Scope {
     property string spotWant: "home"          // which Spotlight panel the next request opens: home | clip | emoji | apps
     property int nightTemp: 4000
     // Control Center: ids of the enabled controls, in order (edit with Control Center → Edit Controls)
-    property var ccControls: ["wifi", "nowplaying", "bluetooth", "airplane", "focus", "record", "nightshift", "keepawake", "display", "sound"]
+    property var ccControls: ["wifi", "nowplaying", "bluetooth", "airdrop", "airplane", "focus", "record", "nightshift", "keepawake", "stagemanager", "dock", "display", "sound"]
     property var ccCompactControls: []
     property var ccWideControls: []
+    property bool ccMigAirDrop: false           // one-time: add AirDrop visibility to existing Control Center layouts
+    property bool ccMigDock: false              // one-time: add the Dock toggle to existing Control Center layouts
     property bool ccMigRec: false              // one-time: add the Screen Recording tile to an existing Control Center layout
     property bool ccMigStage: false            // one-time: add Stage Manager tile to Control Center
     property bool barMigApps: false            // one-time: add built-in app shortcuts to existing menu-bar layouts
@@ -430,7 +432,7 @@ Scope {
         "barStyle", "barGlass", "glassRim", "glassGrain", "glassLiquid", "glassBlur", "barBgOpacity", "glassRealtime", "liveWallGlass", "glassDebug", "wallpaperPath", "use24h", "language", "showDate",
         "showSeconds", "showBatteryPercent", "showCpuRam", "showCpu", "showRam", "showGpu", "showDisk", "showTemp", "showNet", "showTray", "showSearch",
         "spotlightEnabled", "reduceMotion", "ccEnabled", "notificationsEnabled", "clockAppEnabled", "ccStyle", "barLogoMode", "barCustomLogoPath", "barWidgets", "weekStartsMonday", "terminal", "launcher",
-        "filesCmd", "clipboardCmd", "appUsage", "clipHistory", "clipAutoPaste", "emojiRecent", "screenshotDir", "screenshotSave", "screenshotClipboard", "screenshotNotify", "nightTemp", "ccControls", "ccCompactControls", "ccWideControls", "ccMigRec", "wallpaperDir", "wallpaperFavs", "wallpaperCmd", "wallpaperVideo", "wpRestorePath", "uiSounds", "gamingMode", "gamingAuto", "ccMigGame", "lockArtBackground",
+        "filesCmd", "clipboardCmd", "appUsage", "clipHistory", "clipAutoPaste", "emojiRecent", "screenshotDir", "screenshotSave", "screenshotClipboard", "screenshotNotify", "nightTemp", "ccControls", "ccCompactControls", "ccWideControls", "ccMigAirDrop", "ccMigDock", "ccMigRec", "wallpaperDir", "wallpaperFavs", "wallpaperCmd", "wallpaperVideo", "wpRestorePath", "uiSounds", "gamingMode", "gamingAuto", "ccMigGame", "lockArtBackground",
         "lockClockStyle", "switcherStyle", "lockClockFont", "lockClockWeight", "lockClockMaterial", "lockClockIntensity", "lockClockTint", "lockClockDate", "autoContrast", "wallpaperAppearance", "wpPairLight", "wpPairDark",
         "notifDnd", "dnd", "nightOn", "keepAwake", "stageManager", "ccMigStage", "barMigApps", "barMigSysMon", "barMigLockIndicators",
         "kbRepeatRate", "kbRepeatDelay", "mouseSens", "mouseNatural", "tpNatural", "tpTap", "tpDwt", "tpScroll"]
@@ -471,6 +473,7 @@ Scope {
     readonly property var ccCatalog: [
         { id: "wifi",       label: I18n.tr("Wi-Fi"),         glyph: "wifi",       w: 2, h: 1 },
         { id: "bluetooth",  label: I18n.tr("Bluetooth"),     glyph: "bluetooth",  w: 2, h: 1 },
+        { id: "airdrop",    label: I18n.tr("AirDrop"),       glyph: "airdrop",    w: 2, h: 1 },
         { id: "airplane",   label: I18n.tr("Airplane Mode"), glyph: "airplane",   w: 1, h: 1 },
         { id: "focus",      label: I18n.tr("Focus"),         glyph: "moon",       w: 2, h: 1 },
         { id: "nightshift", label: I18n.tr("Night Shift"),   glyph: "nightshift", w: 1, h: 1 },
@@ -478,12 +481,19 @@ Scope {
         { id: "darkmode",   label: I18n.tr("Dark Mode"),     glyph: "contrast",   w: 1, h: 1 },
         { id: "stagemanager", label: I18n.tr("Stage Manager"), glyph: "stagemanager", w: 1, h: 1 },
         { id: "gaming",     label: I18n.tr("Game Mode"),     glyph: "gamepad",    w: 2, h: 1 },
+        { id: "dock",       label: I18n.tr("Dock"),          glyph: "dock",       w: 1, h: 1 },
         { id: "record",     label: I18n.tr("Screen Recording"), glyph: "record",  w: 2, h: 1 },
         { id: "nowplaying", label: I18n.tr("Now Playing"),   glyph: "note",       w: 2, h: 2 },
         { id: "display",    label: I18n.tr("Display"),       glyph: "sun",        w: 4, h: 1 },
         { id: "sound",      label: I18n.tr("Sound"),         glyph: "speaker",    w: 4, h: 1 }
     ]
-    readonly property var ccDefault: ["wifi", "nowplaying", "bluetooth", "airplane", "focus", "record", "nightshift", "keepawake", "stagemanager", "display", "sound"]
+    readonly property var ccDefault: ["wifi", "nowplaying", "bluetooth", "airdrop", "airplane", "focus", "record", "nightshift", "keepawake", "stagemanager", "dock", "display", "sound"]
+    function toggleAirDrop() {
+        if (hub && hub.airdrop) hub.airdrop.receiving = !hub.airdrop.receiving;
+    }
+    function toggleDock() {
+        if (hub && hub.dock) hub.dock.dockEnabled = !hub.dock.dockEnabled;
+    }
     function ccDef(id) {
         for (var i = 0; i < ccCatalog.length; i++) if (ccCatalog[i].id === id) return ccCatalog[i];
         return null;
@@ -537,14 +547,14 @@ Scope {
                 }
             }
         }
-        // pixel layout: tiles sit ccGap apart; the two slider tiles (Display, Sound) keep the wider ccSliderGap around them
+        // Pixel spacing is independent horizontally and vertically; sliders keep a little extra room around their rows.
         var sliderRow = [], ys = [];
         for (var k = 0; k < out.length; k++) {
             if (out[k].id === "display" || out[k].id === "sound")
                 for (var rr = out[k].row; rr < out[k].row + out[k].h; rr++) sliderRow[rr] = true;
         }
         for (var r2 = 0; r2 < rows; r2++)
-            ys[r2] = r2 === 0 ? 0 : ys[r2 - 1] + ccCellH + ((sliderRow[r2] || sliderRow[r2 - 1]) ? ccSliderGap : ccGap);
+            ys[r2] = r2 === 0 ? 0 : ys[r2 - 1] + ccCellH + ((sliderRow[r2] || sliderRow[r2 - 1]) ? ccSliderGap : ccRowGap);
         for (var m = 0; m < out.length; m++) {
             out[m].y = ys[out[m].row];
             out[m].hpx = ys[out[m].row + out[m].h - 1] + ccCellH - ys[out[m].row];
@@ -553,7 +563,8 @@ Scope {
     }
     readonly property real ccCellH: 66
     readonly property real ccGap: 6
-    readonly property real ccSliderGap: 10
+    readonly property real ccRowGap: 12
+    readonly property real ccSliderGap: 16
     readonly property var ccPlan: ccLayout(ccControls)
     function ccAdd(id) {
         if (ccControls.indexOf(id) < 0) ccControls = ccControls.concat([id]);
@@ -862,14 +873,7 @@ Scope {
                 ctx.closePath();
                 ctx.fill();
             } else if (k === "wifi") {
-                var radii = [3.8, 7.2, 10.6];
-                for (i2 = 0; i2 < 3; i2++) {
-                    if (i2 >= level) ctx.globalAlpha = 0.3; else ctx.globalAlpha = 1;
-                    ctx.beginPath(); ctx.arc(9, 14.6, radii[i2], -PI * 0.75, -PI * 0.25); ctx.stroke();
-                }
-                ctx.globalAlpha = 1;
-                circ(9, 14.6, 1.3); ctx.fill();
-                if (flag) line(2.5, 2.5, 15.5, 15.5);
+                return;
             } else if (k === "bluetooth") {
                 poly([5, 5.5, 13, 12.5, 9, 16, 9, 2, 13, 5.5, 5, 12.5], false);
                 if (flag) line(2.5, 2.5, 15.5, 15.5);
@@ -922,6 +926,11 @@ Scope {
             } else if (k === "monitor") {
                 rrect(2, 3, 14, 9.4, 1.8); ctx.stroke();
                 line(6.4, 15.4, 11.6, 15.4); line(9, 12.4, 9, 15.4);
+            } else if (k === "dock") {
+                rrect(1, 1.5, 16, 13, 2.4); ctx.stroke();
+                line(9, 4, 9, 8);
+                poly([7, 6, 9, 8, 11, 6], false);
+                rrect(3, 10.3, 12, 2.3, 0.6); ctx.fill();
             } else if (k === "camera") {
                 rrect(2, 4.6, 14, 9.6, 2.2); ctx.stroke();
                 circ(9, 9.4, 2.7); ctx.stroke();
@@ -1856,6 +1865,7 @@ Scope {
         required property var t
         required property var gx
         property string kind: ""
+        property string iconSource: ""
         property bool on: false
         property real level: 3
         property bool flag: false
@@ -1898,6 +1908,7 @@ Scope {
             NumberAnimation { target: b; property: "pop"; to: 0; duration: 420; easing.type: Easing.OutQuint }
         }
         Glyph {
+            visible: b.iconSource === ""
             scale: 1 - 0.22 * b.pop
             rotation: (b.on ? -14 : 14) * b.pop
             anchors.centerIn: parent
@@ -1905,6 +1916,46 @@ Scope {
             kind: b.kind; level: b.level; flag: b.flag
             color: b.on ? (b.onTint !== "" ? Qt.color(b.onTint) : b.t.accent) : b.t.fg
             Behavior on color { ColorAnimation { duration: 320; easing.type: Easing.OutCubic } }
+        }
+        Image {
+            visible: b.iconSource !== ""
+            anchors.centerIn: parent
+            width: b.circleBtn ? 23 : b.width * 0.46
+            height: width
+            source: b.iconSource
+            sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio * 3), Math.ceil(height * Screen.devicePixelRatio * 3))
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            mipmap: false
+            scale: 1 - 0.22 * b.pop
+            rotation: (b.on ? -14 : 14) * b.pop
+            layer.enabled: visible
+            layer.smooth: true
+            layer.textureSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio * 2), Math.ceil(height * Screen.devicePixelRatio * 2))
+            layer.effect: MultiEffect {
+                colorization: 1.0
+                colorizationColor: b.on ? (b.onTint !== "" ? Qt.color(b.onTint) : b.t.accent) : b.t.fg
+            }
+        }
+        Canvas {
+            anchors.fill: parent
+            property bool drawFlag: b.iconSource !== "" && b.flag
+            property color slashColor: b.on ? (b.onTint !== "" ? Qt.color(b.onTint) : b.t.accent) : b.t.fg
+            visible: drawFlag
+            onDrawFlagChanged: requestPaint()
+            onSlashColorChanged: requestPaint()
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onPaint: {
+                var ctx = getContext("2d");
+                ctx.reset();
+                var s = Math.min(width, height) / 18;
+                ctx.scale(s, s);
+                ctx.strokeStyle = slashColor;
+                ctx.lineWidth = 1.7;
+                ctx.lineCap = "round";
+                ctx.beginPath(); ctx.moveTo(3, 3); ctx.lineTo(15, 15); ctx.stroke();
+            }
         }
         MouseArea { id: bma; anchors.fill: parent; enabled: !b.plain; hoverEnabled: true; onClicked: b.clicked() }
     }
@@ -5288,6 +5339,25 @@ Scope {
                 var cg = root.ccControls.slice();
                 if (cg.indexOf("gaming") < 0) { var ri = cg.indexOf("record"); cg.splice(ri >= 0 ? ri + 1 : cg.length, 0, "gaming"); root.ccControls = cg; }
             }
+            if (!root.ccMigAirDrop) {
+                root.ccMigAirDrop = true;
+                var ca = root.ccControls.slice();
+                if (ca.indexOf("airdrop") < 0) { var ai = ca.indexOf("bluetooth"); ca.splice(ai >= 0 ? ai + 1 : ca.length, 0, "airdrop"); root.ccControls = ca; }
+            }
+            if (!root.ccMigDock) {
+                root.ccMigDock = true;
+                var cd = root.ccControls.slice();
+                if (cd.indexOf("dock") < 0) {
+                    var di = cd.indexOf("display");
+                    if (di < 0) {
+                        di = cd.indexOf("stagemanager");
+                        if (di < 0) di = cd.indexOf("keepawake");
+                        di = di >= 0 ? di + 1 : cd.length;
+                    }
+                    cd.splice(di, 0, "dock");
+                    root.ccControls = cd;
+                }
+            }
             if (!root.ccMigRec) {
                 root.ccMigRec = true;
                 var cl = root.ccControls.slice();
@@ -7037,7 +7107,7 @@ Scope {
                         height: 28
                         transformOrigin: Item.Right
                         scale: root.barWidgetScale
-                        spacing: 0
+                        spacing: 6
 
                         // tray
                         Repeater {
@@ -7500,7 +7570,8 @@ Scope {
                                 width: parent.width - 2; height: parent.height - 6; radius: 12
                                 color: ui.pop === "wifi" ? bpal.hover : "transparent"
     }
-                            Glyph { anchors.centerIn: parent; width: 16; height: 16; kind: root.showEthernet ? "ethernet" : "wifi"; level: root.wifiOn ? (root.wifiLevel || 1) : 3; flag: !root.wifiOn && !root.showEthernet; color: (root.wifiOn || root.showEthernet) ? bpal.fg : bpal.fg2 }
+                            Glyph { visible: root.showEthernet; anchors.centerIn: parent; width: 16; height: 16; kind: "ethernet"; color: bpal.fg }
+                            WifiGlyph { visible: !root.showEthernet; anchors.centerIn: parent; width: 17; height: 13; flag: !root.wifiOn; color: root.wifiOn ? bpal.fg : bpal.fg2 }
                             MouseArea { anchors.fill: parent; onClicked: ui.openPop("wifi", wifiBtn.mapToItem(ui, 0, 0).x) }
 }
                         // search
@@ -7540,14 +7611,14 @@ Scope {
                             visible: root.ccEnabled && root.barWidgetEnabled("controlCenter")
                             // the widget grows to the right while a privacy dot is showing, so the dot sits beside the icon
                             readonly property bool dotsOn: root.privacyAny && root.barWidgetEnabled("privacy")
-                            width: (root.ccEnabled && root.barWidgetEnabled("controlCenter")) ? 30 + (dotsOn ? ccDots.width + 2 : 0) : 0; height: 28
+                            width: (root.ccEnabled && root.barWidgetEnabled("controlCenter")) ? 38 + (dotsOn ? ccDots.width + 4 : 0) : 0; height: 28
                             Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: parent.width - 2; height: parent.height - 6; radius: 12
+                                width: parent.width + 8; height: parent.height - 4; radius: 14
                                 color: ui.pop === "cc" ? bpal.hover : "transparent"
     }
-                            Glyph { x: 7; anchors.verticalCenter: parent.verticalCenter; width: 16; height: 16; kind: "cc"; color: bpal.fg }
+                            Glyph { x: 11; anchors.verticalCenter: parent.verticalCenter; width: 16; height: 16; kind: "cc"; color: bpal.fg }
                             // privacy dots like macOS: orange = microphone, green = camera, purple = screen sharing / recording
                             Row {
                                 id: ccDots
@@ -10526,7 +10597,8 @@ Scope {
                                     required property var modelData
                                     width: parent.width; height: 30
                                     Rectangle { anchors.fill:parent; radius:8; color:connMa.containsMouse?pp.hover:"transparent" }
-                                    Glyph { x:8; anchors.verticalCenter:parent.verticalCenter; width:14; height:14; kind:modelData.type==="vpn"?"lock":"wifi"; color:pp.fg }
+                                    Glyph { visible: modelData.type === "vpn"; x:8; anchors.verticalCenter:parent.verticalCenter; width:14; height:14; kind:"lock"; color:pp.fg }
+                                    WifiGlyph { visible: modelData.type !== "vpn"; x:8; anchors.verticalCenter:parent.verticalCenter; width:14; height:10; color:pp.fg }
                                     Text { x:30; anchors.verticalCenter:parent.verticalCenter; width:parent.width-42; elide:Text.ElideRight; text:modelData.name+(modelData.active?I18n.tr(" · Connected"):""); color:pp.fg; font.family: root.fontForWeight(Font.Normal, pp.fam); font.weight: (pp === ccPal ? Font.DemiBold : Font.Normal); font.pixelSize:12 }
                                     MouseArea { id:connMa; anchors.fill:parent; hoverEnabled:true; onClicked:root.toggleConnection(modelData) }
         }
@@ -10633,10 +10705,9 @@ Scope {
                                                     kind: "lock"
                                                     color: wma.containsMouse ? "white" : pp.fg2
                         }
-                                                Glyph {
+                                                WifiGlyph {
                                                     anchors.verticalCenter: parent.verticalCenter
-                                                    width: 16; height: 16
-                                                    kind: "wifi"; level: root.sigLevel(nr.modelData.signal)
+                                                    width: 16; height: 12
                                                     color: wma.containsMouse ? "white" : pp.fg
                         }
                     }
@@ -11736,6 +11807,8 @@ Scope {
                         switch (id) {
                         case "wifi": return cWifi;
                         case "bluetooth": return cBt;
+                        case "airdrop": return cAirDrop;
+                        case "dock": return cDock;
                         case "airplane": return cAirplane;
                         case "focus": return cFocus;
                         case "nightshift": return cNight;
@@ -11763,7 +11836,7 @@ Scope {
                                 t: ccPal; gx: ccg
                                 x: tl.width > 110 ? 12 : (parent.width - width) / 2
                                 anchors.verticalCenter: parent.verticalCenter
-                                kind: "wifi"; level: root.wifiOn ? (root.wifiLevel || 3) : 3
+                                iconSource: "../assets/wifi-symbolic.svg"; flag: !root.wifiOn
                                 on: root.wifiOn
     }
                             MouseArea {
@@ -11825,6 +11898,56 @@ Scope {
         }
     }
 }
+                    }
+                    Component {
+                        id: cAirDrop
+                        CCTile {
+                            id: airTile
+                            clickable: true
+                            readonly property var app: root.hub ? root.hub.airdrop : null
+                            on: app ? app.receiving : false
+                            onClicked: root.toggleAirDrop()
+                            t: ccPal; gx: ccg
+                            readonly property bool wide: width > 110
+                            CCBtn {
+                                plain: true
+                                t: ccPal; gx: ccg
+                                x: airTile.wide ? 12 : (parent.width - width) / 2
+                                anchors.verticalCenter: parent.verticalCenter
+                                iconSource: "../assets/airdrop-symbolic.svg"; on: airTile.on
+                            }
+                            Column {
+                                visible: airTile.wide
+                                x: 62; anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 72
+                                spacing: 1
+                                Text { width: parent.width; elide: Text.ElideRight; text: I18n.tr("AirDrop"); color: airTile.fg; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 13; font.weight: Font.DemiBold }
+                                MorphText {
+                                    animateWidth: false; duration: 420
+                                    width: parent.width; elide: Text.ElideRight
+                                    text: airTile.app && airTile.app.receiving ? I18n.tr("Everyone") : I18n.tr("No One")
+                                    color: airTile.fg2; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.weight: Font.DemiBold; font.pixelSize: 12
+                                }
+                            }
+                        }
+                    }
+                    Component {
+                        id: cDock
+                        CCTile {
+                            id: dockTile
+                            clickable: true
+                            readonly property var dock: root.hub ? root.hub.dock : null
+                            on: dock ? dock.dockEnabled : false
+                            onClicked: root.toggleDock()
+                            t: ccPal; gx: ccg
+                            CCBtn {
+                                plain: true
+                                t: ccPal; gx: ccg
+                                anchors.centerIn: parent
+                                iconSource: "../assets/dock-symbolic.svg"
+                                on: dockTile.on
+                            }
+                        }
                     }
                     Component {
                         id: cAirplane
@@ -12084,7 +12207,7 @@ Scope {
         }
     }
                             Column {
-                                x: 12; y: 66
+                                x: 12; y: 72
                                 width: parent.width - 24
                                 spacing: 1
                                 Text {
@@ -12140,7 +12263,7 @@ Scope {
                             t: ccPal; gx: ccg
                             radius: 26
                             Text {
-                                x: 15; y: 10
+                                x: 15; y: 15
                                 text: I18n.tr("Display")
                                 color: ccPal.fg; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 12; font.weight: Font.DemiBold
     }
@@ -12164,7 +12287,7 @@ Scope {
                             t: ccPal; gx: ccg
                             radius: 26
                             Text {
-                                x: 15; y: 10
+                                x: 15; y: 15
                                 text: I18n.tr("Sound")
                                 color: ccPal.fg; font.family: Fonts.forWeight(Font.DemiBold, root.boldFontFamily); font.pixelSize: 12; font.weight: Font.DemiBold
     }
