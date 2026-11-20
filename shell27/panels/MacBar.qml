@@ -1115,6 +1115,11 @@ Scope {
             } else if (k === "contrast") {
                 circ(9, 9, 6.5); ctx.stroke();
                 ctx.beginPath(); ctx.arc(9, 9, 6.5, -PI / 2, PI / 2, false); ctx.closePath(); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(9, 9); ctx.arc(9, 9, 3.2, -PI / 2, PI / 2, false); ctx.closePath();
+                ctx.globalCompositeOperation = "destination-out"; ctx.fill();
+                ctx.globalCompositeOperation = "source-over";
+                ctx.beginPath(); ctx.moveTo(9, 9); ctx.arc(9, 9, 3.2, PI / 2, PI * 1.5, false); ctx.closePath(); ctx.fill();
+                circ(9, 9, 3.2); ctx.stroke();
             } else if (k === "check") {
                 poly([3.5, 9.5, 7.5, 13.5, 14.5, 4.5], false);
             } else if (k === "chevL") {
@@ -1477,6 +1482,13 @@ Scope {
             color: gg.gx.dark ? Qt.rgba(0.10, 0.10, 0.11, gg.gx.tint) : Qt.rgba(1, 1, 1, gg.gx.tint * 0.55)
             border.width: 1
             border.color: gg.gx.dark ? Qt.rgba(0, 0, 0, 0.45) : Qt.rgba(0, 0, 0, 0.12)
+            layer.enabled: gg.shadowAmt > 0
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowBlur: 0.65
+                shadowOpacity: gg.shadowAmt * 0.42
+                shadowVerticalOffset: 4
+            }
             Rectangle {
                 anchors.fill: parent
                 visible: gg.gx.whiteEdge
@@ -1554,7 +1566,7 @@ Scope {
         signal clicked()
         scale: (clickable && tma.pressed) ? 0.97 : 1
         Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack; easing.overshoot: 2.4 } }
-        GGlass { anchors.fill: parent; gx: tile.gx; cornerR: tile.radius; thickness: 22; shadowAmt: 0; flatInner: 1 }
+        GGlass { anchors.fill: parent; gx: tile.gx; cornerR: tile.radius; thickness: 22; shadowAmt: 0.68; flatInner: 1 }
         Rectangle {     // enabled (small tiles only): the whole tile background is solid white
             anchors.fill: parent
             radius: tile.radius
@@ -11665,6 +11677,33 @@ Scope {
                     height: ui.ccPage === "" ? ccCol.height : (ui.ccPage === "wifi" ? ccWifiPage.height : ccBtPage.height)
                     x: Math.max(8, ui.width - width - 10)
                     y: root.barH + 6
+                    Canvas {
+                        z: -1
+                        x: -80; y: -80
+                        width: parent.width + 160; height: parent.height + 160
+                        antialiasing: true
+                        onWidthChanged: requestPaint()
+                        onHeightChanged: requestPaint()
+                        onPaint: {
+                            var ctx = getContext("2d");
+                            ctx.reset();
+                            var rx = width / 2 - 22, ry = height / 2 - 22;
+                            var cx = width / 2, cy = height / 2;
+                            ctx.save();
+                            ctx.translate(cx, cy);
+                            ctx.scale(rx, ry);
+                            var gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+                            gradient.addColorStop(0, "rgba(0,0,0,0.22)");
+                            gradient.addColorStop(0.45, "rgba(0,0,0,0.12)");
+                            gradient.addColorStop(0.78, "rgba(0,0,0,0.045)");
+                            gradient.addColorStop(1, "rgba(0,0,0,0)");
+                            ctx.fillStyle = gradient;
+                            ctx.beginPath();
+                            ctx.arc(0, 0, 1, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    }
                     // opening (ColorOS 17): the panel springs out from the Control Center button, overshoots a little and
                     // settles, while the controls stretch up into place one row after another. Closing is quick and flat.
                     readonly property bool opening: ui.pop === "cc"
@@ -12325,7 +12364,7 @@ Scope {
                         x: -12; y: -12
                         width: cc.width + 24; height: cc.height + 24
                         sourceComponent: Item {
-                            GGlass { anchors.fill: parent; gx: ccg; cornerR: 24; thickness: 26; strengthMul: 1.0; shadowAmt: 0.6 }
+                            GGlass { anchors.fill: parent; gx: ccg; cornerR: 24; thickness: 26; strengthMul: 1.0; shadowAmt: 0.72 }
                             CornerBorder { z: 2; anchors.fill: parent; cornerR: 24; dark: ccg.dark; tint: root.menuBorderColor; amount: ccg.borderAmount; lineW: 0.8 }
 }
                     }

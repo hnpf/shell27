@@ -281,6 +281,11 @@ Canvas {
         } else if (k === "contrast") {
             circ(9, 9, 6.5); ctx.stroke();
             ctx.beginPath(); ctx.arc(9, 9, 6.5, -PI / 2, PI / 2, false); ctx.closePath(); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(9, 9); ctx.arc(9, 9, 3.2, -PI / 2, PI / 2, false); ctx.closePath();
+            ctx.globalCompositeOperation = "destination-out"; ctx.fill();
+            ctx.globalCompositeOperation = "source-over";
+            ctx.beginPath(); ctx.moveTo(9, 9); ctx.arc(9, 9, 3.2, PI / 2, PI * 1.5, false); ctx.closePath(); ctx.fill();
+            circ(9, 9, 3.2); ctx.stroke();
         } else if (k === "check") {
             poly([3.5, 9.5, 7.5, 13.5, 14.5, 4.5], false);
         } else if (k === "chevL") {
