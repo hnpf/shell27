@@ -19,6 +19,7 @@ Item {
     MultiEffect {
         anchors.fill: sourceImage
         source: sourceImage
+        opacity: root.flag ? 0.45 : 1
         colorization: 1
         colorizationColor: root.color
     }
@@ -34,14 +35,15 @@ Item {
         onPaint: {
             var ctx = getContext("2d");
             ctx.reset();
-            var scale = Math.min(width, height) / 18;
+            var scale = Math.min(width / 14, height / 10);
+            ctx.translate((width - 14 * scale) / 2, (height - 10 * scale) / 2);
             ctx.scale(scale, scale);
             ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = 1.7;
+            ctx.lineWidth = 1.2;
             ctx.lineCap = "round";
             ctx.beginPath();
-            ctx.moveTo(3, 3);
-            ctx.lineTo(15, 15);
+            ctx.moveTo(1, 0.6);
+            ctx.lineTo(13, 9.4);
             ctx.stroke();
         }
     }

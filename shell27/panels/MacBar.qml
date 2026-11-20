@@ -1925,6 +1925,7 @@ Scope {
             source: b.iconSource
             sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio * 3), Math.ceil(height * Screen.devicePixelRatio * 3))
             fillMode: Image.PreserveAspectFit
+            opacity: b.flag ? 0.45 : 1
             smooth: true
             mipmap: false
             scale: 1 - 0.22 * b.pop
@@ -1949,12 +1950,14 @@ Scope {
             onPaint: {
                 var ctx = getContext("2d");
                 ctx.reset();
-                var s = Math.min(width, height) / 18;
+                var iconSize = b.circleBtn ? 23 : b.width * 0.46;
+                var s = Math.min(iconSize / 14, iconSize / 10);
+                ctx.translate((width - 14 * s) / 2, (height - 10 * s) / 2);
                 ctx.scale(s, s);
                 ctx.strokeStyle = slashColor;
-                ctx.lineWidth = 1.7;
+                ctx.lineWidth = 1.2;
                 ctx.lineCap = "round";
-                ctx.beginPath(); ctx.moveTo(3, 3); ctx.lineTo(15, 15); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(1, 0.6); ctx.lineTo(13, 9.4); ctx.stroke();
             }
         }
         MouseArea { id: bma; anchors.fill: parent; enabled: !b.plain; hoverEnabled: true; onClicked: b.clicked() }
@@ -12168,8 +12171,8 @@ Scope {
                             readonly property var pl: root.player
                             Rectangle {
                                 id: art
-                                x: 12; y: 12
-                                width: 52; height: 52; radius: 10
+                                x: 15; y: 12
+                                width: 45; height: 45; radius: 10
                                 color: ccPal.btnOff
                                 Glyph { visible: artImg.status !== Image.Ready; anchors.centerIn: parent; width: 22; height: 22; kind: "note"; color: ccPal.fg2 }
                                 // `clip: true` only clips to a plain rectangle, so the cover is masked with a rounded shape instead
