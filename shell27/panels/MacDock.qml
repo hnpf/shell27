@@ -4268,6 +4268,15 @@ Scope {
                 SLabel { t: pal; text: I18n.tr("Choose which controls appear in Control Center. You can also drag them around in Control Center → Edit Controls.") }
                 SCard {
                     t: pal
+                    SRow {
+                        t: pal
+                        title: I18n.tr("Frosted background")
+                        subtitle: I18n.tr("Add a blurred, translucent panel behind Control Center. The panel shadow is disabled while this is on.")
+                        SSwitch { t: pal; checked: root.bar ? root.bar.ccBackground : false; onToggled: v => { if (root.bar) root.bar.ccBackground = v; } }
+                    }
+                }
+                SCard {
+                    t: pal
                     Repeater {
                         model: root.bar ? root.bar.ccCatalog : []
                         delegate: SRow {

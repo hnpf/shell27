@@ -511,6 +511,8 @@ var strings = {
     "Add Controls": "Добавить элементы",
     "Edit Controls": "Изменить элементы",
     "Choose which controls appear in Control Center. You can also drag them around in Control Center → Edit Controls.": "Выберите элементы Пункта управления. Их можно перетаскивать прямо в Пункте управления → «Изменить элементы».",
+    "Frosted background": "Матовый фон",
+    "Add a blurred, translucent panel behind Control Center. The panel shadow is disabled while this is on.": "Добавляет размытый полупрозрачный фон под Пункт управления. При включении тень панели отключается.",
     "No controls. Use Edit Controls to add some.": "Нет элементов. Добавьте их через «Изменить элементы».",
     "Done": "Готово",
     "Display": "Дисплей",

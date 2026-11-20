@@ -510,6 +510,8 @@ var strings = {
     "Add Controls": "Añadir controles",
     "Edit Controls": "Editar controles",
     "Choose which controls appear in Control Center. You can also drag them around in Control Center → Edit Controls.": "Elige qué controles aparecen en el Centro de control. También puedes arrastrarlos en Centro de control → Editar controles.",
+    "Frosted background": "Fondo esmerilado",
+    "Add a blurred, translucent panel behind Control Center. The panel shadow is disabled while this is on.": "Añade un panel translúcido y desenfocado detrás del Centro de control. La sombra del panel se desactiva mientras está activado.",
     "No controls. Use Edit Controls to add some.": "Sin controles. Usa Editar controles para añadir.",
     "Done": "Hecho",
     "Display": "Pantalla",

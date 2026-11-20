@@ -103,6 +103,7 @@ Scope {
     property bool reduceMotion: false         // Spotlight: no pop / stagger / slide
     property bool ccEnabled: true             // Control Center
     property string ccStyle: "tiles"          // tiles = every control its own glass | macos = one frosted panel
+    property bool ccBackground: false
     property bool notificationsEnabled: true // banners + Notification Center (off = no D-Bus daemon at all, so mako/dunst can take over)
     property bool clockAppEnabled: true      // the Clock app (alarms and timers still ring while it is on)
     readonly property bool barLayerNeeded: barEnabled || spotlightEnabled || ccEnabled || notificationsEnabled
@@ -431,7 +432,7 @@ Scope {
     readonly property var settingKeys: ["barEnabled", "darkMode", "appearanceMode", "barAppearance", "accent", "fontFamily", "barHeight", "uiScaleAuto", "uiScaleManual", "glassOpacity",
         "barStyle", "barGlass", "glassRim", "glassGrain", "glassLiquid", "glassBlur", "barBgOpacity", "glassRealtime", "liveWallGlass", "glassDebug", "wallpaperPath", "use24h", "language", "showDate",
         "showSeconds", "showBatteryPercent", "showCpuRam", "showCpu", "showRam", "showGpu", "showDisk", "showTemp", "showNet", "showTray", "showSearch",
-        "spotlightEnabled", "reduceMotion", "ccEnabled", "notificationsEnabled", "clockAppEnabled", "ccStyle", "barLogoMode", "barCustomLogoPath", "barWidgets", "weekStartsMonday", "terminal", "launcher",
+        "spotlightEnabled", "reduceMotion", "ccEnabled", "notificationsEnabled", "clockAppEnabled", "ccStyle", "ccBackground", "barLogoMode", "barCustomLogoPath", "barWidgets", "weekStartsMonday", "terminal", "launcher",
         "filesCmd", "clipboardCmd", "appUsage", "clipHistory", "clipAutoPaste", "emojiRecent", "screenshotDir", "screenshotSave", "screenshotClipboard", "screenshotNotify", "nightTemp", "ccControls", "ccCompactControls", "ccWideControls", "ccMigAirDrop", "ccMigDock", "ccMigRec", "wallpaperDir", "wallpaperFavs", "wallpaperCmd", "wallpaperVideo", "wpRestorePath", "uiSounds", "gamingMode", "gamingAuto", "ccMigGame", "lockArtBackground",
         "lockClockStyle", "switcherStyle", "lockClockFont", "lockClockWeight", "lockClockMaterial", "lockClockIntensity", "lockClockTint", "lockClockDate", "autoContrast", "wallpaperAppearance", "wpPairLight", "wpPairDark",
         "notifDnd", "dnd", "nightOn", "keepAwake", "stageManager", "ccMigStage", "barMigApps", "barMigSysMon", "barMigLockIndicators",
@@ -1370,6 +1371,7 @@ Scope {
         property real blurMul: 1.0          // scales the backdrop blur radius of every slab in this context
         property real liquidMul: 1.0        // scales refraction / dispersion / magnify of every slab in this context
         property real magnifyMul: 1.0       // 0 = no vertical lens across the whole slab: what is behind lines up exactly with the real screen
+        property real shadowMul: 1.0
         property real paneOpacity: 1.0      // <1 lets the compositor blur show through the shader pane
         property real rim: 0.45
         property real rimTint: 0            // 1 = rim + border line take a brighter shade of the glass's own local colour
@@ -1482,11 +1484,11 @@ Scope {
             color: gg.gx.dark ? Qt.rgba(0.10, 0.10, 0.11, gg.gx.tint) : Qt.rgba(1, 1, 1, gg.gx.tint * 0.55)
             border.width: 1
             border.color: gg.gx.dark ? Qt.rgba(0, 0, 0, 0.45) : Qt.rgba(0, 0, 0, 0.12)
-            layer.enabled: gg.shadowAmt > 0
+            layer.enabled: gg.shadowAmt * gg.gx.shadowMul > 0
             layer.effect: MultiEffect {
                 shadowEnabled: true
                 shadowBlur: 0.65
-                shadowOpacity: gg.shadowAmt * 0.42
+                shadowOpacity: gg.shadowAmt * gg.gx.shadowMul * 0.42
                 shadowVerticalOffset: 4
             }
             Rectangle {
@@ -1529,7 +1531,7 @@ Scope {
                     property real saturation: 1.25
                     property real dark: gg.gx.dark ? 1 : 0
                     property real debug: gg.gx.debug ? 1 : 0
-                    property real shadowAmt: gg.shadowAmt
+                    property real shadowAmt: gg.shadowAmt * gg.gx.shadowMul
                     property real flatInner: gg.flatInner
                     property real rimTint: gg.gx.rimTint
                     property real ringW: gg.gx.ringW
@@ -5319,7 +5321,7 @@ Scope {
         darkMode = true; appearanceMode = "dark"; accent = "#0a84ff"; fontFamily = "Inter"; glassOpacity = 0.42; glassBlur = 21; glassLiquid = 1.48; barBgOpacity = 0.10; glassRealtime = false; liveWallGlass = false;
         barStyle = "liquid"; use24h = true; showDate = true; showSeconds = false; showBatteryPercent = true;
         showCpuRam = true; showTray = true; showSearch = true; showAudioHub = true;
-        spotlightEnabled = true; ccEnabled = true; notificationsEnabled = true; clockAppEnabled = true; ccStyle = "tiles";
+                spotlightEnabled = true; ccEnabled = true; notificationsEnabled = true; clockAppEnabled = true; ccStyle = "tiles"; ccBackground = false;
         barLogoMode = "arch"; barCustomLogoPath = "";
         barWidgets = ["appleMenu", "appMenus", "workspaces", "volume", "keyboard", "cpuRam", "notifications", "wifi", "lockIndicators", "bluetooth", "siri", "airdrop", "reminders", "privacy", "controlCenter", "clock"];
         ccControls = ccDefault.slice();
@@ -11669,16 +11671,20 @@ Scope {
                 }
 
                 // ═════════ Control Center ═════════
-                // No panel behind it: every tile and every button is its own piece of Liquid Glass.
+                // Optional frosted backdrop; otherwise each tile and button is its own piece of Liquid Glass.
                 Item {
                     id: cc
                     z: 10
                     width: 300
                     height: ui.ccPage === "" ? ccCol.height : (ui.ccPage === "wifi" ? ccWifiPage.height : ccBtPage.height)
-                    x: Math.max(8, ui.width - width - 10)
-                    y: root.barH + 6
+                    readonly property real backgroundContentHeight: ui.ccPage === "" ? ccCol.height - ccEditRow.height - ccCol.spacing : cc.height
+                    readonly property real backgroundOutset: root.ccBackground ? 12 : 0
+                    readonly property real backgroundRadius: root.ccStyle === "macos" ? 24 : (ui.ccPage === "" ? 34 : 26)
+                    x: Math.max(8 + backgroundOutset, ui.width - width - 10 - backgroundOutset)
+                    y: root.barH + 6 + backgroundOutset
                     Canvas {
                         z: -1
+                        visible: !root.ccBackground
                         x: -80; y: -80
                         width: parent.width + 160; height: parent.height + 160
                         antialiasing: true
@@ -11786,6 +11792,66 @@ Scope {
                         visible: false
                         sourceRect: cc.capScreen
                     }
+                    Item {
+                        id: ccBackdropComposite
+                        x: -64; y: -64
+                        width: cc.width + 128; height: cc.height + 128
+                        visible: false
+                        MultiEffect {
+                            anchors.fill: parent
+                            source: ccSrc
+                            blurEnabled: true
+                            blurMax: 64
+                            blur: 0.92
+                            saturation: 0.72
+                            brightness: ccg.dark ? -0.02 : 0.02
+                            autoPaddingEnabled: false
+                        }
+                        Rectangle {
+                            anchors.fill: parent
+                            color: ccg.dark ? Qt.rgba(0.08, 0.08, 0.09, 0.34) : Qt.rgba(1, 1, 1, 0.38)
+                        }
+                    }
+                    ShaderEffectSource {
+                        id: ccBackdropTexture
+                        sourceItem: ccBackdropComposite
+                        live: true
+                        visible: false
+                    }
+                    Item {
+                        id: ccBackdropMask
+                        x: -64; y: -64
+                        width: cc.width + 128; height: cc.height + 128
+                        visible: false
+                        layer.enabled: true
+                        Rectangle {
+                            x: 52; y: 52
+                            width: cc.width + 24; height: cc.backgroundContentHeight + 24
+                            radius: cc.backgroundRadius
+                            color: "white"
+                        }
+                    }
+                    MultiEffect {
+                        id: ccBackdropFx
+                        x: -64; y: -64
+                        width: cc.width + 128; height: cc.height + 128
+                        source: ccBackdropTexture
+                        visible: root.ccBackground && cc.visible
+                        autoPaddingEnabled: false
+                        maskEnabled: true
+                        maskSource: ccBackdropMask
+                    }
+                    CornerBorder {
+                        x: -12; y: -12
+                        width: cc.width + 24; height: cc.backgroundContentHeight + 24
+                        visible: root.ccBackground && cc.visible
+                        cornerR: cc.backgroundRadius
+                        dark: ccg.dark
+                        tint: "white"
+                        amount: 0.82
+                        lineW: 1.1
+                        fade: false
+                    }
                     MultiEffect {
                         id: ccBlurFx
                         source: ccSrc
@@ -11823,7 +11889,7 @@ Scope {
                     }
                     GlassCtx {
                         id: ccg
-                        src: (blur * blurMul) * 1.4 / 64.0 > 1.0 ? ccBlur2 : ccBlur
+                        src: root.ccBackground ? ccBackdropTexture : ((blur * blurMul) * 1.4 / 64.0 > 1.0 ? ccBlur2 : ccBlur)
                         srcRect: cc.capLocal
                         frame: ui
                         liquid: root.liquidActive
@@ -11840,6 +11906,7 @@ Scope {
                         whiteEdge: false                    // no light inner ring on the non-liquid fallback pane
                         grain: root.glassGrain
                         blur: root.glassBlur
+                        shadowMul: root.ccBackground ? 0 : 1
                         debug: root.glassDebug
                         onFailed: root.glassState = "failed"
                     }
@@ -12364,7 +12431,7 @@ Scope {
                         x: -12; y: -12
                         width: cc.width + 24; height: cc.height + 24
                         sourceComponent: Item {
-                            GGlass { anchors.fill: parent; gx: ccg; cornerR: 24; thickness: 26; strengthMul: 1.0; shadowAmt: 0.72 }
+                            GGlass { anchors.fill: parent; gx: ccg; cornerR: 24; thickness: 26; strengthMul: 1.0; shadowAmt: root.ccBackground ? 0 : 0.72 }
                             CornerBorder { z: 2; anchors.fill: parent; cornerR: 24; dark: ccg.dark; tint: root.menuBorderColor; amount: ccg.borderAmount; lineW: 0.8 }
 }
                     }
@@ -12379,7 +12446,7 @@ Scope {
                         opacity: shown ? 1 : 0
                         visible: opacity > 0.01
                         Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        GGlass { visible: root.ccStyle !== "macos"; anchors.fill: parent; gx: ccg; cornerR: 26; thickness: 22; shadowAmt: 0.45 }
+                        GGlass { visible: root.ccStyle !== "macos"; anchors.fill: parent; gx: ccg; cornerR: 26; thickness: 22; shadowAmt: root.ccBackground ? 0 : 0.45 }
                         CornerBorder { visible: root.ccStyle !== "macos"; z: 2; anchors.fill: parent; cornerR: 26; dark: ccg.dark; tint: ccg.borderTint; amount: ccg.borderAmount; lineW: 0.8 }
                         MouseArea { anchors.fill: parent }
                         Loader {
@@ -12401,7 +12468,7 @@ Scope {
                         opacity: shown ? 1 : 0
                         visible: opacity > 0.01
                         Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        GGlass { visible: root.ccStyle !== "macos"; anchors.fill: parent; gx: ccg; cornerR: 26; thickness: 22; shadowAmt: 0.45 }
+                        GGlass { visible: root.ccStyle !== "macos"; anchors.fill: parent; gx: ccg; cornerR: 26; thickness: 22; shadowAmt: root.ccBackground ? 0 : 0.45 }
                         CornerBorder { visible: root.ccStyle !== "macos"; z: 2; anchors.fill: parent; cornerR: 26; dark: ccg.dark; tint: ccg.borderTint; amount: ccg.borderAmount; lineW: 0.8 }
                         MouseArea { anchors.fill: parent }
                         Loader {
@@ -12720,7 +12787,7 @@ Scope {
                                 PauseAnimation { duration: Math.min(220, root.ccPlan.rows * 55 + 40) }
                                 NumberAnimation { target: ccEditRow; property: "ap"; from: 0; to: 1; duration: 460; easing.type: Easing.OutBack; easing.overshoot: 1.8 }
     }
-                            transform: Translate { y: (1 - ccEditRow.ap) * 16 }
+                            transform: Translate { y: (1 - ccEditRow.ap) * 16 + (root.ccBackground ? 14 : 0) }
                             opacity: Math.max(0, Math.min(1, ccEditRow.ap * 1.6))
                             Row {
                                 anchors.centerIn: parent
