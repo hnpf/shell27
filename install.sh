@@ -25,7 +25,7 @@
 #      the start script to     ~/.local/share/shell27/bin/shell27-start   (+ ~/.local/bin/shell27-start)
 #   4. installs ~/.config/hypr/shell27.lua with the autostart and keybinds; optionally replaces hyprland.lua with the
 #      bundled personal config after backing up the existing file. Otherwise it adds only the module loader. On classic
-#      hyprland.conf sessions, it adds an exec-once line instead. --yes never opts into replacing hyprland.lua.
+#      hyprland.conf sessions, it adds an exec-once line instead. Replacing hyprland.lua requires --use-bundled-hyprland.
 #   5. optionally sets up automatic updates (a daily systemd user timer)
 #
 # Updates
@@ -43,6 +43,7 @@
 #       --no-deps         skip the dependency check
 #       --deps-only       only check / install dependencies, then stop
 #       --no-services     do not enable system services (bluetooth, NetworkManager, power profiles, PipeWire)
+#       --enable-sddm     install and enable SDDM for the next boot (refuses to replace another display manager)
 #       --doctor          check the whole setup (environment, QML modules, services, wallpaper, shaders, Hyprland, the last
 #                         start log) and explain problems
 #       --deps            same as --deps-only
@@ -51,6 +52,7 @@
 #       --no-verify       start shell27 without waiting to see whether it stays up
 #       --low-power       settings for older computers (no live window capture, no magnification, plain blur)
 #       --no-autostart    do not touch the Hyprland config
+#       --use-bundled-hyprland replace hyprland.lua with the bundled personal config after backing up the current one
 #       --no-rules        do not add the Liquid Glass layer rules to the Hyprland config
 #       --channel CH      release (default: latest release, else the main branch) or main (always the newest commit)
 #       --ref REF         install a specific tag / commit instead of the latest
@@ -72,7 +74,7 @@
 # Environment: SHELL27_FROM_DIR (install from this folder instead of downloading: the graphical installer sets it),
 #              SHELL27_REPO (new default hnpf/shell27), SHELL27_BRANCH (default main), shell27_CHANNEL, shell27_DEST,
 #              SHELL27_LOCK_DEST, SHELL27_APPLE_EMOJI_PATH (local font file), SHELL27_APPLE_EMOJI_URL (font URL),
-#              SHELL27_APPLE_EMOJI_SHA256 (override URL checksum), GITHUB_TOKEN
+#              SHELL27_APPLE_EMOJI_SHA256 (override URL checksum), SHELL27_HYPRGLASS_PATH (local hyprglass.so), GITHUB_TOKEN
 
 set -euo pipefail
 
@@ -118,6 +120,7 @@ ASSUME_YES=0
 SKIP_DEPS=0
 DEPS_ONLY=0
 SKIP_SERVICES=0
+ENABLE_SDDM=0
 SKIP_AUTOSTART=0
 SKIP_RULES=0
 SKIP_LOCK=0
@@ -172,6 +175,7 @@ confirm() {
 usage() { sed -n '2,/^set -euo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'; }
 
 # ───────────────────────── arguments ─────────────────────────
+USE_BUNDLED_HYPRLAND=0
 while [ $# -gt 0 ]; do
     case "$1" in
         -y|--yes) ASSUME_YES=1 ;;
@@ -181,9 +185,11 @@ while [ $# -gt 0 ]; do
         --no-start) NO_START=1 ;;
         --no-verify) NO_VERIFY=1 ;;
         --no-services) SKIP_SERVICES=1 ;;
+        --enable-sddm) ENABLE_SDDM=1 ;;
         --doctor) DOCTOR=1; MODE_FLAG=1 ;;
         --low-power) LOW_POWER=1 ;;
         --no-autostart) SKIP_AUTOSTART=1 ;;
+        --use-bundled-hyprland) USE_BUNDLED_HYPRLAND=1 ;;
         --no-rules) SKIP_RULES=1 ;;
         --no-lock) SKIP_LOCK=1 ;;
         --gui) GUI=yes; MODE_FLAG=1 ;;
@@ -1002,7 +1008,7 @@ detect_icon_theme() {
 
 run_doctor() {
     step "shell27 doctor"
-    local bad=0 t u miss m log tail_txt
+    local bad=0 t u miss m log tail_txt sessions session_start plugin_src plugin_ver hypr_ver
     detect_pm
     d_ok()  { ok "$*"; }
     d_bad() { warn "$*"; bad=$((bad+1)); }
@@ -1026,6 +1032,31 @@ run_doctor() {
         else d_bad "hyprland.conf does not start shell27: run  bash install.sh  to add the autostart"; fi
     else
         d_bad "no Hyprland config found in $HYPR_DIR"
+    fi
+    plugin_src="${SHELL27_HYPRGLASS_PATH:-$HOME/hyprglass/hyprglass.so}"
+    plugin_ver=""
+    hypr_ver=""
+    [ -f "$(dirname "$plugin_src")/.hyprland-version" ] && plugin_ver=$(head -n1 "$(dirname "$plugin_src")/.hyprland-version" | tr -d '[:space:]')
+    if have hyprctl; then hypr_ver=$(hyprctl version 2>/dev/null | sed -n 's/^Hyprland \([^ ]*\).*/\1/p' | head -n1); fi
+    if [ -s "$plugin_src" ] && [ -n "$plugin_ver" ] && [ -n "$hypr_ver" ] && [ "$plugin_ver" != "$hypr_ver" ]; then
+        warn "local Hyprglass targets Hyprland $plugin_ver, not $hypr_ver; it may stay paused until rebuilt for this version"
+    elif [ -s "$STATE_DIR/plugins/hyprglass.so" ]; then
+        d_ok "Hyprglass plugin installed for Hyprland"
+    fi
+    if have sddm; then
+        if have systemctl && systemctl is-enabled --quiet sddm.service; then
+            d_ok "SDDM service is enabled"
+        else
+            warn "SDDM is installed but its service is not enabled; to use it, run: sudo systemctl enable --now sddm.service"
+        fi
+        sessions=$(find /usr/share/wayland-sessions -maxdepth 1 -type f -name 'hyprland*.desktop' -print -quit 2>/dev/null || true)
+        if [ -n "$sessions" ]; then
+            d_ok "Hyprland session entry: $sessions"
+            session_start=$(find /usr/share/wayland-sessions -maxdepth 1 -type f -name 'hyprland*.desktop' -exec grep -l '^Exec=.*start-hyprland' {} + 2>/dev/null | head -n1 || true)
+            if [ -n "$session_start" ]; then d_ok "SDDM has a start-hyprland session: $session_start"
+            elif have start-hyprland; then warn "SDDM session does not use start-hyprland; update its Exec= entry to $(command -v start-hyprland) for reliable session startup"
+            fi
+        else d_bad "SDDM has no Hyprland Wayland session entry; reinstall the Hyprland package or add its session desktop file"; fi
     fi
     if shell_running; then
         d_ok "shell27 is running"
@@ -1724,10 +1755,49 @@ setup_siri_python() {
     fi
 }
 
+install_kitty_config() { # install_kitty_config <source-root>
+    local src="$1/.config/kitty/kitty.conf" dst="$CONFIG_HOME/kitty/kitty.conf"
+    [ -f "$src" ] || return 0
+    mkdir -p "$(dirname "$dst")"
+    if [ -e "$dst" ]; then
+        if cmp -s "$src" "$dst"; then ok "Kitty config is current -> $dst"; else say "  ${D}- kept your existing Kitty config: $dst${N}"; fi
+        return 0
+    fi
+    cp -p "$src" "$dst" && ok "Kitty config -> $dst"
+}
+
+install_default_wallpaper() { # install_default_wallpaper <source-root>
+    local src="$1/shell27/assets/wallpapers/GoldenGate_6k.png" dst="$HOME/Pictures/Wallpapers/GoldenGate_6k.png"
+    [ -s "$src" ] || return 0
+    mkdir -p "$(dirname "$dst")"
+    if [ -e "$dst" ] || [ -L "$dst" ]; then
+        say "  ${D}- kept your existing wallpaper file: $dst${N}"
+        return 0
+    fi
+    cp -p "$src" "$dst" && ok "default wallpaper -> $dst"
+}
+
+install_hyprglass() {
+    local src="${SHELL27_HYPRGLASS_PATH:-$HOME/hyprglass/hyprglass.so}" dst="$STATE_DIR/plugins/hyprglass.so"
+    local version_file="$(dirname "$src")/.hyprland-version" plugin_version="" hyprland_version=""
+    [ -s "$src" ] || { say "  ${D}- no local Hyprglass binary found; set SHELL27_HYPRGLASS_PATH to install one${N}"; return 0; }
+    [ -f "$version_file" ] && plugin_version=$(head -n1 "$version_file" | tr -d '[:space:]')
+    if have hyprctl; then hyprland_version=$(hyprctl version 2>/dev/null | sed -n 's/^Hyprland \([^ ]*\).*/\1/p' | head -n1); fi
+    mkdir -p "$(dirname "$dst")"
+    if ! cp -f "$src" "$dst"; then warn "could not install Hyprglass to $dst"; return 0; fi
+    ok "Hyprglass plugin -> $dst"
+    if [ -n "$plugin_version" ] && [ -n "$hyprland_version" ] && [ "$plugin_version" != "$hyprland_version" ]; then
+        warn "Hyprglass targets Hyprland $plugin_version, but the installed compositor is $hyprland_version; it will be autoloaded, but may stay paused until rebuilt for this version"
+    fi
+}
+
 install_extras() {
     local root="$1" f n hroot
     install_apple_emoji_font "$root" || true
     install_gtk_configs "$root"
+    install_kitty_config "$root"
+    install_default_wallpaper "$root"
+    install_hyprglass
     # helper tree: scripts (Game Mode, video wallpapers, AirDrop, lock), session config, launchers, icons
     hroot=$(find_hypr_root "$root" || true)
     if [ -n "$hroot" ] && install_hypr_tree "$hroot"; then
@@ -1824,6 +1894,12 @@ write_shell27_lua() {
 -- autostart (remove other bars / docks / notification daemons first).
 -- install.sh adds this for you; shell27-start waits for the compositor and restarts the shell if it crashes.
 hl.on("hyprland.start", function()
+    local pluginPath = (os.getenv("HOME") or "") .. "/.local/share/shell27/plugins/hyprglass.so"
+    local pluginFile = io.open(pluginPath, "r")
+    if pluginFile then
+        pluginFile:close()
+        hl.exec_cmd("hyprctl plugin load " .. string.format("%q", pluginPath))
+    end
     hl.exec_cmd("awww-daemon")
     -- Install/update Hypridle's before_sleep_cmd hook (lid close is covered when it suspends).
     hl.exec_cmd("sh ~/.config/quickshell/shell27-lock/enable-sleep-lock.sh")
@@ -1901,8 +1977,10 @@ install_bundled_hyprland_config() {
     [ "$UPDATE_MODE" = 1 ] && return 0
     local src="$SRC_ROOT/.config/hypr/hyprland.lua" dst="$HYPR_DIR/hyprland.lua" backup genie_src="$SRC_ROOT/.config/hypr/genie.lua" genie_dst="$HYPR_DIR/genie.lua"
     [ -f "$src" ] || return 0
-    [ "$ASSUME_YES" = 1 ] && return 0
-    confirm "Use the bundled personal Hyprland config? It replaces $dst (with a backup)." n || return 0
+    if [ "$USE_BUNDLED_HYPRLAND" != 1 ]; then
+        [ "$ASSUME_YES" = 1 ] && return 0
+        confirm "Use the bundled personal Hyprland config? It replaces $dst (with a backup)." n || return 0
+    fi
 
     mkdir -p "$HYPR_DIR"
     if [ -e "$dst" ]; then
@@ -2246,6 +2324,28 @@ maybe_offer_sddm_theme() {
     install_sddm_theme
 }
 
+enable_sddm() {
+    [ "$ENABLE_SDDM" = 1 ] || return 0
+    detect_pm
+    [ -n "$PM" ] || { warn "cannot install SDDM: no supported package manager was detected"; return 0; }
+    if ! have sddm; then
+        if ! install_packages sddm; then warn "could not install SDDM"; return 0; fi
+    fi
+    local dm_target=""
+    [ -e /etc/systemd/system/display-manager.service ] && dm_target=$(readlink -f /etc/systemd/system/display-manager.service 2>/dev/null || true)
+    case "$dm_target" in
+        *sddm.service) ;;
+        "") ;;
+        *) warn "display-manager.service currently points to $dm_target; not replacing your existing display manager"; return 0 ;;
+    esac
+    if ! have sudo; then warn "sudo is required to enable SDDM; run: sudo systemctl enable sddm.service"; return 0; fi
+    if sudo systemctl enable sddm.service; then
+        ok "SDDM enabled for the next boot; reboot to reach its login screen"
+    else
+        warn "could not enable SDDM; inspect systemd output and run: sudo systemctl enable sddm.service"
+    fi
+}
+
 # ───────────────────────── main ─────────────────────────
 [ "$DEPS_PLAN" = 1 ] && { run_deps_plan; exit 0; }
 [ "$DOCTOR" = 1 ] && { run_doctor; exit 0; }
@@ -2330,6 +2430,7 @@ if [ "$UPDATE_MODE" = 1 ]; then
 fi
 
 enable_services
+enable_sddm
 install_bundled_hyprland_config
 add_autostart
 [ "$LOW_POWER" = 1 ] && apply_low_power

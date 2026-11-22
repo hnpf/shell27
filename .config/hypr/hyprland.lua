@@ -34,9 +34,6 @@ hl.on("hyprland.start", function ()
     -- Polkit Authentication Agent
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
 
-	-- Hyprglass
-	hl.exec_cmd("hyprctl plugin load " .. os.getenv("HOME") .. "/hyprglass/hyprglass.so")
-	
     -- Hyprland compositor cursor
     hl.exec_cmd("hyprctl setcursor " .. cursorTheme .. " " .. cursorSize)
 

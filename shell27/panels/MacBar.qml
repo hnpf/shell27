@@ -5945,6 +5945,13 @@ Scope {
             return;
         }
         var p = wpRestorePath;
+        if (p === "") {
+            var map = root.wallpaperMap || {}, hasExternalWallpaper = false;
+            for (var key in map) if (key.indexOf("wallpaper.") === 0 && map[key]) { hasExternalWallpaper = true; break; }
+            if (hasExternalWallpaper) return;
+            p = (Quickshell.env("HOME") || "") + "/Pictures/Wallpapers/GoldenGate_6k.png";
+            root.wpRestorePath = p;
+        }
         if (p === "") return;
         var cmd = (wallpaperCmd || "").trim();
         var script = cmd !== "" ? '[ -f "$1" ] || exit 0\n' + root.stopVideoScript + "\n" + cmd.split("{}").join('"$1"')
@@ -5952,7 +5959,7 @@ Scope {
         wpApplyProc.command = ["sh", "-c", script, "sh", p];
         wpApplyProc.running = true;
     }
-    Timer { interval: 3500; running: true; onTriggered: root.wpRestore() }
+    Timer { interval: 6000; running: true; onTriggered: root.wpRestore() }
     Process {
         id: setwallProc
         stdout: StdioCollector {
@@ -7143,10 +7150,12 @@ Scope {
                                 Image {
                                     anchors.centerIn: parent
                                     width: 16; height: 16
+                                    clip: true
                                     source: tray.modelData.icon
-                                    sourceSize: Qt.size(32, 32)
+                                    sourceSize: Qt.size(Math.max(1, Math.round(width * Screen.devicePixelRatio)), Math.max(1, Math.round(height * Screen.devicePixelRatio)))
                                     fillMode: Image.PreserveAspectFit
                                     smooth: true
+                                    mipmap: true
         }
                                 MouseArea {
                                     anchors.fill: parent

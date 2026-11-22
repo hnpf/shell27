@@ -22,6 +22,12 @@ if not os.getenv("QS_ICON_THEME") and not os.getenv("QT_QPA_PLATFORMTHEME") then
 end
 
 hl.on("hyprland.start", function()
+    local pluginPath = (os.getenv("HOME") or "") .. "/.local/share/shell27/plugins/hyprglass.so"
+    local pluginFile = io.open(pluginPath, "r")
+    if pluginFile then
+        pluginFile:close()
+        hl.exec_cmd("hyprctl plugin load " .. string.format("%q", pluginPath))
+    end
     hl.exec_cmd("awww-daemon")
     -- Install/update Hypridle's before_sleep_cmd hook (lid close is covered when it suspends).
     hl.exec_cmd("sh ~/.config/quickshell/shell27-lock/enable-sleep-lock.sh")
