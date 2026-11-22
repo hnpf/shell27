@@ -347,6 +347,7 @@ OPTIONAL=(
     "jq:jq:wallpaper helpers (reading the dock / shell settings)"
     "python3:python:AirDrop transfer helper"
     "kitty:kitty:the default terminal"
+    "fish:fish:the configured shell for Kitty"
     "hypridle:hypridle:lock on idle (optional)"
     "wtype:wtype:menu bar keyboard shortcuts in browsers and apps"
 )
