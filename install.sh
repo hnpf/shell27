@@ -434,8 +434,20 @@ pkg_available() { # in the distro's repositories?
     esac
 }
 # first alternative of "a|b" that is installed / available (empty if none)
-first_installed() { local a; IFS='|' read -ra alts <<<"$1"; for a in "${alts[@]}"; do pkg_installed "$a" && { printf '%s' "$a"; return 0; }; done; return 1; }
-first_available() { local a; IFS='|' read -ra alts <<<"$1"; for a in "${alts[@]}"; do pkg_available "$a" && { printf '%s' "$a"; return 0; }; done; return 1; }
+first_installed() {
+    local names a alts
+    names=$(pkg_for "$1"); names="${names:-$1}"
+    IFS='|' read -ra alts <<<"$names"
+    for a in "${alts[@]}"; do pkg_installed "$a" && { printf '%s' "$a"; return 0; }; done
+    return 1
+}
+first_available() {
+    local names a alts
+    names=$(pkg_for "$1"); names="${names:-$1}"
+    IFS='|' read -ra alts <<<"$names"
+    for a in "${alts[@]}"; do pkg_available "$a" && { printf '%s' "$a"; return 0; }; done
+    return 1
+}
 
 APT_UPDATED=0
 install_packages() { # install_packages <distro package names...>
@@ -626,7 +638,7 @@ run_deps_plan() {
     if [ "$PM" != pacman ]; then
         printf '{"pacman":false,"have":[],"repo":[],"aur":[],"skipped":[],"upgrades":[]}\n'; return 0
     fi
-    local have_l=() want=() repo_l=() aur_l=() upg_l=() entry cmd pkg why p pick seen=" " n
+    local have_l=() want=() repo_l=() aur_l=() upg_l=() entry cmd pkg why p pick mapped seen=" " n
     local libs=("${LIBS[@]}")
     [ "$SKIP_LOCK" = 1 ] || libs+=("${LIBS_LOCK[@]}")
     for entry in "${REQUIRED[@]}" "${OPTIONAL[@]}"; do
@@ -639,7 +651,8 @@ run_deps_plan() {
     done
     for p in "${want[@]:-}"; do
         [ -n "$p" ] || continue
-        case "$seen" in *" $p "*) continue ;; esac; seen="$seen$p "
+        mapped=$(pkg_for "$p"); mapped="${mapped:-$p}"
+        case "$seen" in *" $mapped "*) continue ;; esac; seen="$seen$mapped "
         if pick=$(first_available "$p"); then repo_l+=("$pick"); else aur_l+=("${p%%|*}"); fi
     done
     if [ "${#repo_l[@]}" -gt 0 ]; then
