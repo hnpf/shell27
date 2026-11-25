@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FINDER_QML="$(dirname "$SCRIPT_DIR")/Finder.qml"
+
+MODE="open"
+TITLE=""
+INITIAL=""
+SAVE_NAME=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --open) MODE="open"; shift ;;
+        --multiple) MODE="open-multiple"; shift ;;
+        --folder|--dir) MODE="folder"; shift ;;
+        --save) MODE="save"; shift ;;
+        --title) TITLE="${2:-}"; shift 2 ;;
+        --initial) INITIAL="${2:-}"; shift 2 ;;
+        --name) SAVE_NAME="${2:-}"; shift 2 ;;
+        *) INITIAL="$1"; shift ;;
+    esac
+done
+
+OUT_FILE="$(mktemp /tmp/finder-pick-XXXXXX)"
+trap 'rm -f "$OUT_FILE"' EXIT
+
+export FINDER_PICK_MODE="$MODE"
+export FINDER_PICK_TITLE="$TITLE"
+export FINDER_PICK_INITIAL="$INITIAL"
+export FINDER_PICK_SAVE_NAME="$SAVE_NAME"
+export FINDER_PICK_OUT="$OUT_FILE"
+export FINDER_OPEN_ON_START="1"
+
+qs -p "$FINDER_QML" >/dev/null 2>&1 || true
+
+if [[ -s "$OUT_FILE" ]]; then
+    cat "$OUT_FILE"
+    exit 0
+fi
+exit 1

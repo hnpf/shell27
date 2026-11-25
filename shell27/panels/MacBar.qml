@@ -2399,6 +2399,7 @@ Scope {
             if (String(activeTl.title || "").indexOf("Siri - ") === 0) return "Siri";
             if (activeTl.title === "Clock" || activeTl.title === "App Store" || activeTl.title === "Reminders") return I18n.tr(activeTl.title);
             if (activeTl.title === "System Settings") return I18n.tr("System Settings");
+            if (String(activeTl.title || "").indexOf("Finder") >= 0) return "Finder";
             return "shell27";
         }
         var e = lookup(activeAppId);
@@ -6101,12 +6102,13 @@ Scope {
             // shell27's own windows (all "org.quickshell") are separate apps: Clock, System Settings
             if (id === "org.quickshell") id = t.title === "Clock" ? "shell27-clock"
                                              : (t.title === "App Store" ? "shell27-appstore"
-                                             : (t.title === "System Settings" ? "systemsettings" : id));
+                                             : (t.title === "System Settings" ? "systemsettings"
+                                             : (String(t.title || "").indexOf("Finder") >= 0 ? "finder" : id)));
             if (seen[id] !== undefined) { apps[seen[id]].count++; continue; }
             var e = root.lookup(id);
             seen[id] = apps.length;
-            apps.push({ appId: id, cls: t.appId, name: id === "systemsettings" ? "System Settings" : (id === "org.quickshell" ? "shell27" : (e ? e.name : id)),
-                        icon: id === "systemsettings" ? "systemsettings" : (id === "org.quickshell" ? root.logoPath : (e ? e.icon : "")), win: t, count: 1 });
+            apps.push({ appId: id, cls: t.appId, name: id === "systemsettings" ? "System Settings" : (id === "finder" ? "Finder" : (id === "org.quickshell" ? "shell27" : (e ? e.name : id))),
+                        icon: id === "systemsettings" ? "systemsettings" : (id === "finder" ? (e ? e.icon : "system-file-manager") : (id === "org.quickshell" ? root.logoPath : (e ? e.icon : ""))), win: t, count: 1 });
         }
         return apps;
     }

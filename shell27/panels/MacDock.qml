@@ -6541,6 +6541,7 @@ Scope {
         if (tl.title === "Reminders") return "shell27-reminders";
         if (tl.title === "AirDrop") return "shell27-airdrop";
         if (tl.title === "System Settings") return settingsAppKey;
+        if (String(tl.title || "").indexOf("Finder") >= 0) return "finder";
         return tl.appId;
     }
     function windowsFor(key) {
@@ -6784,9 +6785,10 @@ Scope {
             var remindersApp = extras[x].appId === "shell27-reminders";
             var airdropApp = extras[x].appId === "shell27-airdrop";
             var siriApp = extras[x].appId === "siri";
+            var finderApp = extras[x].appId === "finder";
             list.push({ kind: "app", key: extras[x].key, appId: e2 ? e2.id : extras[x].appId,
-                        name: settingsApp ? "System Settings" : (remindersApp ? "Reminders" : (airdropApp ? "AirDrop" : (siriApp ? "Siri" : (own ? "shell27" : (e2 ? e2.name : extras[x].appId))))),
-                        icon: siriApp ? siriIconPath : (settingsApp ? "systemsettings" : (remindersApp ? remindersIconPath : (airdropApp ? airdropIconPath : (own ? logoPath : (e2 ? e2.icon : extras[x].appId.toLowerCase()))))),
+                        name: settingsApp ? "System Settings" : (remindersApp ? "Reminders" : (airdropApp ? "AirDrop" : (siriApp ? "Siri" : (finderApp ? "Finder" : (own ? "shell27" : (e2 ? e2.name : extras[x].appId)))))),
+                        icon: siriApp ? siriIconPath : (settingsApp ? "systemsettings" : (remindersApp ? remindersIconPath : (airdropApp ? airdropIconPath : (finderApp ? (e2 ? e2.icon : "system-file-manager") : (own ? logoPath : (e2 ? e2.icon : extras[x].appId.toLowerCase())))))),
                         entry: settingsApp ? null : e2, running: true, pinned: false, special: settingsApp ? "settings" : "" });
         }
 
@@ -6806,9 +6808,10 @@ Scope {
                 var remindersWin = appOf(tl) === "shell27-reminders";
                 var airdropWin = appOf(tl) === "shell27-airdrop";
                 var siriWin = appOf(tl) === "siri";
+                var finderWin = appOf(tl) === "finder";
                 winItems.push({ kind: "win", key: "win:" + wid, tl: tl,
-                                name: siriWin ? "Siri" : (remindersWin ? "Reminders" : (airdropWin ? "AirDrop" : (own3 ? (tl.title || "shell27") : (e3 ? e3.name : tl.appId)))),
-                                icon: siriWin ? siriIconPath : (remindersWin ? remindersIconPath : (airdropWin ? airdropIconPath : (own3 ? logoPath : (e3 ? e3.icon : tl.appId.toLowerCase())))),
+                                name: siriWin ? "Siri" : (remindersWin ? "Reminders" : (airdropWin ? "AirDrop" : (finderWin ? "Finder" : (own3 ? (tl.title || "shell27") : (e3 ? e3.name : tl.appId))))),
+                                icon: siriWin ? siriIconPath : (remindersWin ? remindersIconPath : (airdropWin ? airdropIconPath : (finderWin ? (e3 ? e3.icon : "system-file-manager") : (own3 ? logoPath : (e3 ? e3.icon : tl.appId.toLowerCase()))))),
                                 entry: null, running: false, pinned: false });
             }
         }

@@ -463,6 +463,7 @@ ShellRoot {
     ScreenCorners { hub: sharedHub }
     MacWidgets { id: macWidgets; hub: sharedHub }
     ClockApp { id: clockApp; hub: sharedHub }
+    FinderApp { id: finderApp; hub: sharedHub }
     AboutApp { id: aboutApp; hub: sharedHub }
     AirDrop { id: airDrop; hub: sharedHub }
     Reminders { id: remindersApp; hub: sharedHub }

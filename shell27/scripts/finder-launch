@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FINDER_QML="$(dirname "$SCRIPT_DIR")/Finder.qml"
+
+TARGET="${1:-}"
+if [[ "$TARGET" == file://* ]]; then
+    TARGET="${TARGET#file://}"
+    TARGET="$(python3 -c 'import urllib.parse, sys; print(urllib.parse.unquote(sys.argv[1]))' "$TARGET")"
+fi
+
+# Fast path 1: reuse already-running standalone Finder instance via IPC (<30ms)
+if qs ipc -p "$FINDER_QML" call finder open "$TARGET" >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Fast path 2: reuse warm Finder instance inside shell27 via IPC (<30ms)
+if qs -c shell27 ipc call finder open "$TARGET" >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Shell startup can cause several xdg-open/portal requests at once.  Without a
+# gate, every request sees IPC unavailable during Finder's first few frames and
+# starts its own standalone process.  Serialize that narrow cold-start window
+# and check IPC once more after the first instance has had time to register.
+finder_runtime_dir="${XDG_RUNTIME_DIR:-/tmp}"
+finder_lock_file="$finder_runtime_dir/shell27-finder-launch.lock"
+mkdir -p "$finder_runtime_dir"
+exec 9>"$finder_lock_file"
+flock -w 6 9
+
+if qs ipc -p "$FINDER_QML" call finder open "$TARGET" >/dev/null 2>&1; then
+    exit 0
+fi
+if qs -c shell27 ipc call finder open "$TARGET" >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Cold-boot fallback.  The lock remains held by this process until Finder has
+# registered its IPC endpoint, preventing duplicate windows during recovery.
+if [[ -n "$TARGET" ]]; then
+    export FINDER_INITIAL_PATH="$TARGET"
+fi
+export FINDER_OPEN_ON_START="1"
+
+exec qs -p "$FINDER_QML"

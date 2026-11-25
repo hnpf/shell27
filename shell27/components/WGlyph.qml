@@ -84,6 +84,90 @@ Canvas {
             line(9, 1.8, 9, 16.2);
             poly([2, 10.5, 9, 7, 16, 10.5], false);
             poly([6, 15.5, 9, 13.5, 12, 15.5], false);
+        } else if (k === "airdrop") {
+            // macOS Finder sidebar AirDrop: person silhouette with concentric radar arcs above
+            // Person head
+            circ(9, 11.5, 1.6); ctx.fill();
+            // Person body arc
+            ctx.beginPath(); ctx.arc(9, 16, 3.5, Math.PI * 1.15, Math.PI * 1.85); ctx.fill();
+            // Radar arcs above person
+            ctx.lineWidth = 1.3;
+            ctx.beginPath(); ctx.arc(9, 9.5, 3.4, Math.PI * 1.18, Math.PI * 1.82); ctx.stroke();
+            ctx.beginPath(); ctx.arc(9, 9.5, 5.8, Math.PI * 1.14, Math.PI * 1.86); ctx.stroke();
+            ctx.beginPath(); ctx.arc(9, 9.5, 8.2, Math.PI * 1.10, Math.PI * 1.90); ctx.stroke();
+        } else if (k === "sharedFolder") {
+            // macOS Finder "Shared" icon: folder outline with small person badge at top-right
+            // Folder body
+            ctx.beginPath();
+            ctx.moveTo(2.2, 13);
+            ctx.lineTo(2.2, 5.6);
+            ctx.arcTo(2.2, 3.8, 4, 3.8, 1.8);
+            ctx.lineTo(6.6, 3.8);
+            ctx.lineTo(8.2, 5.8);
+            ctx.lineTo(14, 5.8);
+            ctx.arcTo(15.8, 5.8, 15.8, 7.6, 1.8);
+            ctx.lineTo(15.8, 13);
+            ctx.arcTo(15.8, 15.2, 13.6, 15.2, 2.2);
+            ctx.lineTo(4.4, 15.2);
+            ctx.arcTo(2.2, 15.2, 2.2, 13, 2.2);
+            ctx.closePath(); ctx.stroke();
+            // Person badge (small head + shoulders inside folder)
+            ctx.lineWidth = 1.2;
+            circ(9, 9.6, 1.3); ctx.fill();
+            ctx.beginPath(); ctx.arc(9, 15, 2.6, Math.PI * 1.15, Math.PI * 1.85); ctx.fill();
+        } else if (k === "tagAll") {
+            circ(6.6, 9, 5.1); ctx.stroke();
+            circ(11.4, 9, 5.1); ctx.stroke();
+        } else if (k === "folderLock") {
+            ctx.beginPath(); ctx.moveTo(2.2, 6.1); ctx.lineTo(2.2, 4.8); ctx.arcTo(2.2, 3.2, 3.8, 3.2, 1.6);
+            ctx.lineTo(7.2, 3.2); ctx.lineTo(8.7, 5.1); ctx.lineTo(14.1, 5.1);
+            ctx.arcTo(15.8, 5.1, 15.8, 6.8, 1.7); ctx.lineTo(15.8, 13.8);
+            ctx.arcTo(15.8, 15.6, 14, 15.6, 1.8); ctx.lineTo(4, 15.6);
+            ctx.arcTo(2.2, 15.6, 2.2, 13.8, 1.8); ctx.closePath(); ctx.stroke();
+            rrect(8.2, 9.2, 5.2, 4.2, 0.8); ctx.stroke();
+            ctx.beginPath(); ctx.arc(10.8, 9.2, 1.5, Math.PI, 0); ctx.stroke();
+        } else if (k === "clock") {
+            circ(9, 9, 6.6); ctx.stroke();
+            line(9, 4.8, 9, 9); line(9, 9, 12.2, 10.8);
+        } else if (k === "download") {
+            line(9, 2.5, 9, 11.2);
+            poly([5.8, 8.2, 9, 11.5, 12.2, 8.2], false);
+            ctx.beginPath();
+            ctx.moveTo(3.4, 11.8);
+            ctx.lineTo(3.4, 13.4);
+            ctx.arcTo(3.4, 15.0, 5.0, 15.0, 1.6);
+            ctx.lineTo(13.0, 15.0);
+            ctx.arcTo(14.6, 15.0, 14.6, 13.4, 1.6);
+            ctx.lineTo(14.6, 11.8);
+            ctx.stroke();
+        } else if (k === "home") {
+            poly([2, 8, 9, 2.2, 16, 8], false);
+            rrect(4.2, 7.5, 9.6, 8.2, 1.2); ctx.stroke();
+            rrect(7.5, 10.5, 3, 5.2, 0.6); ctx.stroke();
+        } else if (k === "cloud") {
+            ctx.beginPath();
+            ctx.moveTo(4, 14.2);
+            ctx.bezierCurveTo(1.4, 14.2, 1.4, 10.2, 4.2, 9.6);
+            ctx.bezierCurveTo(4.5, 5.5, 9.8, 4.5, 11.8, 7.4);
+            ctx.bezierCurveTo(16.2, 7.2, 17.2, 13.4, 13.2, 14.2);
+            ctx.closePath(); ctx.stroke();
+        } else if (k === "drive" || k === "external") {
+            rrect(2, 3, 14, 12, 2); ctx.stroke();
+            line(3.2, 10.5, 14.8, 10.5);
+            circ(12.8, 7, 0.8); ctx.fill();
+            if (k === "external") {
+                circ(5.2, 7, 0.8); ctx.fill();
+                line(5.2, 15, 5.2, 17); line(12.8, 15, 12.8, 17);
+            }
+        } else if (k === "trash") {
+            rrect(4.3, 6, 9.4, 10.2, 1.2); ctx.stroke();
+            line(3, 4.2, 15, 4.2); line(6.6, 2.8, 11.4, 2.8);
+            line(7.2, 8.5, 7.2, 13.8); line(10.8, 8.5, 10.8, 13.8);
+        } else if (k === "shared") {
+            circ(6.4, 6.1, 2.3); ctx.stroke();
+            circ(12.2, 6.8, 1.8); ctx.stroke();
+            ctx.beginPath(); ctx.arc(6.4, 13.2, 4.1, Math.PI, 0); ctx.stroke();
+            ctx.beginPath(); ctx.arc(12.2, 13.5, 3.2, Math.PI, 0); ctx.stroke();
         } else if (k === "moon") {
             circ(9, 9, 6.8); ctx.fill();
             ctx.globalCompositeOperation = "destination-out";
@@ -231,9 +315,19 @@ Canvas {
             ctx.arcTo(2.2, 15.2, 2.2, 13, 2.2);
             ctx.closePath(); ctx.stroke();
         } else if (k === "layers") {
-            ctx.beginPath(); ctx.moveTo(9, 2.4); ctx.lineTo(15.6, 5.8); ctx.lineTo(9, 9.2); ctx.lineTo(2.4, 5.8); ctx.closePath(); ctx.stroke();
-            poly([2.4, 9.2, 9, 12.6, 15.6, 9.2], false);
-            poly([2.4, 12.4, 9, 15.8, 15.6, 12.4], false);
+            ctx.beginPath();
+            ctx.moveTo(12.3, 4.1);
+            ctx.arcTo(15.6, 5.8, 12.3, 7.5, 1.2);
+            ctx.lineTo(10.1, 8.6);
+            ctx.arcTo(9, 9.2, 7.9, 8.6, 1.2);
+            ctx.lineTo(5.7, 7.5);
+            ctx.arcTo(2.4, 5.8, 5.7, 4.1, 1.2);
+            ctx.lineTo(7.9, 3.0);
+            ctx.arcTo(9, 2.4, 10.1, 3.0, 1.2);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(2.6, 9.3); ctx.quadraticCurveTo(9, 12.8, 9, 12.6); ctx.quadraticCurveTo(9, 12.8, 15.4, 9.3); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(2.6, 12.5); ctx.quadraticCurveTo(9, 16.0, 9, 15.8); ctx.quadraticCurveTo(9, 16.0, 15.4, 12.5); ctx.stroke();
         } else if (k === "clipboard") {
             rrect(3.6, 3.4, 10.8, 12.6, 2); ctx.stroke();
             rrect(6.4, 1.9, 5.2, 3.4, 1.2); ctx.stroke();
@@ -245,8 +339,26 @@ Canvas {
             circ(11.3, 7.5, 0.95); ctx.fill();
             ctx.beginPath(); ctx.arc(9, 9.2, 3.7, 0.25, PI - 0.25, false); ctx.stroke();
         } else if (k === "doc") {
-            ctx.beginPath(); ctx.moveTo(4.6, 2.2); ctx.lineTo(10.2, 2.2); ctx.lineTo(13.8, 5.8); ctx.lineTo(13.8, 15.8); ctx.lineTo(4.6, 15.8); ctx.closePath(); ctx.stroke();
-            poly([10.2, 2.2, 10.2, 5.8, 13.8, 5.8], false);
+            ctx.beginPath();
+            ctx.moveTo(6.2, 2.2);
+            ctx.lineTo(9.8, 2.2);
+            ctx.arcTo(10.5, 2.2, 11.0, 2.7, 0.9);
+            ctx.lineTo(13.3, 5.0);
+            ctx.arcTo(13.8, 5.5, 13.8, 6.2, 0.9);
+            ctx.lineTo(13.8, 14.2);
+            ctx.arcTo(13.8, 15.8, 12.2, 15.8, 1.6);
+            ctx.lineTo(6.2, 15.8);
+            ctx.arcTo(4.6, 15.8, 4.6, 14.2, 1.6);
+            ctx.lineTo(4.6, 3.8);
+            ctx.arcTo(4.6, 2.2, 6.2, 2.2, 1.6);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(10.2, 2.4);
+            ctx.lineTo(10.2, 4.8);
+            ctx.arcTo(10.2, 5.8, 11.2, 5.8, 1.0);
+            ctx.lineTo(13.6, 5.8);
+            ctx.stroke();
             line(6.8, 9.6, 11.6, 9.6);
             line(6.8, 12.4, 11.6, 12.4);
         } else if (k === "link") {
